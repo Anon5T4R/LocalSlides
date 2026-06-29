@@ -21,6 +21,7 @@ import { applyTheme, loadSettings, addRecent } from "./lib/settings";
 import { inTauri } from "./lib/env";
 import { PrintView } from "./export/PrintView";
 import { exportSlidePng } from "./export/png";
+import { exportDeckPptx } from "./export/pptx";
 import { findSlide } from "./model/deck";
 import "./App.css";
 
@@ -181,6 +182,17 @@ function App() {
       await exportSlidePng(slide, st.deck, idx);
     } catch (e) {
       window.alert(`Não foi possível exportar PNG:\n${e}`);
+    } finally {
+      setBusy("");
+    }
+  }, []);
+
+  const handleExportPptx = useCallback(async () => {
+    try {
+      setBusy("Exportando PPTX…");
+      await exportDeckPptx(useStore.getState().deck);
+    } catch (e) {
+      window.alert(`Não foi possível exportar PPTX:\n${e}`);
     } finally {
       setBusy("");
     }
@@ -379,6 +391,7 @@ function App() {
           <span className="sep" />
           <button onClick={handleExportPdf} title="Exportar PDF (todos os slides)">PDF</button>
           <button onClick={handleExportPng} title="Exportar PNG (slide atual)">PNG</button>
+          <button onClick={handleExportPptx} title="Exportar PPTX (PowerPoint)">PPTX</button>
           <span className="sep" />
           <button className="present-btn" onClick={() => setPresenting(true)} title="Apresentar (F5)">
             ▶ Apresentar
