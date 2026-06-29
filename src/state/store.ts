@@ -53,6 +53,8 @@ export interface SlidesState {
 
   selection: string[];
   currentSlideId: string;
+  /** Id of the image currently being cropped (ephemeral UI state), or null. */
+  croppingId: string | null;
   /** 0 = fit-to-container (computed by the canvas); otherwise a literal scale. */
   zoom: number;
 
@@ -81,6 +83,7 @@ export interface SlidesState {
 
   // navigation & selection
   setCurrentSlide: (id: string) => void;
+  setCropping: (id: string | null) => void;
   setZoom: (z: number) => void;
   select: (ids: string[]) => void;
   toggleSelect: (id: string, additive: boolean) => void;
@@ -133,6 +136,7 @@ export const useStore = create<SlidesState>((set, get) => ({
 
   selection: [],
   currentSlideId: initialDeck.slides[0].id,
+  croppingId: null,
   zoom: 0,
 
   past: [],
@@ -244,7 +248,8 @@ export const useStore = create<SlidesState>((set, get) => ({
       if (d.assets) d.assets = d.assets.filter((a) => a.id !== id);
     }),
 
-  setCurrentSlide: (id) => set({ currentSlideId: id, selection: [] }),
+  setCurrentSlide: (id) => set({ currentSlideId: id, selection: [], croppingId: null }),
+  setCropping: (id) => set({ croppingId: id }),
   setZoom: (z) => set({ zoom: z }),
   select: (ids) => set({ selection: ids }),
   toggleSelect: (id, additive) =>

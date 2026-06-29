@@ -87,11 +87,21 @@ export interface TextBox extends Base {
   placeholder?: "title" | "body";
 }
 
+/** Crop rectangle as fractions (0..1) of the natural image. Undefined = full. */
+export interface Crop {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface ImageEl extends Base {
   type: "image";
   /** "media/img1.png" inside the zip, or a data URL. */
   src: string;
   fit?: "contain" | "cover";
+  /** Visible region of the source image; the element box shows only this. */
+  crop?: Crop;
 }
 
 export interface VideoEl extends Base {

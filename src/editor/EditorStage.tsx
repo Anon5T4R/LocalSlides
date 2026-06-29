@@ -23,6 +23,7 @@ import { resizeGeom, rotationFromPointer, type Handle } from "../interactions/ge
 import { computeSnap } from "../interactions/snapping";
 import { TextBoxEditor } from "./TextBoxEditor";
 import { TableCellEditor } from "./TableCellEditor";
+import { CropOverlay } from "./CropOverlay";
 
 const FIT_MARGIN = 48;
 
@@ -49,6 +50,8 @@ export function EditorStage() {
   const deck = useStore((s) => s.deck);
   const currentSlideId = useStore((s) => s.currentSlideId);
   const selection = useStore((s) => s.selection);
+  const croppingId = useStore((s) => s.croppingId);
+  const setCropping = useStore((s) => s.setCropping);
   const zoom = useStore((s) => s.zoom);
   const select = useStore((s) => s.select);
   const clearSelection = useStore((s) => s.clearSelection);
@@ -190,6 +193,19 @@ export function EditorStage() {
   const marqueeRef = useRef(marquee);
   marqueeRef.current = marquee;
 
+  // Esc leaves crop mode (the overlay's own buttons also exit).
+  useEffect(() => {
+    if (!croppingId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setCropping(null);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [croppingId, setCropping]);
+
   // --- Start gestures ---
   const startMove = useCallback(
     (elId: string, e: ReactPointerEvent) => {
@@ -311,6 +327,11 @@ export function EditorStage() {
 
   const selectedEl = selection.length === 1 ? slide.elements.find((e) => e.id === selection[0]) : undefined;
   const selSet = new Set(selection);
+  const cropEl =
+    croppingId ? slide.elements.find((e) => e.id === croppingId && e.type === "image") : undefined;
+  const hidden = new Set<string>();
+  if (editingId) hidden.add(editingId);
+  if (cropEl) hidden.add(cropEl.id);
 
   return (
     <div
@@ -347,9 +368,9 @@ export function EditorStage() {
             slide={slide}
             deck={deck}
             style={{ pointerEvents: "none" }}
-            // Hide the text box being edited so the live editor doesn't ghost over
-            // the static render (tables keep painting — the cell editor is partial).
-            hideIds={editingId ? new Set([editingId]) : undefined}
+            // Hide the text box being edited / image being cropped so the live
+            // overlay doesn't ghost over the static render (tables keep painting).
+            hideIds={hidden.size ? hidden : undefined}
           />
 
           {/* interaction hit boxes */}
@@ -371,8 +392,9 @@ export function EditorStage() {
                 transform: el.geom.rotation ? `rotate(${el.geom.rotation}deg)` : undefined,
                 transformOrigin: "center center",
                 outline: selSet.has(el.id) && !selectedEl ? `${1.5 / scale}px solid ${deck.theme.colors.accent1}` : undefined,
-                cursor: editingId || editingCell ? "default" : "move",
-                pointerEvents: editingId === el.id || editingCell?.elId === el.id ? "none" : "auto",
+                cursor: editingId || editingCell || croppingId ? "default" : "move",
+                pointerEvents:
+                  editingId === el.id || editingCell?.elId === el.id || croppingId ? "none" : "auto",
               }}
             />
           ))}
@@ -382,8 +404,13 @@ export function EditorStage() {
             <GuidesLayer vGuides={guides.v} hGuides={guides.h} size={deck.size} scale={scale} />
           )}
 
+          {/* image crop overlay */}
+          {cropEl && cropEl.type === "image" && (
+            <CropOverlay el={cropEl} scale={scale} onDone={() => setCropping(null)} />
+          )}
+
           {/* resize + rotate handles for a single selection */}
-          {selectedEl && !editingId && !editingCell && (
+          {selectedEl && !editingId && !editingCell && !croppingId && (
             <SelectionLayer
               geom={selectedEl.geom}
               scale={scale}

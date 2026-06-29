@@ -95,6 +95,7 @@ function ElementInspector({ el }: { el: Element }) {
   const updateElement = useStore((s) => s.updateElement);
   const reorder = useStore((s) => s.reorder);
   const deleteElements = useStore((s) => s.deleteElements);
+  const setCropping = useStore((s) => s.setCropping);
 
   const set = (recipe: (e: Element) => void) => updateElement(el.id, recipe);
 
@@ -212,6 +213,25 @@ function ElementInspector({ el }: { el: Element }) {
             <option value="contain">Conter</option>
             <option value="cover">Preencher</option>
           </select>
+        </Row>
+      )}
+
+      {el.type === "image" && (
+        <Row label="Cortar">
+          <div className="insp-zorder">
+            <button className="insp-mini" onClick={() => setCropping(el.id)} title="Recortar imagem">
+              Recortar
+            </button>
+            {el.crop && (
+              <button
+                className="insp-mini"
+                onClick={() => set((x) => x.type === "image" && (x.crop = undefined))}
+                title="Remover corte"
+              >
+                Remover
+              </button>
+            )}
+          </div>
         </Row>
       )}
 

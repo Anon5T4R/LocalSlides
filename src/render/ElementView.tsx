@@ -255,6 +255,27 @@ export function ElementView({
   }
 
   if (el.type === "image") {
+    const c = el.crop;
+    // A crop shows only a sub-rectangle of the source, scaled to fill the box.
+    if (c && (c.x > 0 || c.y > 0 || c.w < 1 || c.h < 1)) {
+      return (
+        <div style={{ ...base, overflow: "hidden" }}>
+          <img
+            src={el.src}
+            alt=""
+            draggable={false}
+            style={{
+              position: "absolute",
+              width: `${100 / c.w}%`,
+              height: `${100 / c.h}%`,
+              left: `${(-c.x / c.w) * 100}%`,
+              top: `${(-c.y / c.h) * 100}%`,
+              userSelect: "none",
+            }}
+          />
+        </div>
+      );
+    }
     return (
       <img
         src={el.src}
