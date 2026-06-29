@@ -3,6 +3,11 @@
 # IMPORTANTE: os assets Linux do llama.cpp são .tar.gz (NÃO .zip) — por isso o
 # AppImage não precisa de nenhuma ferramenta de zip. Só o Windows usa .zip
 # (scripts/fetch-llama.ps1).
+#
+# Robustez: usa o token do CI (GH_TOKEN) p/ evitar rate-limit; extrai SÓ URLs
+# reais de download (nunca a URL da API); tenta de novo se os assets ainda não
+# subiram (o llama.cpp publica a release e sobe os binários aos poucos); e valida
+# que o download é gzip antes de extrair.
 # Uso: bash scripts/fetch-llama.sh
 set -euo pipefail
 
@@ -15,16 +20,35 @@ if [ -f "$LLAMA_DIR/llama-server" ]; then
   exit 0
 fi
 
-echo "Buscando release mais recente do llama.cpp..."
-API=$(curl -fsSL https://api.github.com/repos/ggml-org/llama.cpp/releases/latest)
-# Assets do llama.cpp para Linux são .tar.gz (ubuntu-vulkan-x64 com fallback CPU ubuntu-x64).
-# `|| true` evita que o pipefail aborte quando o grep não casa (deixa o fallback rodar).
-URL=$(echo "$API" | grep browser_download_url | grep -E 'ubuntu-vulkan-x64\.tar\.gz' | head -1 | cut -d'"' -f4 || true)
-[ -z "$URL" ] && URL=$(echo "$API" | grep browser_download_url | grep -E 'ubuntu-x64\.tar\.gz' | head -1 | cut -d'"' -f4 || true)
-[ -z "$URL" ] && { echo "asset ubuntu-x64 não encontrado"; exit 1; }
+AUTH=()
+[ -n "${GH_TOKEN:-}" ] && AUTH=(-H "Authorization: Bearer $GH_TOKEN")
+API_URL="https://api.github.com/repos/ggml-org/llama.cpp/releases/latest"
+
+# Extrai uma URL de download de asset (github.com/.../*.tar.gz), nunca a URL da API.
+find_url() {
+  local json="$1" u
+  u=$(printf '%s' "$json" | grep -oE 'https://github\.com/[^"]*ubuntu-vulkan-x64\.tar\.gz' | head -1 || true)
+  [ -z "$u" ] && u=$(printf '%s' "$json" | grep -oE 'https://github\.com/[^"]*ubuntu-x64\.tar\.gz' | head -1 || true)
+  printf '%s' "$u"
+}
+
+URL=""
+for attempt in 1 2 3 4 5; do
+  echo "Buscando release mais recente do llama.cpp (tentativa $attempt)..."
+  API=$(curl -fsSL --retry 3 --retry-delay 2 -H "User-Agent: localslides-app" "${AUTH[@]}" "$API_URL" || true)
+  URL=$(find_url "$API")
+  [ -n "$URL" ] && break
+  echo "asset Linux ainda não disponível nesta release; aguardando 15s..."
+  sleep 15
+done
+[ -z "$URL" ] && { echo "asset ubuntu(-vulkan)-x64.tar.gz não encontrado"; exit 1; }
 
 echo "Baixando $URL"
-curl -fsSL "$URL" -o /tmp/llama.tar.gz
+curl -fsSL --retry 3 --retry-delay 2 "$URL" -o /tmp/llama.tar.gz
+if ! gzip -t /tmp/llama.tar.gz 2>/dev/null; then
+  echo "arquivo baixado não é um .tar.gz válido (URL: $URL)"; exit 1
+fi
+
 rm -rf /tmp/llama-extract
 mkdir -p /tmp/llama-extract
 tar -xzf /tmp/llama.tar.gz -C /tmp/llama-extract

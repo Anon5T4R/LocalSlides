@@ -16,7 +16,9 @@ if (Test-Path (Join-Path $llamaDir "llama-server.exe")) {
 }
 
 Write-Host "Consultando release mais recente do llama.cpp..."
-$rel = Invoke-RestMethod -Uri "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest" -Headers @{ "User-Agent" = "localslides-app" }
+$headers = @{ "User-Agent" = "localslides-app" }
+if ($env:GH_TOKEN) { $headers["Authorization"] = "Bearer $env:GH_TOKEN" }
+$rel = Invoke-RestMethod -Uri "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest" -Headers $headers
 # Vulkan build: GPU em qualquer placa + fallback CPU (-ngl 0), sem CUDA externo.
 $asset = $rel.assets | Where-Object { $_.name -match "win-vulkan-x64\.zip$" } | Select-Object -First 1
 if (-not $asset) { throw "asset win-vulkan-x64 não encontrado no release $($rel.tag_name)" }

@@ -60,10 +60,14 @@ jobs:
       - name: Baixar runtime de IA (llama.cpp) — Windows
         if: matrix.platform == 'windows-latest'
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: powershell -ExecutionPolicy Bypass -File scripts/fetch-llama.ps1
 
       - name: Baixar runtime de IA (llama.cpp) — Linux
         if: matrix.platform == 'ubuntu-22.04'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/fetch-llama.sh
 
       - name: Build Tauri app
