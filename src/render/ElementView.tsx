@@ -3,7 +3,7 @@
 // stage and the (non-interactive) thumbnails.
 
 import type { CSSProperties } from "react";
-import type { Element, Fill, Geom, InkEl, ShapeEl, Stroke, TableEl, Theme } from "../model/deck";
+import type { Element, Geom, InkEl, ShapeEl, Stroke, TableEl, Theme } from "../model/deck";
 import { RenderPM } from "./renderPM";
 
 export function geomStyle(geom: Geom): CSSProperties {
@@ -23,11 +23,6 @@ function outlineStyle(outline: Stroke | undefined): CSSProperties {
   if (!outline || outline.width <= 0) return {};
   const style = outline.dash === "dash" ? "dashed" : outline.dash === "dot" ? "dotted" : "solid";
   return { outline: `${outline.width}px ${style} ${outline.color}`, outlineOffset: 0 };
-}
-
-function fillToCss(fill: Fill | undefined, fallback = "transparent"): string {
-  if (!fill || fill.kind === "none") return fallback;
-  return fill.color;
 }
 
 /** Points for a regular n-gon inscribed in the box, starting at the top. */
@@ -96,7 +91,8 @@ function InkSvg({ el }: { el: InkEl }) {
 
 function ShapeSvg({ el }: { el: ShapeEl }) {
   const { w, h } = el.geom;
-  const fill = fillToCss(el.fill, "#cbd5e1");
+  // Undefined fill → default gray; explicit "none" → transparent (SVG "none").
+  const fill = !el.fill ? "#cbd5e1" : el.fill.kind === "none" ? "none" : el.fill.color;
   const stroke = el.stroke?.color ?? "none";
   const sw = el.stroke?.width ?? 0;
   const dash =
