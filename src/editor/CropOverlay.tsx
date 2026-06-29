@@ -1,11 +1,12 @@
-// Interactive image crop (Canva-style). While active, the element box shows the
-// WHOLE source image (contain-fitted) dimmed, with a bright, draggable crop
-// frame over it. Confirming stores el.crop (fractions of the natural image) and
-// resizes the element to the crop frame, so the result fills the box undistorted.
+// Canva-style image crop: the image is "loose" inside a fixed frame. You PAN
+// (drag) and ZOOM (wheel/slider) the image behind the frame, and can resize the
+// frame itself (the image stays its size, revealing/hiding more — it only scales
+// up if needed to keep covering the frame). On confirm we store el.crop (the
+// visible region as fractions of the natural image) and the frame as the geom.
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useStore } from "../state/store";
-import type { Geom, ImageEl } from "../model/deck";
+import type { ImageEl } from "../model/deck";
 import { SelectionLayer } from "../render/SelectionLayer";
 import { resizeGeom, type Handle } from "../interactions/geometry";
 
@@ -20,60 +21,57 @@ export function CropOverlay({ el, scale, onDone }: { el: ImageEl; scale: number;
   const updateElement = useStore((s) => s.updateElement);
   const accent = useStore((s) => s.deck.theme.colors.accent1);
 
-  const box = el.geom;
   const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
-  const [rect, setRect] = useState<Rect | null>(null);
+  // frame = the visible window (slide coords); dispW = displayed image width;
+  // ox/oy = image top-left relative to the frame top-left. dispH derives by aspect.
+  const [frame, setFrame] = useState<Rect>({ ...el.geom });
+  const [dispW, setDispW] = useState(0);
+  const [ox, setOx] = useState(0);
+  const [oy, setOy] = useState(0);
 
-  // Load the source to learn its natural size → the contain rectangle inside the box.
   useEffect(() => {
     const img = new Image();
-    img.onload = () => setNat({ w: img.naturalWidth || box.w, h: img.naturalHeight || box.h });
+    img.onload = () => setNat({ w: img.naturalWidth || el.geom.w, h: img.naturalHeight || el.geom.h });
     img.src = el.src;
-  }, [el.src, box.w, box.h]);
+  }, [el.src, el.geom.w, el.geom.h]);
 
-  // contain fit of the image within the box (box-local px)
-  const fit =
-    nat && nat.w > 0 && nat.h > 0
-      ? (() => {
-          const s = Math.min(box.w / nat.w, box.h / nat.h);
-          const dispW = nat.w * s;
-          const dispH = nat.h * s;
-          return { dispW, dispH, offX: (box.w - dispW) / 2, offY: (box.h - dispH) / 2 };
-        })()
-      : { dispW: box.w, dispH: box.h, offX: 0, offY: 0 };
+  const ar = nat ? nat.w / nat.h : 1; // image aspect (w/h)
+  const dispH = dispW / ar;
+  const coverW = nat ? Math.max(frame.w, frame.h * ar) : frame.w; // min width to cover frame
 
-  // Initialise the crop frame from el.crop (or the whole image) once we know the fit.
+  // Initialise pan/zoom from the existing crop (or cover-centered) once nat loads.
   useEffect(() => {
-    if (!nat || rect) return;
+    if (!nat || dispW) return;
     const c = el.crop;
-    if (c) {
-      setRect({
-        x: fit.offX + c.x * fit.dispW,
-        y: fit.offY + c.y * fit.dispH,
-        w: c.w * fit.dispW,
-        h: c.h * fit.dispH,
-      });
+    if (c && c.w > 0 && c.h > 0) {
+      const dw = Math.max(coverW, el.geom.w / c.w);
+      setDispW(dw);
+      setOx(-c.x * dw);
+      setOy(-c.y * (dw / ar));
     } else {
-      setRect({ x: fit.offX, y: fit.offY, w: fit.dispW, h: fit.dispH });
+      setDispW(coverW);
+      setOx((frame.w - coverW) / 2);
+      setOy((frame.h - coverW / ar) / 2);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nat]);
 
-  const gesture = useRef<{ kind: "move" | "resize"; handle?: Handle; start: Rect; px: number; py: number } | null>(null);
-  const rectRef = useRef<Rect | null>(rect);
-  rectRef.current = rect;
-
-  const clamp = (r: Rect): Rect => {
-    // Keep the frame inside the displayed image and non-degenerate.
-    const minX = fit.offX, minY = fit.offY;
-    const maxX = fit.offX + fit.dispW, maxY = fit.offY + fit.dispH;
-    let { x, y, w, h } = r;
-    w = Math.max(20, Math.min(w, fit.dispW));
-    h = Math.max(20, Math.min(h, fit.dispH));
-    x = Math.max(minX, Math.min(x, maxX - w));
-    y = Math.max(minY, Math.min(y, maxY - h));
-    return { x, y, w, h };
+  // Keep the image covering the frame: clamp offsets (and width) so no gaps show.
+  const clampOffset = (x: number, y: number, dw: number) => {
+    const dh = dw / ar;
+    return {
+      x: Math.min(0, Math.max(frame.w - dw, x)),
+      y: Math.min(0, Math.max(frame.h - dh, y)),
+    };
   };
+
+  const gesture = useRef<
+    | { kind: "pan"; ox: number; oy: number; px: number; py: number }
+    | { kind: "resize"; handle: Handle; start: Rect; sox: number; soy: number; px: number; py: number }
+    | null
+  >(null);
+  const st = useRef({ frame, dispW, ox, oy });
+  st.current = { frame, dispW, ox, oy };
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -81,12 +79,24 @@ export function CropOverlay({ el, scale, onDone }: { el: ImageEl; scale: number;
       if (!g) return;
       const dx = (e.clientX - g.px) / scale;
       const dy = (e.clientY - g.py) / scale;
-      if (g.kind === "move") {
-        setRect(clamp({ ...g.start, x: g.start.x + dx, y: g.start.y + dy }));
+      if (g.kind === "pan") {
+        const c = clampOffset(g.ox + dx, g.oy + dy, st.current.dispW);
+        setOx(c.x);
+        setOy(c.y);
       } else {
-        const geom: Geom = { ...g.start, rotation: 0 };
-        const next = resizeGeom(geom, g.handle!, dx, dy);
-        setRect(clamp({ x: next.x, y: next.y, w: next.w, h: next.h }));
+        // Resize the frame; keep image size unless it would stop covering.
+        const r = resizeGeom({ ...g.start, rotation: 0 }, g.handle, dx, dy);
+        const nf = { x: r.x, y: r.y, w: r.w, h: r.h };
+        const minW = Math.max(nf.w, nf.h * ar);
+        const dw = Math.max(st.current.dispW, minW);
+        // Image's top-left in slide coords stays put; recompute offset vs new frame.
+        const imgSlideX = g.start.x + g.sox;
+        const imgSlideY = g.start.y + g.soy;
+        const c = clampOffset(imgSlideX - nf.x, imgSlideY - nf.y, dw);
+        setFrame(nf);
+        setDispW(dw);
+        setOx(c.x);
+        setOy(c.y);
       }
     };
     const onUp = () => (gesture.current = null);
@@ -97,80 +107,131 @@ export function CropOverlay({ el, scale, onDone }: { el: ImageEl; scale: number;
       window.removeEventListener("pointerup", onUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scale, fit.offX, fit.offY, fit.dispW, fit.dispH]);
+  }, [scale, ar, frame.w, frame.h]);
 
-  if (!rect) return null;
+  // Zoom around the frame centre.
+  const zoomTo = (dw: number) => {
+    const next = Math.max(coverW, Math.min(coverW * 8, dw));
+    const k = next / dispW;
+    const cx = frame.w / 2, cy = frame.h / 2;
+    const c = clampOffset(cx - (cx - ox) * k, cy - (cy - oy) * k, next);
+    setDispW(next);
+    setOx(c.x);
+    setOy(c.y);
+  };
 
-  const startMove = (e: ReactPointerEvent) => {
+  if (!nat || !dispW) return null;
+
+  const startPan = (e: ReactPointerEvent) => {
     e.stopPropagation();
-    gesture.current = { kind: "move", start: rect, px: e.clientX, py: e.clientY };
+    gesture.current = { kind: "pan", ox, oy, px: e.clientX, py: e.clientY };
   };
   const startResize = (handle: Handle, e: ReactPointerEvent) => {
-    gesture.current = { kind: "resize", handle, start: rect, px: e.clientX, py: e.clientY };
+    gesture.current = { kind: "resize", handle, start: { ...frame }, sox: ox, soy: oy, px: e.clientX, py: e.clientY };
   };
 
   const apply = () => {
-    const r = rectRef.current!;
+    const s = st.current;
+    const dh = s.dispW / ar;
     const crop = {
-      x: Math.max(0, Math.min(1, (r.x - fit.offX) / fit.dispW)),
-      y: Math.max(0, Math.min(1, (r.y - fit.offY) / fit.dispH)),
-      w: Math.max(0.01, Math.min(1, r.w / fit.dispW)),
-      h: Math.max(0.01, Math.min(1, r.h / fit.dispH)),
+      x: Math.max(0, Math.min(1, -s.ox / s.dispW)),
+      y: Math.max(0, Math.min(1, -s.oy / dh)),
+      w: Math.max(0.01, Math.min(1, s.frame.w / s.dispW)),
+      h: Math.max(0.01, Math.min(1, s.frame.h / dh)),
     };
     updateElement(el.id, (x) => {
       if (x.type !== "image") return;
       x.crop = crop;
-      x.geom = { ...x.geom, x: box.x + r.x, y: box.y + r.y, w: r.w, h: r.h };
+      x.geom = { ...x.geom, x: s.frame.x, y: s.frame.y, w: s.frame.w, h: s.frame.h };
     });
     onDone();
   };
 
-  const reset = () => setRect({ x: fit.offX, y: fit.offY, w: fit.dispW, h: fit.dispH });
+  const reset = () => {
+    setDispW(coverW);
+    setOx((frame.w - coverW) / 2);
+    setOy((frame.h - coverW / ar) / 2);
+  };
+
+  const zoomPct = Math.round((dispW / coverW) * 100);
 
   return (
     <>
-      {/* The element box: dimmed full image + bright clipped preview at the frame. */}
-      <div style={{ position: "absolute", left: box.x, top: box.y, width: box.w, height: box.h }}>
+      {/* Dimmed context: the whole image around the frame (not clipped). */}
+      <div
+        style={{ position: "absolute", left: frame.x, top: frame.y, width: frame.w, height: frame.h, pointerEvents: "none" }}
+      >
         <img
           src={el.src}
           alt=""
           draggable={false}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", opacity: 0.35 }}
+          style={{ position: "absolute", left: ox, top: oy, width: dispW, height: dispH, maxWidth: "none", opacity: 0.3 }}
         />
-        <div style={{ position: "absolute", left: rect.x, top: rect.y, width: rect.w, height: rect.h, overflow: "hidden", cursor: "move" }} onPointerDown={startMove}>
-          <img
-            src={el.src}
-            alt=""
-            draggable={false}
-            style={{ position: "absolute", left: fit.offX - rect.x, top: fit.offY - rect.y, width: fit.dispW, height: fit.dispH, maxWidth: "none" }}
-          />
-        </div>
       </div>
 
+      {/* Bright window: the visible region, draggable to pan. */}
+      <div
+        onPointerDown={startPan}
+        onWheel={(e) => {
+          e.preventDefault();
+          zoomTo(dispW * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+        }}
+        style={{
+          position: "absolute",
+          left: frame.x,
+          top: frame.y,
+          width: frame.w,
+          height: frame.h,
+          overflow: "hidden",
+          cursor: "move",
+          touchAction: "none",
+        }}
+      >
+        <img
+          src={el.src}
+          alt=""
+          draggable={false}
+          style={{ position: "absolute", left: ox, top: oy, width: dispW, height: dispH, maxWidth: "none" }}
+        />
+      </div>
+
+      {/* Frame handles (resize the window; the image keeps its size). */}
       <SelectionLayer
-        geom={{ x: box.x + rect.x, y: box.y + rect.y, w: rect.w, h: rect.h, rotation: 0 }}
+        geom={{ ...frame, rotation: 0 }}
         scale={scale}
         accent={accent}
         onHandleDown={startResize}
         onRotateDown={() => {}}
       />
 
-      {/* Toolbar below the box, counter-scaled to stay constant size. */}
+      {/* Toolbar below the frame, counter-scaled to stay constant size. */}
       <div
         className="crop-bar"
         style={{
           position: "absolute",
-          left: box.x,
-          top: box.y + box.h,
+          left: frame.x,
+          top: frame.y + frame.h,
           transform: `scale(${1 / scale})`,
           transformOrigin: "top left",
           marginTop: 8 / scale,
         }}
         onPointerDown={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
       >
-        <button onClick={reset} title="Restaurar imagem inteira">Tudo</button>
+        <button onClick={() => zoomTo(dispW / 1.15)} title="Reduzir zoom">−</button>
+        <input
+          type="range"
+          min={100}
+          max={800}
+          value={Math.min(800, zoomPct)}
+          onChange={(e) => zoomTo(coverW * (Number(e.target.value) / 100))}
+          title={`Zoom ${zoomPct}%`}
+          style={{ width: 90 }}
+        />
+        <button onClick={() => zoomTo(dispW * 1.15)} title="Aumentar zoom">＋</button>
+        <button onClick={reset} title="Reenquadrar">Reenquadrar</button>
         <button onClick={onDone} title="Cancelar (Esc)">Cancelar</button>
-        <button className="crop-apply" onClick={apply} title="Aplicar corte (Enter)">Cortar</button>
+        <button className="crop-apply" onClick={apply} title="Concluir">Concluir</button>
       </div>
     </>
   );
