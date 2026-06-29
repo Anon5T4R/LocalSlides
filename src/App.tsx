@@ -20,6 +20,7 @@ import {
 import { applyTheme, loadSettings, saveSettings, addRecent, type Settings } from "./lib/settings";
 import { useLocalAi } from "./ai/useLocalAi";
 import { AiPanel } from "./ai/AiPanel";
+import { MediaPanel } from "./panels/MediaPanel";
 import { inTauri } from "./lib/env";
 import { PrintView } from "./export/PrintView";
 import { exportSlidePng } from "./export/png";
@@ -61,6 +62,7 @@ function App() {
   const markSaved = useStore((s) => s.markSaved);
   const addSlide = useStore((s) => s.addSlide);
   const addElement = useStore((s) => s.addElement);
+  const addAsset = useStore((s) => s.addAsset);
   const group = useStore((s) => s.group);
   const ungroup = useStore((s) => s.ungroup);
 
@@ -68,6 +70,7 @@ function App() {
   const [presenting, setPresenting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [showAi, setShowAi] = useState(false);
+  const [showMedia, setShowMedia] = useState(false);
   const [showShapes, setShowShapes] = useState(false);
   const [rightWidth, setRightWidth] = useState(300);
   const [rightCollapsed, setRightCollapsed] = useState(false);
@@ -185,21 +188,27 @@ function App() {
     if (!inTauri()) return;
     try {
       const src = await pickImageDataUri();
-      if (src) addElement(newImage(useStore.getState().deck, src));
+      if (src) {
+        addAsset("image", "Imagem", src); // also keep it in the reusable library
+        addElement(newImage(useStore.getState().deck, src));
+      }
     } catch (e) {
       window.alert(`Não foi possível inserir a imagem:\n${e}`);
     }
-  }, [addElement]);
+  }, [addElement, addAsset]);
 
   const insertVideo = useCallback(async () => {
     if (!inTauri()) return;
     try {
       const src = await pickVideoDataUri();
-      if (src) addElement(newVideo(useStore.getState().deck, src));
+      if (src) {
+        addAsset("video", "Vídeo", src);
+        addElement(newVideo(useStore.getState().deck, src));
+      }
     } catch (e) {
       window.alert(`Não foi possível inserir o vídeo:\n${e}`);
     }
-  }, [addElement]);
+  }, [addElement, addAsset]);
 
   // ---- Export ----
   const handleExportPdf = useCallback(() => {
@@ -395,6 +404,7 @@ function App() {
   const dropImageAt = useCallback(
     (src: string, clientX?: number, clientY?: number) => {
       const deckNow = useStore.getState().deck;
+      addAsset("image", "Imagem", src); // dropped images join the library too
       const img = newImage(deckNow, src);
       // If we know where it was dropped, center the image there.
       const scaled = document.querySelector(".slide-scaled") as HTMLElement | null;
@@ -408,7 +418,7 @@ function App() {
       }
       addElement(img);
     },
-    [addElement]
+    [addElement, addAsset]
   );
 
   // Browser fallback (works in the dev preview).
@@ -511,7 +521,26 @@ function App() {
           <button onClick={handleExportPptx} title="Exportar PPTX (PowerPoint)">PPTX</button>
           <button onClick={handleImportPptx} title="Importar PPTX (PowerPoint)">Importar PPTX</button>
           <span className="sep" />
-          <button className={"ai-toggle" + (showAi ? " active" : "")} onClick={() => setShowAi((v) => !v)} title="IA local (gerar/conversar)">
+          <button
+            className={"ai-toggle" + (showMedia ? " active" : "")}
+            onClick={() => {
+              setShowMedia((v) => !v);
+              setShowAi(false);
+              setRightCollapsed(false);
+            }}
+            title="Biblioteca de mídia"
+          >
+            ⬚ Mídia
+          </button>
+          <button
+            className={"ai-toggle" + (showAi ? " active" : "")}
+            onClick={() => {
+              setShowAi((v) => !v);
+              setShowMedia(false);
+              setRightCollapsed(false);
+            }}
+            title="IA local (gerar/conversar)"
+          >
             ✦ IA
           </button>
           <button className="present-btn" onClick={() => setPresenting(true)} title="Apresentar (F5)">
@@ -542,7 +571,13 @@ function App() {
             <button className="right-collapse" onClick={() => setRightCollapsed(true)} title="Recolher painel">
               ⟩
             </button>
-            {showAi ? <AiPanel ai={ai} onClose={() => setShowAi(false)} /> : <Inspector />}
+            {showMedia ? (
+              <MediaPanel onClose={() => setShowMedia(false)} />
+            ) : showAi ? (
+              <AiPanel ai={ai} onClose={() => setShowAi(false)} />
+            ) : (
+              <Inspector />
+            )}
           </div>
         )}
       </div>

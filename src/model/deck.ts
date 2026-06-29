@@ -181,11 +181,22 @@ export interface Slide {
   transition?: Transition;
 }
 
+/** A reusable media asset uploaded once and inserted many times. */
+export interface Asset {
+  id: string;
+  kind: "image" | "video";
+  name: string;
+  /** Data URL in memory; externalized to media/ on disk (see serialize.ts). */
+  src: string;
+}
+
 export interface Deck {
   version: 1;
   size: Size;
   theme: Theme;
   slides: Slide[];
+  /** Deck-level library of uploaded media, for quick reuse. */
+  assets?: Asset[];
 }
 
 export const DEFAULT_THEME: Theme = {
@@ -323,6 +334,10 @@ export function newShape(deck: Deck, shape: ShapeKind): ShapeEl {
     shape,
     fill: { kind: "solid", color: deck.theme.colors.accent1 },
   };
+}
+
+export function newAsset(kind: "image" | "video", name: string, src: string): Asset {
+  return { id: makeId("asset"), kind, name, src };
 }
 
 /** A blank slide with an optional title + body placeholder layout. */

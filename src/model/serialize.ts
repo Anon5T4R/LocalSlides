@@ -64,20 +64,29 @@ export async function packDeck(deck: Deck): Promise<Uint8Array> {
   // Deep-clone so we can rewrite image srcs without touching the live deck.
   const out: Deck = structuredClone(deck);
   let mediaCount = 0;
+  // Dedup identical data URLs (e.g. an asset inserted on many slides) → one file.
+  const seen = new Map<string, string>();
+
+  const externalize = (src: string, kind: "image" | "video"): string => {
+    if (!src.startsWith("data:")) return src;
+    const hit = seen.get(src);
+    if (hit) return hit;
+    const parts = dataUrlToParts(src);
+    if (!parts) return src;
+    const ext = MIME_EXT[parts.mime] ?? "bin";
+    const name = `${kind === "video" ? "vid" : "img"}${++mediaCount}.${ext}`;
+    zip.file(MEDIA_DIR + name, parts.bytes);
+    const path = MEDIA_DIR + name;
+    seen.set(src, path);
+    return path;
+  };
 
   for (const slide of out.slides) {
     for (const el of slide.elements) {
-      if ((el.type === "image" || el.type === "video") && el.src.startsWith("data:")) {
-        const parts = dataUrlToParts(el.src);
-        if (!parts) continue;
-        const ext = MIME_EXT[parts.mime] ?? "bin";
-        const prefix = el.type === "video" ? "vid" : "img";
-        const name = `${prefix}${++mediaCount}.${ext}`;
-        zip.file(MEDIA_DIR + name, parts.bytes);
-        el.src = MEDIA_DIR + name;
-      }
+      if (el.type === "image" || el.type === "video") el.src = externalize(el.src, el.type);
     }
   }
+  for (const asset of out.assets ?? []) asset.src = externalize(asset.src, asset.kind);
 
   zip.file(DECK_ENTRY, JSON.stringify(out));
   return zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
@@ -109,5 +118,6 @@ export async function unpackDeck(bytes: Uint8Array): Promise<Deck> {
       if (el.type === "image" || el.type === "video") el.src = await resolve(el.src);
     }
   }
+  for (const asset of deck.assets ?? []) asset.src = await resolve(asset.src);
   return deck;
 }

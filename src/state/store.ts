@@ -17,8 +17,10 @@ import {
   Element,
   Slide,
   Theme,
+  Asset,
   newDeck,
   newSlide,
+  newAsset,
   findSlide,
   makeId,
 } from "../model/deck";
@@ -72,6 +74,10 @@ export interface SlidesState {
   resetDeck: () => void;
   markSaved: (filePath?: string) => void;
   setTheme: (theme: Theme) => void;
+
+  // media library (undoable)
+  addAsset: (kind: "image" | "video", name: string, src: string) => Asset;
+  removeAsset: (id: string) => void;
 
   // navigation & selection
   setCurrentSlide: (id: string) => void;
@@ -220,6 +226,22 @@ export const useStore = create<SlidesState>((set, get) => ({
   setTheme: (theme) =>
     get().apply((d) => {
       d.theme = structuredClone(theme);
+    }),
+
+  addAsset: (kind, name, src) => {
+    // Dedup by src so re-uploading or re-inserting the same file reuses one asset.
+    const existing = get().deck.assets?.find((a) => a.src === src);
+    if (existing) return existing;
+    const asset = newAsset(kind, name, src);
+    get().apply((d) => {
+      (d.assets ??= []).push(asset);
+    });
+    return asset;
+  },
+
+  removeAsset: (id) =>
+    get().apply((d) => {
+      if (d.assets) d.assets = d.assets.filter((a) => a.id !== id);
     }),
 
   setCurrentSlide: (id) => set({ currentSlideId: id, selection: [] }),
