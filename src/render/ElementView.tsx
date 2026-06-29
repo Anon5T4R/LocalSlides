@@ -311,6 +311,15 @@ export function ElementView({
     opacity: el.opacity ?? 1,
   };
 
+  // Mirror (flip) — combine with any rotation from geomStyle.
+  if (el.flipH || el.flipV) {
+    const tf: string[] = [];
+    if (el.geom.rotation) tf.push(`rotate(${el.geom.rotation}deg)`);
+    if (el.flipH) tf.push("scaleX(-1)");
+    if (el.flipV) tf.push("scaleY(-1)");
+    base.transform = tf.join(" ");
+  }
+
   // Entrance animation only plays in present mode. `both` holds the start frame
   // during the delay and the end frame afterwards.
   const anim =

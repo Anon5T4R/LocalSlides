@@ -38,7 +38,7 @@ export function SlideView({
       }}
     >
       {slide.elements.map((el) =>
-        hideIds?.has(el.id) ? null : (
+        hideIds?.has(el.id) || el.hidden ? null : (
           <ElementView key={el.id} el={el} theme={deck.theme} presenting={presenting} />
         )
       )}

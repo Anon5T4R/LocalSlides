@@ -18,6 +18,7 @@ import {
   Slide,
   Theme,
   Asset,
+  InkEl,
   InkStroke,
   StrokeStyle,
   newDeck,
@@ -283,22 +284,47 @@ export const useStore = create<SlidesState>((set, get) => ({
   setCommenting: (b) => set({ commenting: b, drawing: false, croppingId: null }),
 
   appendStroke: (stroke) => {
-    const { currentSlideId, deck } = get();
+    // Incoming points are absolute slide coords (from DrawLayer). We keep the ink
+    // element's box tight to its strokes (so the selection box isn't slide-sized),
+    // storing stroke points RELATIVE to that box origin.
+    const { currentSlideId } = get();
+    const pad = Math.ceil((stroke.width || 4) / 2) + 2;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i + 1 < stroke.points.length; i += 2) {
+      minX = Math.min(minX, stroke.points[i]);
+      maxX = Math.max(maxX, stroke.points[i]);
+      minY = Math.min(minY, stroke.points[i + 1]);
+      maxY = Math.max(maxY, stroke.points[i + 1]);
+    }
     get().apply((d) => {
       const slide = findSlide(d, currentSlideId);
       if (!slide) return;
-      let ink = slide.elements.find((e) => e.type === "ink");
+      const ink = slide.elements.find((e): e is InkEl => e.type === "ink");
       if (!ink) {
-        ink = {
+        const x = Math.floor(minX - pad), y = Math.floor(minY - pad);
+        const w = Math.ceil(maxX + pad) - x, h = Math.ceil(maxY + pad) - y;
+        slide.elements.push({
           id: makeId("ink"),
           type: "ink",
-          geom: { x: 0, y: 0, w: deck.size.w, h: deck.size.h, rotation: 0 },
-          base: { w: deck.size.w, h: deck.size.h },
-          strokes: [],
-        };
-        slide.elements.push(ink);
+          geom: { x, y, w, h, rotation: 0 },
+          base: { w, h },
+          strokes: [{ ...stroke, points: stroke.points.map((v, i) => (i % 2 ? v - y : v - x)) }],
+        });
+        return;
       }
-      if (ink.type === "ink") ink.strokes.push(stroke);
+      const ox = ink.geom.x, oy = ink.geom.y;
+      const nx = Math.floor(Math.min(ox, minX - pad));
+      const ny = Math.floor(Math.min(oy, minY - pad));
+      const nw = Math.ceil(Math.max(ox + ink.geom.w, maxX + pad)) - nx;
+      const nh = Math.ceil(Math.max(oy + ink.geom.h, maxY + pad)) - ny;
+      const sx = ox - nx, sy = oy - ny;
+      if (sx || sy || nw !== ink.geom.w || nh !== ink.geom.h) {
+        // Box grew/shifted: re-base existing relative points and the geom/base.
+        ink.strokes.forEach((s) => (s.points = s.points.map((v, i) => (i % 2 ? v + sy : v + sx))));
+        ink.geom = { ...ink.geom, x: nx, y: ny, w: nw, h: nh };
+        ink.base = { w: nw, h: nh };
+      }
+      ink.strokes.push({ ...stroke, points: stroke.points.map((v, i) => (i % 2 ? v - ny : v - nx)) });
     });
   },
   setZoom: (z) => set({ zoom: z }),

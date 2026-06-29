@@ -74,6 +74,8 @@ export interface Base {
   id: string;
   geom: Geom;
   locked?: boolean;
+  /** Hidden from the canvas/present/export (toggle via the Layers panel). */
+  hidden?: boolean;
   /** 0..1 */
   opacity?: number;
   /** Decorative ring drawn around the element ("contorno"). */
@@ -82,6 +84,9 @@ export interface Base {
   anim?: Anim;
   /** Elements sharing a groupId select and move together (flat grouping). */
   groupId?: string;
+  /** Mirror horizontally / vertically (visual only; geometry unchanged). */
+  flipH?: boolean;
+  flipV?: boolean;
 }
 
 export interface TextBox extends Base {

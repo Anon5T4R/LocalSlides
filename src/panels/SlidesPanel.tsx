@@ -84,6 +84,11 @@ export function SlidesPanel() {
           >
             <span className="slide-index">{i + 1}</span>
             <Thumbnail slide={slide} deck={deck} />
+            {!!slide.comments?.length && (
+              <span className="slide-cmt-badge" title={`${slide.comments.length} comentário(s)`}>
+                💬 {slide.comments.length}
+              </span>
+            )}
             <div className="slide-thumb-actions">
               <button
                 className="icon-btn sm"

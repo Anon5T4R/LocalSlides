@@ -21,6 +21,7 @@ import { applyTheme, loadSettings, saveSettings, addRecent, type Settings } from
 import { useLocalAi } from "./ai/useLocalAi";
 import { AiPanel } from "./ai/AiPanel";
 import { MediaPanel } from "./panels/MediaPanel";
+import { LayersPanel } from "./panels/LayersPanel";
 import { inTauri } from "./lib/env";
 import { PrintView } from "./export/PrintView";
 import { exportSlidePng } from "./export/png";
@@ -75,12 +76,14 @@ function App() {
   const setInkStyle = useStore((s) => s.setInkStyle);
   const commenting = useStore((s) => s.commenting);
   const setCommenting = useStore((s) => s.setCommenting);
+  const selectionCount = useStore((s) => s.selection.length);
 
   const [busy, setBusy] = useState<string>("");
   const [presenting, setPresenting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [showAi, setShowAi] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
+  const [showLayers, setShowLayers] = useState(false);
   const [showShapes, setShowShapes] = useState(false);
   const [rightWidth, setRightWidth] = useState(300);
   const [rightCollapsed, setRightCollapsed] = useState(false);
@@ -527,6 +530,22 @@ function App() {
           <button onClick={insertTable} title="Inserir tabela">Tabela</button>
           <span className="sep" />
           <button
+            className={"ai-toggle" + (!drawing && !commenting ? " active" : "")}
+            onClick={() => {
+              setDrawing(false);
+              setCommenting(false);
+            }}
+            title="Selecionar / mover (cursor)"
+          >
+            ↖ Selecionar
+          </button>
+          {selectionCount >= 2 && (
+            <>
+              <button onClick={group} title="Agrupar (Ctrl+G)">⧉ Agrupar</button>
+              <button onClick={ungroup} title="Desagrupar (Ctrl+Shift+G)">Desagrupar</button>
+            </>
+          )}
+          <button
             className={"ai-toggle" + (drawing ? " active" : "")}
             onClick={() => setDrawing(!drawing)}
             title="Desenhar à mão livre"
@@ -578,9 +597,22 @@ function App() {
           <button onClick={handleImportPptx} title="Importar PPTX (PowerPoint)">Importar PPTX</button>
           <span className="sep" />
           <button
+            className={"ai-toggle" + (showLayers ? " active" : "")}
+            onClick={() => {
+              setShowLayers((v) => !v);
+              setShowMedia(false);
+              setShowAi(false);
+              setRightCollapsed(false);
+            }}
+            title="Camadas do slide"
+          >
+            ▤ Camadas
+          </button>
+          <button
             className={"ai-toggle" + (showMedia ? " active" : "")}
             onClick={() => {
               setShowMedia((v) => !v);
+              setShowLayers(false);
               setShowAi(false);
               setRightCollapsed(false);
             }}
@@ -593,6 +625,7 @@ function App() {
             onClick={() => {
               setShowAi((v) => !v);
               setShowMedia(false);
+              setShowLayers(false);
               setRightCollapsed(false);
             }}
             title="IA local (gerar/conversar)"
@@ -627,7 +660,9 @@ function App() {
             <button className="right-collapse" onClick={() => setRightCollapsed(true)} title="Recolher painel">
               ⟩
             </button>
-            {showMedia ? (
+            {showLayers ? (
+              <LayersPanel onClose={() => setShowLayers(false)} />
+            ) : showMedia ? (
               <MediaPanel onClose={() => setShowMedia(false)} />
             ) : showAi ? (
               <AiPanel ai={ai} onClose={() => setShowAi(false)} />

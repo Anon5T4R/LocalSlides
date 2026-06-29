@@ -407,6 +407,25 @@ function ElementInspector({ el }: { el: Element }) {
         </>
       )}
 
+      {/* Transform: flip + quick rotate */}
+      <div className="insp-head">Transformar</div>
+      <div className="insp-zorder">
+        <button onClick={() => set((x) => (x.flipH = !x.flipH))} title="Espelhar horizontal">⇋</button>
+        <button onClick={() => set((x) => (x.flipV = !x.flipV))} title="Espelhar vertical">⥮</button>
+        <button
+          onClick={() => set((x) => (x.geom.rotation = ((x.geom.rotation ?? 0) + 90) % 360))}
+          title="Girar 90°"
+        >
+          ⟳
+        </button>
+        <button
+          onClick={() => set((x) => (x.geom.rotation = ((x.geom.rotation ?? 0) + 270) % 360))}
+          title="Girar -90°"
+        >
+          ⟲
+        </button>
+      </div>
+
       {/* Z-order */}
       <div className="insp-head">Camadas</div>
       <div className="insp-zorder">

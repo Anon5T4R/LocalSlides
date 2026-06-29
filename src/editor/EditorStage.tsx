@@ -381,7 +381,8 @@ export function EditorStage() {
           />
 
           {/* interaction hit boxes */}
-          {slide.elements.map((el) => (
+          {slide.elements.map((el) =>
+            el.hidden ? null : (
             <div
               key={el.id}
               onPointerDown={(ev) => startMove(el.id, ev)}
