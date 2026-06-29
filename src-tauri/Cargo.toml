@@ -1,6 +1,6 @@
 [package]
 name = "slides"
-version = "0.2.0"
+version = "0.3.0"
 description = "LocalSlides — apresentações offline com IA local"
 authors = ["Taylor"]
 edition = "2021"
