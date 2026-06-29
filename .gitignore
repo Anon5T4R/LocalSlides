@@ -26,5 +26,7 @@ dist-ssr
 # Tauri / Rust
 src-tauri/target
 
-# Native AI/runtime binaries (fetched, not versioned)
-src-tauri/binaries
+# Native AI/runtime binaries (fetched, not versioned).
+# Keep the placeholder so Tauri's `resources` glob is never empty.
+src-tauri/binaries/llama/*
+!src-tauri/binaries/llama/placeholder.txt

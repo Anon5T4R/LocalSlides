@@ -17,7 +17,9 @@ import {
   saveDeckAs,
   saveDeckTo,
 } from "./lib/deck-io";
-import { applyTheme, loadSettings, addRecent } from "./lib/settings";
+import { applyTheme, loadSettings, saveSettings, addRecent, type Settings } from "./lib/settings";
+import { useLocalAi } from "./ai/useLocalAi";
+import { AiPanel } from "./ai/AiPanel";
 import { inTauri } from "./lib/env";
 import { PrintView } from "./export/PrintView";
 import { exportSlidePng } from "./export/png";
@@ -46,6 +48,10 @@ function App() {
   const [busy, setBusy] = useState<string>("");
   const [presenting, setPresenting] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [showAi, setShowAi] = useState(false);
+
+  const [settings] = useState<Settings>(() => loadSettings());
+  const ai = useLocalAi(settings, (patch) => saveSettings(patch));
 
   useEffect(() => {
     applyTheme(loadSettings().theme);
@@ -393,6 +399,9 @@ function App() {
           <button onClick={handleExportPng} title="Exportar PNG (slide atual)">PNG</button>
           <button onClick={handleExportPptx} title="Exportar PPTX (PowerPoint)">PPTX</button>
           <span className="sep" />
+          <button className={"ai-toggle" + (showAi ? " active" : "")} onClick={() => setShowAi((v) => !v)} title="IA local (gerar/conversar)">
+            ✦ IA
+          </button>
           <button className="present-btn" onClick={() => setPresenting(true)} title="Apresentar (F5)">
             ▶ Apresentar
           </button>
@@ -407,7 +416,7 @@ function App() {
       <div className="workspace">
         <SlidesPanel />
         <EditorStage />
-        <Inspector />
+        {showAi ? <AiPanel ai={ai} onClose={() => setShowAi(false)} /> : <Inspector />}
       </div>
       {busy && <div className="busy">{busy}</div>}
       {presenting && <PresentMode onExit={() => setPresenting(false)} />}

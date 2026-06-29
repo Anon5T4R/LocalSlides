@@ -1,5 +1,5 @@
 use std::fs;
-use std::net::{SocketAddr, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::Mutex;
@@ -133,6 +133,18 @@ fn resolve_llama_server(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Err("llama-server não encontrado (runtime de IA ausente)".into())
 }
 
+/// LocalSlides prefers port 8100 (Writer=8088, Sheets=8099) so the suite's
+/// sidecars don't collide. If it's taken (another app, a stale server, or a
+/// second LocalSlides window), fall back to the next free port in the range.
+fn pick_free_port() -> Result<u16, String> {
+    for port in 8100u16..=8120 {
+        if TcpListener::bind(("127.0.0.1", port)).is_ok() {
+            return Ok(port);
+        }
+    }
+    Err("nenhuma porta livre entre 8100 e 8120 para a IA".into())
+}
+
 fn wait_for_port(port: u16, secs: u64) -> Result<(), String> {
     let addr: SocketAddr = ([127, 0, 0, 1], port).into();
     for _ in 0..(secs * 4) {
@@ -164,9 +176,9 @@ fn start_llm(
 
     let exe = resolve_llama_server(&app)?;
     let dir = exe.parent().ok_or("diretório do llama inválido")?.to_path_buf();
-    // LocalSlides uses port 8100 (Writer=8088, Sheets=8099) so the suite's
-    // sidecars never collide when several apps run at once.
-    let port: u16 = 8100;
+    // Prefer 8100 but fall back if it's busy (the bind is dropped immediately,
+    // so llama-server can grab the same port a moment later).
+    let port = pick_free_port()?;
 
     let mut cmd = Command::new(&exe);
     cmd.current_dir(&dir).args([

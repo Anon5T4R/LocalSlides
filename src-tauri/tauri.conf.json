@@ -31,6 +31,7 @@
         "installerIcon": "icons/icon.ico"
       }
     },
+    "resources": ["binaries/llama/*"],
     "fileAssociations": [
       {
         "ext": ["tslides"],

@@ -1,0 +1,4 @@
+Placeholder so the Tauri `resources: ["binaries/llama/*"]` glob always matches
+at least one file (an empty glob makes the build script fail). The real llama.cpp
+runtime is fetched here by scripts/fetch-llama.ps1 (Windows .zip) or
+scripts/fetch-llama.sh (Linux .tar.gz — the AppImage uses no zip) and is gitignored.

@@ -57,6 +57,15 @@ jobs:
       - name: Install JS deps
         run: npm ci
 
+      - name: Baixar runtime de IA (llama.cpp) — Windows
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/fetch-llama.ps1
+
+      - name: Baixar runtime de IA (llama.cpp) — Linux
+        if: matrix.platform == 'ubuntu-22.04'
+        run: bash scripts/fetch-llama.sh
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -67,11 +76,13 @@ jobs:
           releaseBody: |
             ## LocalSlides ${{ github.ref_name }}
 
-            Apresentações 100% offline, com canvas posicional e (em breve) IA local (llama.cpp / GGUF).
+            Apresentações 100% offline, com canvas posicional, export PDF/PNG/PPTX e IA local (llama.cpp / GGUF).
 
             ### Downloads
             - **Windows — Instalador:** `*-setup.exe` (instala no sistema)
             - **Linux — AppImage:** `*.AppImage` (dê permissão de execução e rode)
+
+            > **IA:** aponte para uma pasta com modelos `.gguf`, clique **✦ IA**, escaneie e inicie. Modelos GGUF não inclusos.
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: false
