@@ -13,6 +13,8 @@ import {
   type ShapeKind,
   type TransitionKind,
 } from "../model/deck";
+import { THEME_PRESETS, findThemePreset } from "../model/themes";
+import { LAYOUTS } from "../model/layouts";
 
 const ANIMS: { value: AnimKind; label: string }[] = [
   { value: "none", label: "Nenhuma" },
@@ -309,15 +311,56 @@ function SlideInspector() {
   const deck = useStore((s) => s.deck);
   const currentSlideId = useStore((s) => s.currentSlideId);
   const updateCurrentSlide = useStore((s) => s.updateCurrentSlide);
+  const setTheme = useStore((s) => s.setTheme);
+  const applyLayout = useStore((s) => s.applyLayout);
+  const addSlide = useStore((s) => s.addSlide);
   const slide = findSlide(deck, currentSlideId);
   if (!slide) return null;
 
   const bgColor = slide.background?.kind === "solid" ? slide.background.color : deck.theme.colors.bg;
   const onBg = (e: ChangeEvent<HTMLInputElement>) =>
     updateCurrentSlide((s) => (s.background = { kind: "solid", color: e.target.value }));
+  const activeTheme = findThemePreset(deck.theme);
 
   return (
     <>
+      <div className="insp-head">Tema da apresentação</div>
+      <div className="insp-themes">
+        {THEME_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            className={"theme-swatch" + (activeTheme?.id === p.id ? " active" : "")}
+            title={p.name}
+            onClick={() => setTheme(p.theme)}
+            style={{ background: p.theme.colors.bg, color: p.theme.colors.text }}
+          >
+            <span className="theme-dot" style={{ background: p.theme.colors.accent1 }} />
+            <span className="theme-dot" style={{ background: p.theme.colors.accent2 }} />
+            <span className="theme-name" style={{ fontFamily: p.theme.fonts.heading }}>
+              {p.name}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="insp-head">Layout do slide</div>
+      <div className="insp-layouts">
+        {LAYOUTS.map((l) => (
+          <div key={l.id} className="insp-layout-row">
+            <button className="insp-mini" onClick={() => applyLayout(l.id)} title={`Aplicar "${l.name}" a este slide`}>
+              {l.name}
+            </button>
+            <button
+              className="insp-mini insp-layout-add"
+              onClick={() => addSlide(l.id)}
+              title={`Novo slide "${l.name}"`}
+            >
+              ＋
+            </button>
+          </div>
+        ))}
+      </div>
+
       <div className="insp-head">Slide</div>
       <Row label="Fundo">
         <input type="color" value={bgColor} onChange={onBg} />

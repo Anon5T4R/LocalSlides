@@ -52,7 +52,7 @@ export function SlidesPanel() {
     <div className="slides-panel">
       <div className="slides-panel-head">
         <span>Slides</span>
-        <button className="icon-btn" title="Novo slide" onClick={addSlide}>
+        <button className="icon-btn" title="Novo slide" onClick={() => addSlide()}>
           ＋
         </button>
       </div>

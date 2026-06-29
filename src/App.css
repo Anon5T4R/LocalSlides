@@ -688,3 +688,61 @@ body {
   align-items: flex-end;
 }
 .ai-input textarea { flex: 1; }
+
+/* --- Fase 6: temas + layouts ricos (no Inspector do slide) --- */
+.insp-themes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.theme-swatch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  overflow: hidden;
+  font: inherit;
+}
+.theme-swatch.active {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+.theme-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.theme-name {
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.insp-layouts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.insp-layout-row {
+  display: flex;
+  gap: 4px;
+}
+.insp-layout-row .insp-mini:first-child {
+  flex: 1 1 auto;
+  text-align: left;
+}
+.insp-layout-add {
+  flex: 0 0 28px;
+  padding: 0;
+  text-align: center;
+}

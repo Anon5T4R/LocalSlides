@@ -387,7 +387,7 @@ function App() {
           <button onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)">↶</button>
           <button onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)">↷</button>
           <span className="sep" />
-          <button onClick={addSlide} title="Novo slide (Ctrl+M)">＋ Slide</button>
+          <button onClick={() => addSlide()} title="Novo slide (Ctrl+M)">＋ Slide</button>
           <span className="sep" />
           <button onClick={insertText} title="Caixa de texto">Texto</button>
           <button onClick={insertImage} title="Inserir imagem">Imagem</button>

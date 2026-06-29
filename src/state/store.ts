@@ -16,11 +16,13 @@ import {
   Deck,
   Element,
   Slide,
+  Theme,
   newDeck,
   newSlide,
   findSlide,
   makeId,
 } from "../model/deck";
+import { buildLayout } from "../model/layouts";
 
 const HISTORY_LIMIT = 100;
 
@@ -69,6 +71,7 @@ export interface SlidesState {
   loadDeck: (deck: Deck, filePath: string | null) => void;
   resetDeck: () => void;
   markSaved: (filePath?: string) => void;
+  setTheme: (theme: Theme) => void;
 
   // navigation & selection
   setCurrentSlide: (id: string) => void;
@@ -78,7 +81,8 @@ export interface SlidesState {
   clearSelection: () => void;
 
   // slide ops (undoable)
-  addSlide: () => void;
+  addSlide: (layoutId?: string) => void;
+  applyLayout: (layoutId: string) => void;
   duplicateSlide: (id: string) => void;
   deleteSlide: (id: string) => void;
   moveSlide: (id: string, toIndex: number) => void;
@@ -213,6 +217,11 @@ export const useStore = create<SlidesState>((set, get) => ({
   markSaved: (filePath) =>
     set((state) => ({ dirty: false, filePath: filePath ?? state.filePath })),
 
+  setTheme: (theme) =>
+    get().apply((d) => {
+      d.theme = structuredClone(theme);
+    }),
+
   setCurrentSlide: (id) => set({ currentSlideId: id, selection: [] }),
   setZoom: (z) => set({ zoom: z }),
   select: (ids) => set({ selection: ids }),
@@ -225,14 +234,25 @@ export const useStore = create<SlidesState>((set, get) => ({
     }),
   clearSelection: () => set({ selection: [] }),
 
-  addSlide: () => {
+  addSlide: (layoutId) => {
     const { currentSlideId, deck } = get();
     const idx = deck.slides.findIndex((s) => s.id === currentSlideId);
-    const slide = newSlide(true);
+    const slide: Slide = layoutId
+      ? { id: makeId("slide"), elements: buildLayout(layoutId, deck) }
+      : newSlide(true);
     get().apply((d) => {
       d.slides.splice(idx < 0 ? d.slides.length : idx + 1, 0, slide);
     });
     set({ currentSlideId: slide.id, selection: [] });
+  },
+
+  applyLayout: (layoutId) => {
+    const { currentSlideId } = get();
+    get().apply((d) => {
+      const slide = findSlide(d, currentSlideId);
+      if (slide) slide.elements = buildLayout(layoutId, d);
+    });
+    set({ selection: [] });
   },
 
   duplicateSlide: (id) => {
