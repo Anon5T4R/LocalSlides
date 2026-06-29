@@ -24,6 +24,7 @@ import { inTauri } from "./lib/env";
 import { PrintView } from "./export/PrintView";
 import { exportSlidePng } from "./export/png";
 import { exportDeckPptx } from "./export/pptx";
+import { importPptx } from "./lib/pptx-io";
 import { findSlide } from "./model/deck";
 import "./App.css";
 
@@ -192,6 +193,19 @@ function App() {
       setBusy("");
     }
   }, []);
+
+  const handleImportPptx = useCallback(async () => {
+    if (dirty && !window.confirm("Há alterações não salvas. Importar um PPTX mesmo assim?")) return;
+    try {
+      setBusy("Importando PPTX…");
+      const res = await importPptx();
+      if (res) loadDeck(res.deck, null);
+    } catch (e) {
+      window.alert(`Não foi possível importar o PPTX:\n${e}`);
+    } finally {
+      setBusy("");
+    }
+  }, [dirty, loadDeck]);
 
   const handleExportPptx = useCallback(async () => {
     try {
@@ -398,6 +412,7 @@ function App() {
           <button onClick={handleExportPdf} title="Exportar PDF (todos os slides)">PDF</button>
           <button onClick={handleExportPng} title="Exportar PNG (slide atual)">PNG</button>
           <button onClick={handleExportPptx} title="Exportar PPTX (PowerPoint)">PPTX</button>
+          <button onClick={handleImportPptx} title="Importar PPTX (PowerPoint)">Importar PPTX</button>
           <span className="sep" />
           <button className={"ai-toggle" + (showAi ? " active" : "")} onClick={() => setShowAi((v) => !v)} title="IA local (gerar/conversar)">
             ✦ IA
