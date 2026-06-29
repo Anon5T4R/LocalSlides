@@ -1,0 +1,21 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App tile -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#bg)"/>
+
+  <!-- Presentation screen -->
+  <rect x="196" y="236" width="632" height="424" rx="40" fill="#ffffff"/>
+
+  <!-- Play triangle (present) -->
+  <path d="M455 360 L455 536 L611 448 Z" fill="#2563eb"/>
+
+  <!-- Stand -->
+  <rect x="492" y="660" width="40" height="78" fill="#ffffff"/>
+  <rect x="414" y="724" width="196" height="40" rx="20" fill="#ffffff"/>
+</svg>
