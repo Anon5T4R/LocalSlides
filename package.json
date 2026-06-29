@@ -19,6 +19,7 @@
     "@tiptap/pm": "^3.27.1",
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
+    "html-to-image": "^1.11.13",
     "immer": "^10.1.1",
     "jszip": "^3.10.1",
     "react": "^19.1.0",

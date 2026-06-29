@@ -18,12 +18,11 @@ import {
   saveDeckTo,
 } from "./lib/deck-io";
 import { applyTheme, loadSettings, addRecent } from "./lib/settings";
+import { inTauri } from "./lib/env";
+import { PrintView } from "./export/PrintView";
+import { exportSlidePng } from "./export/png";
+import { findSlide } from "./model/deck";
 import "./App.css";
-
-/** Tauri's invoke throws outside the native shell (e.g. plain browser preview). */
-function inTauri(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
 
 function App() {
   const deck = useStore((s) => s.deck);
@@ -45,6 +44,7 @@ function App() {
 
   const [busy, setBusy] = useState<string>("");
   const [presenting, setPresenting] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     applyTheme(loadSettings().theme);
@@ -142,6 +142,49 @@ function App() {
       window.alert(`Não foi possível inserir o vídeo:\n${e}`);
     }
   }, [addElement]);
+
+  // ---- Export ----
+  const handleExportPdf = useCallback(() => {
+    setPrinting(true);
+  }, []);
+
+  // When the print view mounts, give it a couple frames to paint, then print.
+  useEffect(() => {
+    if (!printing) return;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      setPrinting(false);
+    };
+    window.addEventListener("afterprint", finish);
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        window.print();
+        // Fallback in case afterprint never fires (some webviews).
+        setTimeout(finish, 1000);
+      })
+    );
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("afterprint", finish);
+    };
+  }, [printing]);
+
+  const handleExportPng = useCallback(async () => {
+    const st = useStore.getState();
+    const slide = findSlide(st.deck, st.currentSlideId);
+    if (!slide) return;
+    const idx = st.deck.slides.findIndex((s) => s.id === slide.id);
+    try {
+      setBusy("Exportando PNG…");
+      await exportSlidePng(slide, st.deck, idx);
+    } catch (e) {
+      window.alert(`Não foi possível exportar PNG:\n${e}`);
+    } finally {
+      setBusy("");
+    }
+  }, []);
 
   // ---- Debounced autosave (only for decks already on disk) ----
   const autosaveTimer = useRef<number | null>(null);
@@ -334,6 +377,9 @@ function App() {
           <button onClick={insertShape} title="Inserir forma">Forma</button>
           <button onClick={insertTable} title="Inserir tabela">Tabela</button>
           <span className="sep" />
+          <button onClick={handleExportPdf} title="Exportar PDF (todos os slides)">PDF</button>
+          <button onClick={handleExportPng} title="Exportar PNG (slide atual)">PNG</button>
+          <span className="sep" />
           <button className="present-btn" onClick={() => setPresenting(true)} title="Apresentar (F5)">
             ▶ Apresentar
           </button>
@@ -352,6 +398,7 @@ function App() {
       </div>
       {busy && <div className="busy">{busy}</div>}
       {presenting && <PresentMode onExit={() => setPresenting(false)} />}
+      {printing && <PrintView deck={deck} />}
     </div>
   );
 }

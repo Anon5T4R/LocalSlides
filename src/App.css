@@ -538,6 +538,40 @@ body {
   to { transform: translateX(0); }
 }
 
+/* ---- Print / PDF export ---- */
+.print-root {
+  position: absolute;
+  left: -99999px;
+  top: 0;
+}
+.print-page {
+  position: relative;
+  background: #fff;
+}
+@media print {
+  /* Hide the app; show only the print view, page by page. */
+  body * {
+    visibility: hidden;
+  }
+  .print-root,
+  .print-root * {
+    visibility: visible;
+  }
+  .print-root {
+    left: 0;
+    top: 0;
+    position: absolute;
+  }
+  .print-page {
+    page-break-after: always;
+    break-after: page;
+  }
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}
+
 /* ---- Busy toast ---- */
 .busy {
   position: fixed;
