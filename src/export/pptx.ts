@@ -41,18 +41,16 @@ function fillColor(fill: Fill | undefined): string | null {
   return hex(fill.color);
 }
 
-const DASH: Record<NonNullable<Stroke["dash"]>, "solid" | "dash" | "sysDot"> = {
-  solid: "solid",
-  dash: "dash",
-  dot: "sysDot",
-};
-
 function strokeLine(s: Stroke | undefined) {
   if (!s) return undefined;
+  // chalk/smudge have no PPTX equivalent → render as a solid line.
+  const style = s.style ?? s.dash ?? "solid";
+  const dashType: "solid" | "dash" | "sysDot" =
+    style === "dash" ? "dash" : style === "dot" ? "sysDot" : "solid";
   return {
     color: hex(s.color),
     width: Math.max(0.5, s.width * 0.75), // px → pt
-    dashType: DASH[s.dash ?? "solid"],
+    dashType,
   };
 }
 

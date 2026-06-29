@@ -7,7 +7,7 @@ import { EditorStage } from "./editor/EditorStage";
 import { SlidesPanel } from "./panels/SlidesPanel";
 import { Inspector } from "./panels/Inspector";
 import { PresentMode } from "./present/PresentMode";
-import { newFreeTextBox, newImage, newShape, newTable, newVideo, type ShapeKind } from "./model/deck";
+import { newFreeTextBox, newImage, newShape, newTable, newVideo, type ShapeKind, type StrokeStyle } from "./model/deck";
 import { pickImageDataUri, pickVideoDataUri, imageDataUrlFromPath } from "./lib/media";
 import {
   DeckFile,
@@ -71,6 +71,8 @@ function App() {
   const setInkColor = useStore((s) => s.setInkColor);
   const inkWidth = useStore((s) => s.inkWidth);
   const setInkWidth = useStore((s) => s.setInkWidth);
+  const inkStyle = useStore((s) => s.inkStyle);
+  const setInkStyle = useStore((s) => s.setInkStyle);
   const commenting = useStore((s) => s.commenting);
   const setCommenting = useStore((s) => s.setCommenting);
 
@@ -549,6 +551,17 @@ function App() {
                 title={`Espessura: ${inkWidth}px`}
                 style={{ width: 70 }}
               />
+              <select
+                value={inkStyle}
+                onChange={(e) => setInkStyle(e.target.value as StrokeStyle)}
+                title="Estilo do traço"
+              >
+                <option value="solid">Normal</option>
+                <option value="dash">Tracejado</option>
+                <option value="dot">Pontilhado</option>
+                <option value="chalk">Giz</option>
+                <option value="smudge">Esfumaçado</option>
+              </select>
             </>
           )}
           <button

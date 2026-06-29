@@ -10,6 +10,7 @@ import type { Size } from "../model/deck";
 export function DrawLayer({ size, scale }: { size: Size; scale: number }) {
   const color = useStore((s) => s.inkColor);
   const width = useStore((s) => s.inkWidth);
+  const inkStyle = useStore((s) => s.inkStyle);
   const appendStroke = useStore((s) => s.appendStroke);
 
   const ref = useRef<HTMLDivElement>(null);
@@ -44,7 +45,8 @@ export function DrawLayer({ size, scale }: { size: Size; scale: number }) {
   const onUp = () => {
     if (!drawing.current) return;
     drawing.current = false;
-    if (ptsRef.current.length >= 2) appendStroke({ points: ptsRef.current, color, width });
+    if (ptsRef.current.length >= 2)
+      appendStroke({ points: ptsRef.current, color, width, style: inkStyle });
     ptsRef.current = [];
     setPts([]);
   };

@@ -19,6 +19,7 @@ import {
   Theme,
   Asset,
   InkStroke,
+  StrokeStyle,
   newDeck,
   newSlide,
   newAsset,
@@ -60,6 +61,7 @@ export interface SlidesState {
   drawing: boolean;
   inkColor: string;
   inkWidth: number;
+  inkStyle: StrokeStyle;
   /** When true, the next canvas click drops a comment pin. */
   commenting: boolean;
   /** 0 = fit-to-container (computed by the canvas); otherwise a literal scale. */
@@ -94,6 +96,7 @@ export interface SlidesState {
   setDrawing: (b: boolean) => void;
   setInkColor: (c: string) => void;
   setInkWidth: (n: number) => void;
+  setInkStyle: (s: StrokeStyle) => void;
   setCommenting: (b: boolean) => void;
   /** Append a freehand stroke to the current slide's ink layer (creates one if needed). */
   appendStroke: (stroke: InkStroke) => void;
@@ -158,6 +161,7 @@ export const useStore = create<SlidesState>((set, get) => ({
   drawing: false,
   inkColor: "#ef4444",
   inkWidth: 4,
+  inkStyle: "solid",
   commenting: false,
   zoom: 0,
 
@@ -275,6 +279,7 @@ export const useStore = create<SlidesState>((set, get) => ({
   setDrawing: (b) => set({ drawing: b, croppingId: null, commenting: false }),
   setInkColor: (c) => set({ inkColor: c }),
   setInkWidth: (n) => set({ inkWidth: n }),
+  setInkStyle: (s) => set({ inkStyle: s }),
   setCommenting: (b) => set({ commenting: b, drawing: false, croppingId: null }),
 
   appendStroke: (stroke) => {

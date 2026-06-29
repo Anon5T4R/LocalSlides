@@ -2,9 +2,17 @@
 // the zoom scale; here everything is in logical px. Used by both the editor
 // stage and the (non-interactive) thumbnails.
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { Element, Geom, InkEl, ShapeEl, Stroke, TableEl, Theme } from "../model/deck";
 import { RenderPM } from "./renderPM";
+import {
+  StrokeDefs,
+  dashArrayFor,
+  effectiveStyle,
+  filterIdFor,
+  imageOutlineFilter,
+  needsDefs,
+} from "./strokeStyle";
 
 export function geomStyle(geom: Geom): CSSProperties {
   return {
@@ -18,11 +26,45 @@ export function geomStyle(geom: Geom): CSSProperties {
   };
 }
 
-/** Decorative outline ("contorno") rendered as a CSS outline so it never shifts layout. */
-function outlineStyle(outline: Stroke | undefined): CSSProperties {
-  if (!outline || outline.width <= 0) return {};
-  const style = outline.dash === "dash" ? "dashed" : outline.dash === "dot" ? "dotted" : "solid";
-  return { outline: `${outline.width}px ${style} ${outline.color}`, outlineOffset: 0 };
+/**
+ * Decorative outline ("contorno") as an SVG rect overlay positioned over the
+ * element box, so it supports every stroke style (dash/dot/chalk/smudge). Images
+ * use a silhouette outline instead (see ElementView), not this rectangle.
+ */
+function OutlineLayer({
+  geom,
+  outline,
+  opacity,
+  anim,
+}: {
+  geom: Geom;
+  outline: Stroke;
+  opacity?: number;
+  anim?: string;
+}) {
+  const style = effectiveStyle(outline);
+  const w = Math.max(1, outline.width);
+  const filterId = filterIdFor(style);
+  return (
+    <svg
+      width={geom.w}
+      height={geom.h}
+      style={{ ...geomStyle(geom), overflow: "visible", pointerEvents: "none", opacity, animation: anim }}
+    >
+      {needsDefs(style) && <StrokeDefs />}
+      <rect
+        x={w / 2}
+        y={w / 2}
+        width={geom.w - w}
+        height={geom.h - w}
+        fill="none"
+        stroke={outline.color}
+        strokeWidth={w}
+        strokeDasharray={dashArrayFor(style, w)}
+        filter={filterId ? `url(#${filterId})` : undefined}
+      />
+    </svg>
+  );
 }
 
 /** Points for a regular n-gon inscribed in the box, starting at the top. */
@@ -61,6 +103,7 @@ function strokePoints(pts: number[]): string {
 }
 
 function InkSvg({ el }: { el: InkEl }) {
+  const anyTexture = el.strokes.some((s) => needsDefs(effectiveStyle(s)));
   return (
     <svg
       width="100%"
@@ -69,22 +112,29 @@ function InkSvg({ el }: { el: InkEl }) {
       preserveAspectRatio="none"
       style={{ display: "block", overflow: "visible" }}
     >
-      {el.strokes.map((s, i) =>
-        s.points.length >= 4 ? (
+      {anyTexture && <StrokeDefs />}
+      {el.strokes.map((s, i) => {
+        const style = effectiveStyle(s);
+        const filterId = filterIdFor(style);
+        const common = {
+          stroke: s.color,
+          strokeDasharray: dashArrayFor(style, s.width),
+          filter: filterId ? `url(#${filterId})` : undefined,
+        };
+        return s.points.length >= 4 ? (
           <polyline
             key={i}
             points={strokePoints(s.points)}
             fill="none"
-            stroke={s.color}
             strokeWidth={s.width}
             strokeLinecap="round"
             strokeLinejoin="round"
+            {...common}
           />
         ) : s.points.length === 2 ? (
-          // A dot (single tap).
           <circle key={i} cx={s.points[0]} cy={s.points[1]} r={s.width / 2} fill={s.color} />
-        ) : null
-      )}
+        ) : null;
+      })}
     </svg>
   );
 }
@@ -95,9 +145,16 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
   const fill = !el.fill ? "#cbd5e1" : el.fill.kind === "none" ? "none" : el.fill.color;
   const stroke = el.stroke?.color ?? "none";
   const sw = el.stroke?.width ?? 0;
-  const dash =
-    el.stroke?.dash === "dash" ? "12 8" : el.stroke?.dash === "dot" ? "2 6" : undefined;
-  const common = { fill, stroke, strokeWidth: sw, strokeDasharray: dash };
+  const style = effectiveStyle(el.stroke);
+  const dash = el.stroke ? dashArrayFor(style, sw || 1) : undefined;
+  const filterId = el.stroke ? filterIdFor(style) : undefined;
+  const common = {
+    fill,
+    stroke,
+    strokeWidth: sw,
+    strokeDasharray: dash,
+    filter: filterId ? `url(#${filterId})` : undefined,
+  };
   // Inset so the stroke stays inside the box.
   const i = sw / 2;
   const iw = w - sw, ih = h - sw;
@@ -126,7 +183,7 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
       shape = <polygon points={starPoints(w, h)} {...common} />;
       break;
     case "line":
-      shape = <line x1={i} y1={h / 2} x2={w - i} y2={h / 2} stroke={stroke === "none" ? fill : stroke} strokeWidth={Math.max(sw, 3)} strokeDasharray={dash} strokeLinecap="round" />;
+      shape = <line x1={i} y1={h / 2} x2={w - i} y2={h / 2} stroke={stroke === "none" ? fill : stroke} strokeWidth={Math.max(sw, 3)} strokeDasharray={dash} filter={filterId ? `url(#${filterId})` : undefined} strokeLinecap="round" />;
       break;
     case "arrow": {
       // Right-pointing block arrow (rotate the element for other directions).
@@ -193,6 +250,7 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
   }
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", overflow: "visible" }}>
+      {needsDefs(style) && <StrokeDefs />}
       {shape}
     </svg>
   );
@@ -251,15 +309,24 @@ export function ElementView({
   const base: CSSProperties = {
     ...geomStyle(el.geom),
     opacity: el.opacity ?? 1,
-    ...outlineStyle(el.outline),
   };
 
   // Entrance animation only plays in present mode. `both` holds the start frame
   // during the delay and the end frame afterwards.
-  if (presenting && el.anim && el.anim.kind !== "none") {
-    base.animation = `anim-${el.anim.kind} ${el.anim.duration}s ease ${el.anim.delay}s both`;
-  }
+  const anim =
+    presenting && el.anim && el.anim.kind !== "none"
+      ? `anim-${el.anim.kind} ${el.anim.duration}s ease ${el.anim.delay}s both`
+      : undefined;
+  if (anim) base.animation = anim;
 
+  // Images outline their alpha silhouette (Canva sticker/shadow); every other
+  // type gets the rectangular SVG outline overlay appended at the end.
+  const imgOutline =
+    el.type === "image" && el.outline && el.outline.width > 0
+      ? imageOutlineFilter(el.outline)
+      : undefined;
+
+  const body: ReactNode = (() => {
   if (el.type === "text") {
     const justify =
       el.vAlign === "middle" ? "center" : el.vAlign === "bottom" ? "flex-end" : "flex-start";
@@ -313,7 +380,7 @@ export function ElementView({
         src={el.src}
         alt=""
         draggable={false}
-        style={{ ...base, objectFit: el.fit ?? "contain", userSelect: "none" }}
+        style={{ ...base, objectFit: el.fit ?? "contain", userSelect: "none", filter: imgOutline }}
       />
     );
   }
@@ -370,5 +437,19 @@ export function ElementView({
         </div>
       )}
     </div>
+  );
+  })();
+
+  // Rectangular decorative outline (all types except images, which outline alpha).
+  const rectOutline =
+    el.type !== "image" && el.outline && el.outline.width > 0 ? (
+      <OutlineLayer geom={el.geom} outline={el.outline} opacity={el.opacity} anim={anim} />
+    ) : null;
+
+  return (
+    <>
+      {body}
+      {rectOutline}
+    </>
   );
 }

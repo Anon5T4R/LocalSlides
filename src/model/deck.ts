@@ -38,10 +38,15 @@ export type Fill =
   | { kind: "solid"; color: string }
   | { kind: "none" };
 
+/** Visual style of a line/stroke: plain, dashed, dotted, chalky, or smudged. */
+export type StrokeStyle = "solid" | "dash" | "dot" | "chalk" | "smudge";
+
 export interface Stroke {
   color: string;
   width: number;
+  /** @deprecated kept for old files; superseded by `style`. */
   dash?: "solid" | "dash" | "dot";
+  style?: StrokeStyle;
 }
 
 // --- Geometry & elements -----------------------------------------------------
@@ -157,6 +162,7 @@ export interface InkStroke {
   points: number[];
   color: string;
   width: number;
+  style?: StrokeStyle;
 }
 
 /** A freehand drawing layer. Points live in `base` coords; geom scales/positions it. */

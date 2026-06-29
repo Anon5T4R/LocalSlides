@@ -11,6 +11,7 @@ import {
   type AnimKind,
   type Element,
   type ShapeKind,
+  type StrokeStyle,
   type TransitionKind,
 } from "../model/deck";
 import { THEME_PRESETS, findThemePreset } from "../model/themes";
@@ -29,6 +30,14 @@ const TRANSITIONS: { value: TransitionKind; label: string }[] = [
   { value: "fade", label: "Fade" },
   { value: "slide", label: "Deslizar" },
   { value: "push", label: "Empurrar" },
+];
+
+const STROKE_STYLES: { value: StrokeStyle; label: string }[] = [
+  { value: "solid", label: "Normal" },
+  { value: "dash", label: "Tracejado" },
+  { value: "dot", label: "Pontilhado" },
+  { value: "chalk", label: "Giz" },
+  { value: "smudge", label: "Esfumaçado" },
 ];
 
 const SHAPES: { value: ShapeKind; label: string }[] = [
@@ -147,14 +156,14 @@ function ElementInspector({ el }: { el: Element }) {
           </Row>
           <Row label="Estilo">
             <select
-              value={el.outline.dash ?? "solid"}
-              onChange={(e) =>
-                set((x) => x.outline && (x.outline.dash = e.target.value as "solid" | "dash" | "dot"))
-              }
+              value={el.outline.style ?? el.outline.dash ?? "solid"}
+              onChange={(e) => set((x) => x.outline && (x.outline.style = e.target.value as StrokeStyle))}
             >
-              <option value="solid">Sólido</option>
-              <option value="dash">Tracejado</option>
-              <option value="dot">Pontilhado</option>
+              {STROKE_STYLES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
             </select>
           </Row>
         </>
@@ -324,6 +333,18 @@ function ElementInspector({ el }: { el: Element }) {
                   onChange={(e) => set((x) => x.type === "shape" && x.stroke && (x.stroke.width = Number(e.target.value)))}
                 />
                 <span className="insp-num">{el.stroke.width}px</span>
+              </Row>
+              <Row label="Estilo">
+                <select
+                  value={el.stroke.style ?? el.stroke.dash ?? "solid"}
+                  onChange={(e) => set((x) => x.type === "shape" && x.stroke && (x.stroke.style = e.target.value as StrokeStyle))}
+                >
+                  {STROKE_STYLES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
               </Row>
             </>
           )}
