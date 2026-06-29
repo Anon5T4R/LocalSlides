@@ -65,6 +65,14 @@ function App() {
   const addAsset = useStore((s) => s.addAsset);
   const group = useStore((s) => s.group);
   const ungroup = useStore((s) => s.ungroup);
+  const drawing = useStore((s) => s.drawing);
+  const setDrawing = useStore((s) => s.setDrawing);
+  const inkColor = useStore((s) => s.inkColor);
+  const setInkColor = useStore((s) => s.setInkColor);
+  const inkWidth = useStore((s) => s.inkWidth);
+  const setInkWidth = useStore((s) => s.setInkWidth);
+  const commenting = useStore((s) => s.commenting);
+  const setCommenting = useStore((s) => s.setCommenting);
 
   const [busy, setBusy] = useState<string>("");
   const [presenting, setPresenting] = useState(false);
@@ -515,6 +523,41 @@ function App() {
             )}
           </div>
           <button onClick={insertTable} title="Inserir tabela">Tabela</button>
+          <span className="sep" />
+          <button
+            className={"ai-toggle" + (drawing ? " active" : "")}
+            onClick={() => setDrawing(!drawing)}
+            title="Desenhar à mão livre"
+          >
+            ✏ Desenhar
+          </button>
+          {drawing && (
+            <>
+              <input
+                type="color"
+                className="ink-color"
+                value={inkColor}
+                onChange={(e) => setInkColor(e.target.value)}
+                title="Cor do traço"
+              />
+              <input
+                type="range"
+                min={1}
+                max={24}
+                value={inkWidth}
+                onChange={(e) => setInkWidth(Number(e.target.value))}
+                title={`Espessura: ${inkWidth}px`}
+                style={{ width: 70 }}
+              />
+            </>
+          )}
+          <button
+            className={"ai-toggle" + (commenting ? " active" : "")}
+            onClick={() => setCommenting(!commenting)}
+            title="Adicionar comentário (clique no slide)"
+          >
+            💬 Comentar
+          </button>
           <span className="sep" />
           <button onClick={handleExportPdf} title="Exportar PDF (todos os slides)">PDF</button>
           <button onClick={handleExportPng} title="Exportar PNG (slide atual)">PNG</button>

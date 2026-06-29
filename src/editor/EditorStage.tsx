@@ -24,6 +24,8 @@ import { computeSnap } from "../interactions/snapping";
 import { TextBoxEditor } from "./TextBoxEditor";
 import { TableCellEditor } from "./TableCellEditor";
 import { CropOverlay } from "./CropOverlay";
+import { DrawLayer } from "./DrawLayer";
+import { CommentsLayer } from "./CommentsLayer";
 
 const FIT_MARGIN = 48;
 
@@ -52,6 +54,10 @@ export function EditorStage() {
   const selection = useStore((s) => s.selection);
   const croppingId = useStore((s) => s.croppingId);
   const setCropping = useStore((s) => s.setCropping);
+  const drawing = useStore((s) => s.drawing);
+  const commenting = useStore((s) => s.commenting);
+  const setCommenting = useStore((s) => s.setCommenting);
+  const addComment = useStore((s) => s.addComment);
   const zoom = useStore((s) => s.zoom);
   const select = useStore((s) => s.select);
   const clearSelection = useStore((s) => s.clearSelection);
@@ -69,6 +75,7 @@ export function EditorStage() {
   const [editingCell, setEditingCell] = useState<CellTarget | null>(null);
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [activeComment, setActiveComment] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     const el = stageRef.current;
@@ -409,8 +416,33 @@ export function EditorStage() {
             <CropOverlay el={cropEl} scale={scale} onDone={() => setCropping(null)} />
           )}
 
+          {/* freehand drawing surface */}
+          {drawing && <DrawLayer size={deck.size} scale={scale} />}
+
+          {/* comment placement capture (one-shot) */}
+          {commenting && (
+            <div
+              style={{ position: "absolute", inset: 0, zIndex: 19, cursor: "crosshair" }}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                const p = toLogical(e.clientX, e.clientY);
+                const id = addComment(p.x, p.y);
+                setActiveComment(id);
+                setCommenting(false);
+              }}
+            />
+          )}
+
+          {/* comment pins + popovers (editor-only) */}
+          <CommentsLayer
+            comments={slide.comments ?? []}
+            scale={scale}
+            activeId={activeComment}
+            onActivate={setActiveComment}
+          />
+
           {/* resize + rotate handles for a single selection */}
-          {selectedEl && !editingId && !editingCell && !croppingId && (
+          {selectedEl && !editingId && !editingCell && !croppingId && !drawing && !commenting && (
             <SelectionLayer
               geom={selectedEl.geom}
               scale={scale}

@@ -152,7 +152,21 @@ export interface TableEl extends Base {
   headerFill?: string;
 }
 
-export type Element = TextBox | ImageEl | VideoEl | ShapeEl | TableEl;
+/** A single freehand stroke: flat [x0,y0,x1,y1,…] points in the ink base coords. */
+export interface InkStroke {
+  points: number[];
+  color: string;
+  width: number;
+}
+
+/** A freehand drawing layer. Points live in `base` coords; geom scales/positions it. */
+export interface InkEl extends Base {
+  type: "ink";
+  base: Size;
+  strokes: InkStroke[];
+}
+
+export type Element = TextBox | ImageEl | VideoEl | ShapeEl | TableEl | InkEl;
 
 /** Element types that reference a media file (image/video) in the zip. */
 export type MediaEl = ImageEl | VideoEl;
@@ -181,6 +195,15 @@ export interface Transition {
   duration: number;
 }
 
+/** An authoring comment pinned to a point on the slide (not shown when presenting). */
+export interface Comment {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  resolved?: boolean;
+}
+
 export interface Slide {
   id: string;
   /** Overrides the theme/layout background for this slide. */
@@ -189,6 +212,8 @@ export interface Slide {
   elements: Element[];
   notes?: ProseMirrorJSON;
   transition?: Transition;
+  /** Authoring comments (editor-only). */
+  comments?: Comment[];
 }
 
 /** A reusable media asset uploaded once and inserted many times. */

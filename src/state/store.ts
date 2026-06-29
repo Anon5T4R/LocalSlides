@@ -18,6 +18,7 @@ import {
   Slide,
   Theme,
   Asset,
+  InkStroke,
   newDeck,
   newSlide,
   newAsset,
@@ -55,6 +56,12 @@ export interface SlidesState {
   currentSlideId: string;
   /** Id of the image currently being cropped (ephemeral UI state), or null. */
   croppingId: string | null;
+  /** Freehand drawing tool state (ephemeral UI). */
+  drawing: boolean;
+  inkColor: string;
+  inkWidth: number;
+  /** When true, the next canvas click drops a comment pin. */
+  commenting: boolean;
   /** 0 = fit-to-container (computed by the canvas); otherwise a literal scale. */
   zoom: number;
 
@@ -84,6 +91,12 @@ export interface SlidesState {
   // navigation & selection
   setCurrentSlide: (id: string) => void;
   setCropping: (id: string | null) => void;
+  setDrawing: (b: boolean) => void;
+  setInkColor: (c: string) => void;
+  setInkWidth: (n: number) => void;
+  setCommenting: (b: boolean) => void;
+  /** Append a freehand stroke to the current slide's ink layer (creates one if needed). */
+  appendStroke: (stroke: InkStroke) => void;
   setZoom: (z: number) => void;
   select: (ids: string[]) => void;
   toggleSelect: (id: string, additive: boolean) => void;
@@ -103,6 +116,11 @@ export interface SlidesState {
   updateElement: (elId: string, recipe: (el: Element) => void) => void;
   deleteElements: (ids: string[]) => void;
   reorder: (id: string, dir: "front" | "back" | "forward" | "backward") => void;
+
+  // comments (undoable)
+  addComment: (x: number, y: number) => string;
+  updateComment: (id: string, patch: { text?: string; resolved?: boolean }) => void;
+  removeComment: (id: string) => void;
 
   // grouping & arrangement (undoable)
   group: () => void;
@@ -137,6 +155,10 @@ export const useStore = create<SlidesState>((set, get) => ({
   selection: [],
   currentSlideId: initialDeck.slides[0].id,
   croppingId: null,
+  drawing: false,
+  inkColor: "#ef4444",
+  inkWidth: 4,
+  commenting: false,
   zoom: 0,
 
   past: [],
@@ -250,6 +272,30 @@ export const useStore = create<SlidesState>((set, get) => ({
 
   setCurrentSlide: (id) => set({ currentSlideId: id, selection: [], croppingId: null }),
   setCropping: (id) => set({ croppingId: id }),
+  setDrawing: (b) => set({ drawing: b, croppingId: null, commenting: false }),
+  setInkColor: (c) => set({ inkColor: c }),
+  setInkWidth: (n) => set({ inkWidth: n }),
+  setCommenting: (b) => set({ commenting: b, drawing: false, croppingId: null }),
+
+  appendStroke: (stroke) => {
+    const { currentSlideId, deck } = get();
+    get().apply((d) => {
+      const slide = findSlide(d, currentSlideId);
+      if (!slide) return;
+      let ink = slide.elements.find((e) => e.type === "ink");
+      if (!ink) {
+        ink = {
+          id: makeId("ink"),
+          type: "ink",
+          geom: { x: 0, y: 0, w: deck.size.w, h: deck.size.h, rotation: 0 },
+          base: { w: deck.size.w, h: deck.size.h },
+          strokes: [],
+        };
+        slide.elements.push(ink);
+      }
+      if (ink.type === "ink") ink.strokes.push(stroke);
+    });
+  },
   setZoom: (z) => set({ zoom: z }),
   select: (ids) => set({ selection: ids }),
   toggleSelect: (id, additive) =>
@@ -366,6 +412,33 @@ export const useStore = create<SlidesState>((set, get) => ({
       const to =
         dir === "front" ? last : dir === "back" ? 0 : dir === "forward" ? Math.min(i + 1, last) : Math.max(i - 1, 0);
       slide.elements.splice(to, 0, el);
+    });
+  },
+
+  addComment: (x, y) => {
+    const { currentSlideId } = get();
+    const id = makeId("cmt");
+    get().apply((d) => {
+      const slide = findSlide(d, currentSlideId);
+      if (!slide) return;
+      (slide.comments ??= []).push({ id, x: Math.round(x), y: Math.round(y), text: "" });
+    });
+    return id;
+  },
+
+  updateComment: (id, patch) => {
+    const { currentSlideId } = get();
+    get().apply((d) => {
+      const c = findSlide(d, currentSlideId)?.comments?.find((c) => c.id === id);
+      if (c) Object.assign(c, patch);
+    });
+  },
+
+  removeComment: (id) => {
+    const { currentSlideId } = get();
+    get().apply((d) => {
+      const slide = findSlide(d, currentSlideId);
+      if (slide?.comments) slide.comments = slide.comments.filter((c) => c.id !== id);
     });
   },
 

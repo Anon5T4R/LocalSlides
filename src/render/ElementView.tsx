@@ -3,7 +3,7 @@
 // stage and the (non-interactive) thumbnails.
 
 import type { CSSProperties } from "react";
-import type { Element, Fill, Geom, ShapeEl, Stroke, TableEl, Theme } from "../model/deck";
+import type { Element, Fill, Geom, InkEl, ShapeEl, Stroke, TableEl, Theme } from "../model/deck";
 import { RenderPM } from "./renderPM";
 
 export function geomStyle(geom: Geom): CSSProperties {
@@ -56,6 +56,42 @@ function starPoints(w: number, h: number): string {
     pts.push(`${cx + rx * Math.cos(a)},${cy + ry * Math.sin(a)}`);
   }
   return pts.join(" ");
+}
+
+/** Flatten one ink stroke's [x0,y0,x1,y1,…] into an SVG polyline points string. */
+function strokePoints(pts: number[]): string {
+  const out: string[] = [];
+  for (let i = 0; i + 1 < pts.length; i += 2) out.push(`${pts[i]},${pts[i + 1]}`);
+  return out.join(" ");
+}
+
+function InkSvg({ el }: { el: InkEl }) {
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${el.base.w} ${el.base.h}`}
+      preserveAspectRatio="none"
+      style={{ display: "block", overflow: "visible" }}
+    >
+      {el.strokes.map((s, i) =>
+        s.points.length >= 4 ? (
+          <polyline
+            key={i}
+            points={strokePoints(s.points)}
+            fill="none"
+            stroke={s.color}
+            strokeWidth={s.width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : s.points.length === 2 ? (
+          // A dot (single tap).
+          <circle key={i} cx={s.points[0]} cy={s.points[1]} r={s.width / 2} fill={s.color} />
+        ) : null
+      )}
+    </svg>
+  );
 }
 
 function ShapeSvg({ el }: { el: ShapeEl }) {
@@ -303,6 +339,14 @@ export function ElementView({
 
   if (el.type === "table") {
     return <TableView el={el} theme={theme} style={base} />;
+  }
+
+  if (el.type === "ink") {
+    return (
+      <div style={base}>
+        <InkSvg el={el} />
+      </div>
+    );
   }
 
   // shape

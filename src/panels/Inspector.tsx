@@ -88,6 +88,8 @@ function typeLabel(el: Element): string {
     ? "Vídeo"
     : el.type === "table"
     ? "Tabela"
+    : el.type === "ink"
+    ? "Desenho"
     : "Forma";
 }
 
