@@ -23,8 +23,15 @@ function applyMarks(text: ReactNode, marks: Mark[] | undefined, key: number): Re
         const style: CSSProperties = {};
         const color = mark.attrs?.color as string | undefined;
         const fontSize = mark.attrs?.fontSize as string | undefined;
+        const fontFamily = mark.attrs?.fontFamily as string | undefined;
+        const textStroke = mark.attrs?.textStroke as string | undefined;
         if (color) style.color = color;
         if (fontSize) style.fontSize = fontSize;
+        if (fontFamily) style.fontFamily = fontFamily;
+        if (textStroke) {
+          (style as CSSProperties & { WebkitTextStroke?: string }).WebkitTextStroke = textStroke;
+          style.paintOrder = "stroke fill";
+        }
         return (
           <span key={i} style={style}>
             {acc}

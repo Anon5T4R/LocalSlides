@@ -87,8 +87,16 @@ function pmToRuns(doc: ProseMirrorJSON | undefined): Run[] {
         else if (mark.type === "italic") o.italic = true;
         else if (mark.type === "underline") o.underline = { style: "sng" };
         else if (mark.type === "strike") o.strike = true;
-        else if (mark.type === "textStyle" && mark.attrs?.color)
-          color = hex(mark.attrs.color as string);
+        else if (mark.type === "textStyle") {
+          if (mark.attrs?.color) color = hex(mark.attrs.color as string);
+          if (mark.attrs?.fontSize) {
+            const px = parseInt(String(mark.attrs.fontSize), 10);
+            if (Number.isFinite(px)) o.fontSize = Math.round(px * 0.75); // px → pt
+          }
+          if (mark.attrs?.fontFamily) {
+            o.fontFace = String(mark.attrs.fontFamily).split(",")[0].replace(/['"]/g, "").trim();
+          }
+        }
       }
       if (color) o.color = color;
       if (isHeading) {

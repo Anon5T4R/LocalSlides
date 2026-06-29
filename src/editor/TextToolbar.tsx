@@ -5,6 +5,7 @@
 
 import type { Editor } from "@tiptap/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
+import { FONT_FAMILIES, FONT_SIZES } from "./tiptapExtensions";
 
 function Btn({
   active,
@@ -36,6 +37,16 @@ export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }
   // Re-render on selection/transaction so active states stay in sync.
   void editor.state.selection;
   const chain = () => editor.chain().focus();
+  const ts = editor.getAttributes("textStyle") as {
+    fontFamily?: string;
+    fontSize?: string;
+    textStroke?: string;
+  };
+  const curSize = ts.fontSize ? String(parseInt(ts.fontSize, 10)) : "";
+  const strokeOn = !!ts.textStroke;
+  const strokeColor = ts.textStroke?.split(" ").pop() || "#000000";
+  const setMark = (attrs: Record<string, unknown>) =>
+    editor.chain().focus().setMark("textStyle", attrs).run();
 
   return (
     <div
@@ -80,6 +91,51 @@ export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }
         ➡
       </Btn>
       <span className="tt-sep" />
+      <select
+        className="tt-select"
+        title="Fonte"
+        value={ts.fontFamily ?? ""}
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => setMark({ fontFamily: e.target.value || null })}
+      >
+        {FONT_FAMILIES.map((f) => (
+          <option key={f.label} value={f.value} style={{ fontFamily: f.value || undefined }}>
+            {f.label}
+          </option>
+        ))}
+      </select>
+      <select
+        className="tt-select tt-size"
+        title="Tamanho"
+        value={curSize}
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => setMark({ fontSize: e.target.value ? `${e.target.value}px` : null })}
+      >
+        <option value="">Auto</option>
+        {FONT_SIZES.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+      <span className="tt-sep" />
+      <Btn
+        title="Contorno da letra"
+        active={strokeOn}
+        onRun={() => setMark({ textStroke: strokeOn ? null : `1px ${strokeColor}` })}
+      >
+        <span style={{ WebkitTextStroke: "1px currentColor", color: "transparent" }}>O</span>
+      </Btn>
+      {strokeOn && (
+        <label className="tt-color" title="Cor do contorno" onMouseDown={(e) => e.preventDefault()}>
+          ◐
+          <input
+            type="color"
+            value={strokeColor}
+            onChange={(e) => setMark({ textStroke: `1px ${e.target.value}` })}
+          />
+        </label>
+      )}
       <label className="tt-color" title="Cor do texto" onMouseDown={(e) => e.preventDefault()}>
         A
         <input

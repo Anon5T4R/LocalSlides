@@ -333,6 +333,25 @@ body {
   opacity: 0;
   cursor: pointer;
 }
+.tt-select {
+  font: inherit;
+  font-size: 12px;
+  height: 26px;
+  max-width: 96px;
+  color: #e5e7eb;
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 5px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.tt-select.tt-size {
+  max-width: 58px;
+}
+.tt-select option {
+  color: #111827;
+  background: #fff;
+}
 
 /* ---- Inspector ---- */
 .inspector {

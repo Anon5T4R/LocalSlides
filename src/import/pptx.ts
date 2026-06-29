@@ -182,8 +182,17 @@ function parseRun(r: Element_): ProseMirrorJSON | null {
     if (u && u !== "none") marks.push({ type: "underline" });
     const strike = rPr.getAttribute("strike");
     if (strike && strike !== "noStrike") marks.push({ type: "strike" });
+    const ts: Record<string, unknown> = {};
     const color = solidColor(rPr);
-    if (color) marks.push({ type: "textStyle", attrs: { color } });
+    if (color) ts.color = color;
+    const sz = rPr.getAttribute("sz"); // hundredths of a point
+    if (sz) {
+      const px = Math.round((Number(sz) / 100) * (96 / 72));
+      if (Number.isFinite(px) && px > 0) ts.fontSize = `${px}px`;
+    }
+    const face = kid(rPr, "latin")?.getAttribute("typeface");
+    if (face) ts.fontFamily = face;
+    if (Object.keys(ts).length) marks.push({ type: "textStyle", attrs: ts });
   }
   return { type: "text", text, ...(marks.length ? { marks } : {}) };
 }
