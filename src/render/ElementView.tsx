@@ -30,27 +30,134 @@ function fillToCss(fill: Fill | undefined, fallback = "transparent"): string {
   return fill.color;
 }
 
+/** Points for a regular n-gon inscribed in the box, starting at the top. */
+function polygonPoints(w: number, h: number, n: number, rotDeg = -90): string {
+  const cx = w / 2, cy = h / 2;
+  const rx = w / 2, ry = h / 2;
+  const start = (rotDeg * Math.PI) / 180;
+  const pts: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = start + (i * 2 * Math.PI) / n;
+    pts.push(`${cx + rx * Math.cos(a)},${cy + ry * Math.sin(a)}`);
+  }
+  return pts.join(" ");
+}
+
+/** Alternating outer/inner points for a 5-point star. */
+function starPoints(w: number, h: number): string {
+  const cx = w / 2, cy = h / 2;
+  const outerX = w / 2, outerY = h / 2;
+  const innerX = outerX * 0.4, innerY = outerY * 0.4;
+  const pts: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rx = i % 2 === 0 ? outerX : innerX;
+    const ry = i % 2 === 0 ? outerY : innerY;
+    pts.push(`${cx + rx * Math.cos(a)},${cy + ry * Math.sin(a)}`);
+  }
+  return pts.join(" ");
+}
+
 function ShapeSvg({ el }: { el: ShapeEl }) {
   const { w, h } = el.geom;
   const fill = fillToCss(el.fill, "#cbd5e1");
   const stroke = el.stroke?.color ?? "none";
-  const strokeWidth = el.stroke?.width ?? 0;
+  const sw = el.stroke?.width ?? 0;
   const dash =
     el.stroke?.dash === "dash" ? "12 8" : el.stroke?.dash === "dot" ? "2 6" : undefined;
-  const common = { fill, stroke, strokeWidth, strokeDasharray: dash };
-  let shape;
+  const common = { fill, stroke, strokeWidth: sw, strokeDasharray: dash };
+  // Inset so the stroke stays inside the box.
+  const i = sw / 2;
+  const iw = w - sw, ih = h - sw;
+
+  let shape: React.ReactNode;
   switch (el.shape) {
     case "ellipse":
-      shape = <ellipse cx={w / 2} cy={h / 2} rx={w / 2 - strokeWidth / 2} ry={h / 2 - strokeWidth / 2} {...common} />;
+      shape = <ellipse cx={w / 2} cy={h / 2} rx={w / 2 - i} ry={h / 2 - i} {...common} />;
       break;
     case "triangle":
-      shape = <polygon points={`${w / 2},0 ${w},${h} 0,${h}`} {...common} />;
+      shape = <polygon points={`${w / 2},${i} ${w - i},${h - i} ${i},${h - i}`} {...common} />;
       break;
     case "roundRect":
-      shape = <rect x={strokeWidth / 2} y={strokeWidth / 2} width={w - strokeWidth} height={h - strokeWidth} rx={Math.min(w, h) * 0.12} {...common} />;
+      shape = <rect x={i} y={i} width={iw} height={ih} rx={Math.min(w, h) * 0.12} {...common} />;
       break;
+    case "diamond":
+      shape = <polygon points={`${w / 2},${i} ${w - i},${h / 2} ${w / 2},${h - i} ${i},${h / 2}`} {...common} />;
+      break;
+    case "pentagon":
+      shape = <polygon points={polygonPoints(w, h, 5)} {...common} />;
+      break;
+    case "hexagon":
+      shape = <polygon points={polygonPoints(w, h, 6, 0)} {...common} />;
+      break;
+    case "star":
+      shape = <polygon points={starPoints(w, h)} {...common} />;
+      break;
+    case "line":
+      shape = <line x1={i} y1={h / 2} x2={w - i} y2={h / 2} stroke={stroke === "none" ? fill : stroke} strokeWidth={Math.max(sw, 3)} strokeDasharray={dash} strokeLinecap="round" />;
+      break;
+    case "arrow": {
+      // Right-pointing block arrow (rotate the element for other directions).
+      const sh = h * 0.34, hl = w * 0.4; // shaft half-height, head length
+      const cy = h / 2;
+      shape = (
+        <polygon
+          points={`${i},${cy - sh} ${w - hl},${cy - sh} ${w - hl},${i} ${w - i},${cy} ${w - hl},${h - i} ${w - hl},${cy + sh} ${i},${cy + sh}`}
+          {...common}
+        />
+      );
+      break;
+    }
+    case "doubleArrow": {
+      const sh = h * 0.34, hl = w * 0.22;
+      const cy = h / 2;
+      shape = (
+        <polygon
+          points={`${i},${cy} ${hl},${i} ${hl},${cy - sh} ${w - hl},${cy - sh} ${w - hl},${i} ${w - i},${cy} ${w - hl},${h - i} ${w - hl},${cy + sh} ${hl},${cy + sh} ${hl},${h - i}`}
+          {...common}
+        />
+      );
+      break;
+    }
+    case "chevron": {
+      const notch = w * 0.25;
+      shape = (
+        <polygon
+          points={`${i},${i} ${w - notch},${i} ${w - i},${h / 2} ${w - notch},${h - i} ${i},${h - i} ${notch},${h / 2}`}
+          {...common}
+        />
+      );
+      break;
+    }
+    case "speech": {
+      // Rounded rectangle body with a tail at the bottom-left.
+      const r = Math.min(w, h) * 0.14;
+      const bodyH = h * 0.78;
+      const d = `M ${i + r} ${i}
+        H ${w - i - r} A ${r} ${r} 0 0 1 ${w - i} ${i + r}
+        V ${bodyH - r} A ${r} ${r} 0 0 1 ${w - i - r} ${bodyH}
+        H ${w * 0.32} L ${w * 0.16} ${h - i} L ${w * 0.22} ${bodyH}
+        H ${i + r} A ${r} ${r} 0 0 1 ${i} ${bodyH - r}
+        V ${i + r} A ${r} ${r} 0 0 1 ${i + r} ${i} Z`;
+      shape = <path d={d} {...common} />;
+      break;
+    }
+    case "thought": {
+      // Cloud-ish body (overlapping ellipses) + two little bubbles.
+      const cy = h * 0.4;
+      shape = (
+        <g {...common}>
+          <ellipse cx={w * 0.32} cy={cy} rx={w * 0.3} ry={h * 0.3} />
+          <ellipse cx={w * 0.62} cy={cy} rx={w * 0.34} ry={h * 0.36} />
+          <ellipse cx={w * 0.5} cy={h * 0.32} rx={w * 0.28} ry={h * 0.26} />
+          <ellipse cx={w * 0.22} cy={h * 0.82} rx={w * 0.07} ry={h * 0.07} />
+          <ellipse cx={w * 0.12} cy={h * 0.95} rx={w * 0.04} ry={h * 0.04} />
+        </g>
+      );
+      break;
+    }
     default:
-      shape = <rect x={strokeWidth / 2} y={strokeWidth / 2} width={w - strokeWidth} height={h - strokeWidth} {...common} />;
+      shape = <rect x={i} y={i} width={iw} height={ih} {...common} />;
   }
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", overflow: "visible" }}>

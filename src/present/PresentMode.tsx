@@ -14,8 +14,12 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
 
   const startIndex = Math.max(0, deck.slides.findIndex((s) => s.id === currentSlideId));
   const [index, setIndex] = useState(startIndex);
-  // Bumped on every navigation so the slide remounts and animations replay.
+  // Bumped on every navigation so element entrance animations replay.
   const [visit, setVisit] = useState(0);
+  // Active slide-to-slide transition (outgoing + incoming animate together).
+  const [trans, setTrans] = useState<{ from: number; id: number } | null>(null);
+  const transId = useRef(0);
+  const transTimer = useRef<number | undefined>(undefined);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -34,12 +38,28 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
     (delta: number) => {
       setIndex((i) => {
         const next = Math.max(0, Math.min(i + delta, deck.slides.length - 1));
-        if (next !== i) setVisit((v) => v + 1);
+        if (next === i) return i;
+        setVisit((v) => v + 1);
+        // The transition belongs to the *incoming* slide.
+        const t = deck.slides[next]?.transition;
+        if (t && t.kind !== "none") {
+          const id = ++transId.current;
+          setTrans({ from: i, id });
+          window.clearTimeout(transTimer.current);
+          transTimer.current = window.setTimeout(
+            () => setTrans((cur) => (cur && cur.id === id ? null : cur)),
+            t.duration * 1000 + 60
+          );
+        } else {
+          setTrans(null);
+        }
         return next;
       });
     },
-    [deck.slides.length]
+    [deck.slides]
   );
+
+  useEffect(() => () => window.clearTimeout(transTimer.current), []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -63,9 +83,27 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
   const slide = deck.slides[index];
   if (!slide) return null;
 
-  const transition = slide.transition;
-  const animName = transition && transition.kind !== "none" ? `slide-${transition.kind}` : undefined;
-  const animStyle = animName ? `${animName} ${transition!.duration}s ease both` : undefined;
+  const t = slide.transition;
+  const dur = t?.duration ?? 0.5;
+  const kind = t?.kind ?? "none";
+  const enterAnim = trans && kind !== "none" ? `pt-${kind}-in ${dur}s ease both` : undefined;
+  const exitAnim = trans && kind !== "none" ? `pt-${kind}-out ${dur}s ease both` : undefined;
+
+  const layer = (i: number, key: string, animation: string | undefined) => (
+    <div key={key} className="present-layer" style={{ animation }}>
+      <div
+        className="present-slide"
+        style={{
+          width: deck.size.w,
+          height: deck.size.h,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
+        <SlideView slide={deck.slides[i]} deck={deck} presenting />
+      </div>
+    </div>
+  );
 
   return (
     <div className="present-root" ref={wrapRef} onClick={() => go(1)}>
@@ -73,24 +111,10 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
         className="present-frame"
         style={{ width: deck.size.w * scale, height: deck.size.h * scale }}
       >
-        {/* Transition animates on this wrapper so it never fights the slide's scale. */}
-        <div
-          key={`${slide.id}:${visit}`}
-          className="present-anim"
-          style={{ width: "100%", height: "100%", animation: animStyle }}
-        >
-          <div
-            className="present-slide"
-            style={{
-              width: deck.size.w,
-              height: deck.size.h,
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
-            }}
-          >
-            <SlideView slide={slide} deck={deck} presenting />
-          </div>
-        </div>
+        {/* During a transition the outgoing slide animates out while the incoming
+            (stable key by visit) animates in; afterwards only the incoming remains. */}
+        {trans && layer(trans.from, `out-${trans.id}`, exitAnim)}
+        {layer(index, `cur-${visit}`, enterAnim)}
       </div>
 
       <div className="present-hud" onClick={(e) => e.stopPropagation()}>

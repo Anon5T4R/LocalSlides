@@ -343,7 +343,14 @@ export function EditorStage() {
             transformOrigin: "top left",
           }}
         >
-          <SlideView slide={slide} deck={deck} style={{ pointerEvents: "none" }} />
+          <SlideView
+            slide={slide}
+            deck={deck}
+            style={{ pointerEvents: "none" }}
+            // Hide the text box being edited so the live editor doesn't ghost over
+            // the static render (tables keep painting — the cell editor is partial).
+            hideIds={editingId ? new Set([editingId]) : undefined}
+          />
 
           {/* interaction hit boxes */}
           {slide.elements.map((el) => (

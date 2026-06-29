@@ -256,8 +256,11 @@ body {
 }
 
 /* ---- TipTap text editor ---- */
+/* Size to content (not flex-grow) so the wrapper's justify-content vertical
+   alignment matches the static render exactly (WYSIWYG, no jump on edit). */
 .tt-content {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  width: 100%;
   min-height: 0;
   outline: none;
 }
@@ -469,6 +472,10 @@ body {
   position: relative;
   overflow: hidden;
 }
+.present-layer {
+  position: absolute;
+  inset: 0;
+}
 .present-slide {
   position: relative;
 }
@@ -524,18 +531,30 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* ---- Slide transitions (present mode) ---- */
-@keyframes slide-fade {
+/* ---- Slide transitions (present mode): paired enter/exit layers ---- */
+@keyframes pt-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes slide-slide {
-  from { opacity: 0.4; transform: translateX(8%); }
-  to { opacity: 1; transform: translateX(0); }
+@keyframes pt-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
-@keyframes slide-push {
+@keyframes pt-slide-in {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
+}
+@keyframes pt-slide-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+@keyframes pt-push-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes pt-push-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
 }
 
 /* ---- Print / PDF export ---- */
@@ -745,4 +764,150 @@ body {
   flex: 0 0 28px;
   padding: 0;
   text-align: center;
+}
+
+/* --- Shape picker popover (toolbar) --- */
+.shape-picker-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.shape-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.shape-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.shape-picker button {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.shape-picker button:hover {
+  background: var(--border);
+}
+.shape-glyph {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text);
+}
+
+/* --- Collapsible inspector sections --- */
+.insp-section {
+  border-bottom: 1px solid var(--border);
+}
+.insp-section-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.insp-section-head:hover {
+  color: var(--text);
+}
+.insp-chevron {
+  display: inline-block;
+  transition: transform 0.15s;
+  font-size: 10px;
+}
+.insp-chevron.open {
+  transform: rotate(90deg);
+}
+.insp-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+}
+
+/* --- Collapsible + resizable right panel --- */
+.right-pane {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+}
+/* The Inspector / AI panel fill the resizable pane. */
+.right-pane .inspector,
+.right-pane .ai-panel {
+  width: 100%;
+  flex: 1 1 auto;
+  border-left: none;
+}
+.right-resize {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 5;
+}
+.right-resize:hover {
+  background: var(--accent, #2563eb);
+  opacity: 0.4;
+}
+.right-collapse {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 6;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.right-collapse:hover {
+  color: var(--text);
+}
+.right-reopen {
+  flex: 0 0 auto;
+  width: 22px;
+  align-self: stretch;
+  background: var(--panel);
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+.right-reopen:hover {
+  color: var(--text);
+  background: var(--panel-2);
 }

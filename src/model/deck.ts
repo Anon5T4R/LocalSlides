@@ -104,7 +104,21 @@ export interface VideoEl extends Base {
   muted?: boolean;
 }
 
-export type ShapeKind = "rect" | "roundRect" | "ellipse" | "triangle";
+export type ShapeKind =
+  | "rect"
+  | "roundRect"
+  | "ellipse"
+  | "triangle"
+  | "line"
+  | "arrow"
+  | "doubleArrow"
+  | "chevron"
+  | "diamond"
+  | "pentagon"
+  | "hexagon"
+  | "star"
+  | "speech"
+  | "thought";
 
 export interface ShapeEl extends Base {
   type: "shape";

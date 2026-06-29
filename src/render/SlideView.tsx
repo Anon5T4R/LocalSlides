@@ -17,11 +17,14 @@ export function SlideView({
   deck,
   style,
   presenting = false,
+  hideIds,
 }: {
   slide: Slide;
   deck: Deck;
   style?: CSSProperties;
   presenting?: boolean;
+  /** Elements to skip painting — e.g. one being edited by an overlay editor. */
+  hideIds?: Set<string>;
 }) {
   return (
     <div
@@ -34,9 +37,11 @@ export function SlideView({
         ...style,
       }}
     >
-      {slide.elements.map((el) => (
-        <ElementView key={el.id} el={el} theme={deck.theme} presenting={presenting} />
-      ))}
+      {slide.elements.map((el) =>
+        hideIds?.has(el.id) ? null : (
+          <ElementView key={el.id} el={el} theme={deck.theme} presenting={presenting} />
+        )
+      )}
     </div>
   );
 }

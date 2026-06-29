@@ -254,6 +254,22 @@ const PRST_MAP: Record<string, ShapeKind> = {
   triangle: "triangle",
   isoscelesTriangle: "triangle",
   rtTriangle: "triangle",
+  line: "line",
+  straightConnector1: "line",
+  rightArrow: "arrow",
+  leftRightArrow: "doubleArrow",
+  chevron: "chevron",
+  homePlate: "chevron",
+  diamond: "diamond",
+  pentagon: "pentagon",
+  hexagon: "hexagon",
+  star5: "star",
+  star4: "star",
+  star6: "star",
+  wedgeRectCallout: "speech",
+  wedgeRoundRectCallout: "speech",
+  cloudCallout: "thought",
+  cloud: "thought",
 };
 
 // --- Per-shape parsing -------------------------------------------------------

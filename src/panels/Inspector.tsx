@@ -3,7 +3,7 @@
 // selected, the current slide's properties (background, transition). Every change
 // flows through the store, so all of it is undoable.
 
-import type { ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useStore } from "../state/store";
 import {
   findSlide,
@@ -36,6 +36,16 @@ const SHAPES: { value: ShapeKind; label: string }[] = [
   { value: "roundRect", label: "Arredondado" },
   { value: "ellipse", label: "Elipse" },
   { value: "triangle", label: "Triângulo" },
+  { value: "diamond", label: "Losango" },
+  { value: "pentagon", label: "Pentágono" },
+  { value: "hexagon", label: "Hexágono" },
+  { value: "star", label: "Estrela" },
+  { value: "arrow", label: "Seta" },
+  { value: "doubleArrow", label: "Seta dupla" },
+  { value: "chevron", label: "Chevron" },
+  { value: "line", label: "Linha" },
+  { value: "speech", label: "Balão de fala" },
+  { value: "thought", label: "Balão de pensamento" },
 ];
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -44,6 +54,28 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <span className="insp-label">{label}</span>
       <span className="insp-control">{children}</span>
     </label>
+  );
+}
+
+/** Collapsible section with a clickable header + chevron. */
+function Section({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="insp-section">
+      <button className="insp-section-head" onClick={() => setOpen((v) => !v)}>
+        <span className={"insp-chevron" + (open ? " open" : "")}>▸</span>
+        {title}
+      </button>
+      {open && <div className="insp-section-body">{children}</div>}
+    </div>
   );
 }
 
@@ -223,15 +255,56 @@ function ElementInspector({ el }: { el: Element }) {
               ))}
             </select>
           </Row>
-          <Row label="Cor">
+          <Row label="Preenchimento">
             <input
-              type="color"
-              value={el.fill?.kind === "solid" ? el.fill.color : "#2563eb"}
+              type="checkbox"
+              checked={el.fill?.kind !== "none"}
               onChange={(e) =>
-                set((x) => x.type === "shape" && (x.fill = { kind: "solid", color: e.target.value }))
+                set((x) => x.type === "shape" && (x.fill = e.target.checked ? { kind: "solid", color: "#2563eb" } : { kind: "none" }))
               }
             />
           </Row>
+          {el.fill?.kind !== "none" && (
+            <Row label="Cor">
+              <input
+                type="color"
+                value={el.fill?.kind === "solid" ? el.fill.color : "#2563eb"}
+                onChange={(e) =>
+                  set((x) => x.type === "shape" && (x.fill = { kind: "solid", color: e.target.value }))
+                }
+              />
+            </Row>
+          )}
+          <Row label="Traço">
+            <input
+              type="checkbox"
+              checked={!!el.stroke}
+              onChange={(e) =>
+                set((x) => x.type === "shape" && (x.stroke = e.target.checked ? { color: "#1e293b", width: 3 } : undefined))
+              }
+            />
+          </Row>
+          {el.stroke && (
+            <>
+              <Row label="Cor do traço">
+                <input
+                  type="color"
+                  value={el.stroke.color}
+                  onChange={(e) => set((x) => x.type === "shape" && x.stroke && (x.stroke.color = e.target.value))}
+                />
+              </Row>
+              <Row label="Espessura">
+                <input
+                  type="range"
+                  min={1}
+                  max={32}
+                  value={el.stroke.width}
+                  onChange={(e) => set((x) => x.type === "shape" && x.stroke && (x.stroke.width = Number(e.target.value)))}
+                />
+                <span className="insp-num">{el.stroke.width}px</span>
+              </Row>
+            </>
+          )}
         </>
       )}
 
@@ -324,7 +397,7 @@ function SlideInspector() {
 
   return (
     <>
-      <div className="insp-head">Tema da apresentação</div>
+      <Section title="Tema da apresentação">
       <div className="insp-themes">
         {THEME_PRESETS.map((p) => (
           <button
@@ -342,8 +415,9 @@ function SlideInspector() {
           </button>
         ))}
       </div>
+      </Section>
 
-      <div className="insp-head">Layout do slide</div>
+      <Section title="Layout do slide">
       <div className="insp-layouts">
         {LAYOUTS.map((l) => (
           <div key={l.id} className="insp-layout-row">
@@ -360,6 +434,7 @@ function SlideInspector() {
           </div>
         ))}
       </div>
+      </Section>
 
       <div className="insp-head">Slide</div>
       <Row label="Fundo">

@@ -171,6 +171,16 @@ const SHAPE_TYPE: Record<ShapeEl["shape"], string> = {
   roundRect: "roundRect",
   ellipse: "ellipse",
   triangle: "triangle",
+  line: "line",
+  arrow: "rightArrow",
+  doubleArrow: "leftRightArrow",
+  chevron: "chevron",
+  diamond: "diamond",
+  pentagon: "pentagon",
+  hexagon: "hexagon",
+  star: "star5",
+  speech: "wedgeRectCallout",
+  thought: "cloudCallout",
 };
 
 function addShape(s: AnySlide, el: ShapeEl) {

@@ -7,7 +7,7 @@ import { EditorStage } from "./editor/EditorStage";
 import { SlidesPanel } from "./panels/SlidesPanel";
 import { Inspector } from "./panels/Inspector";
 import { PresentMode } from "./present/PresentMode";
-import { newFreeTextBox, newImage, newShape, newTable, newVideo } from "./model/deck";
+import { newFreeTextBox, newImage, newShape, newTable, newVideo, type ShapeKind } from "./model/deck";
 import { pickImageDataUri, pickVideoDataUri, imageDataUrlFromPath } from "./lib/media";
 import {
   DeckFile,
@@ -27,6 +27,23 @@ import { exportDeckPptx } from "./export/pptx";
 import { importPptx } from "./lib/pptx-io";
 import { findSlide } from "./model/deck";
 import "./App.css";
+
+const SHAPE_PICKER: { kind: ShapeKind; label: string; glyph: string }[] = [
+  { kind: "rect", label: "Retângulo", glyph: "▭" },
+  { kind: "roundRect", label: "Arredondado", glyph: "▢" },
+  { kind: "ellipse", label: "Elipse", glyph: "◯" },
+  { kind: "triangle", label: "Triângulo", glyph: "△" },
+  { kind: "diamond", label: "Losango", glyph: "◇" },
+  { kind: "pentagon", label: "Pentágono", glyph: "⬠" },
+  { kind: "hexagon", label: "Hexágono", glyph: "⬡" },
+  { kind: "star", label: "Estrela", glyph: "☆" },
+  { kind: "arrow", label: "Seta", glyph: "➜" },
+  { kind: "doubleArrow", label: "Seta dupla", glyph: "↔" },
+  { kind: "chevron", label: "Chevron", glyph: "❯" },
+  { kind: "line", label: "Linha", glyph: "—" },
+  { kind: "speech", label: "Balão de fala", glyph: "💬" },
+  { kind: "thought", label: "Balão de pensamento", glyph: "💭" },
+];
 
 function App() {
   const deck = useStore((s) => s.deck);
@@ -50,12 +67,37 @@ function App() {
   const [presenting, setPresenting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [showAi, setShowAi] = useState(false);
+  const [showShapes, setShowShapes] = useState(false);
+  const [rightWidth, setRightWidth] = useState(300);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
 
   const [settings] = useState<Settings>(() => loadSettings());
   const ai = useLocalAi(settings, (patch) => saveSettings(patch));
 
   useEffect(() => {
     applyTheme(loadSettings().theme);
+  }, []);
+
+  // ---- Right panel resize (drag the handle on its left edge) ----
+  const rightResizing = useRef(false);
+  const startRightResize = useCallback((e: React.PointerEvent) => {
+    rightResizing.current = true;
+    e.preventDefault();
+  }, []);
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!rightResizing.current) return;
+      setRightWidth(Math.min(560, Math.max(220, window.innerWidth - e.clientX)));
+    };
+    const onUp = () => {
+      rightResizing.current = false;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
   }, []);
 
   const remember = (path: string) => addRecent(path);
@@ -123,9 +165,13 @@ function App() {
     addElement(newFreeTextBox(useStore.getState().deck));
   }, [addElement]);
 
-  const insertShape = useCallback(() => {
-    addElement(newShape(useStore.getState().deck, "rect"));
-  }, [addElement]);
+  const insertShape = useCallback(
+    (kind: ShapeKind = "rect") => {
+      addElement(newShape(useStore.getState().deck, kind));
+      setShowShapes(false);
+    },
+    [addElement]
+  );
 
   const insertTable = useCallback(() => {
     addElement(newTable(useStore.getState().deck, 3, 3));
@@ -406,7 +452,21 @@ function App() {
           <button onClick={insertText} title="Caixa de texto">Texto</button>
           <button onClick={insertImage} title="Inserir imagem">Imagem</button>
           <button onClick={insertVideo} title="Inserir vídeo">Vídeo</button>
-          <button onClick={insertShape} title="Inserir forma">Forma</button>
+          <div className="shape-picker-wrap">
+            <button onClick={() => setShowShapes((v) => !v)} title="Inserir forma">Forma ▾</button>
+            {showShapes && (
+              <>
+                <div className="shape-picker-backdrop" onClick={() => setShowShapes(false)} />
+                <div className="shape-picker">
+                  {SHAPE_PICKER.map((s) => (
+                    <button key={s.kind} title={s.label} onClick={() => insertShape(s.kind)}>
+                      <span className="shape-glyph">{s.glyph}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button onClick={insertTable} title="Inserir tabela">Tabela</button>
           <span className="sep" />
           <button onClick={handleExportPdf} title="Exportar PDF (todos os slides)">PDF</button>
@@ -431,7 +491,23 @@ function App() {
       <div className="workspace">
         <SlidesPanel />
         <EditorStage />
-        {showAi ? <AiPanel ai={ai} onClose={() => setShowAi(false)} /> : <Inspector />}
+        {rightCollapsed ? (
+          <button
+            className="right-reopen"
+            onClick={() => setRightCollapsed(false)}
+            title="Mostrar painel (Inspetor / IA)"
+          >
+            ‹
+          </button>
+        ) : (
+          <div className="right-pane" style={{ width: rightWidth }}>
+            <div className="right-resize" onPointerDown={startRightResize} title="Arraste para redimensionar" />
+            <button className="right-collapse" onClick={() => setRightCollapsed(true)} title="Recolher painel">
+              ⟩
+            </button>
+            {showAi ? <AiPanel ai={ai} onClose={() => setShowAi(false)} /> : <Inspector />}
+          </div>
+        )}
       </div>
       {busy && <div className="busy">{busy}</div>}
       {presenting && <PresentMode onExit={() => setPresenting(false)} />}
