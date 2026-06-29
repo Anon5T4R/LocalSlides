@@ -25,6 +25,7 @@ import { PrintView } from "./export/PrintView";
 import { exportSlidePng } from "./export/png";
 import { exportDeckPptx } from "./export/pptx";
 import { importPptx } from "./lib/pptx-io";
+import { saveRecovery, loadRecovery, clearRecovery } from "./lib/recovery";
 import { findSlide } from "./model/deck";
 import "./App.css";
 
@@ -107,6 +108,7 @@ function App() {
     (f: DeckFile) => {
       loadDeck(f.deck, f.path);
       remember(f.path);
+      clearRecovery();
     },
     [loadDeck]
   );
@@ -136,6 +138,7 @@ function App() {
       if (path) {
         markSaved(path);
         remember(path);
+        clearRecovery();
       }
     } catch (e) {
       window.alert(`Não foi possível salvar:\n${e}`);
@@ -153,6 +156,7 @@ function App() {
       await saveDeckTo(path, useStore.getState().deck);
       markSaved(path);
       remember(path);
+      clearRecovery();
     } catch (e) {
       window.alert(`Não foi possível salvar:\n${e}`);
     } finally {
@@ -285,6 +289,39 @@ function App() {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
   }, [deck, dirty, filePath]);
+
+  // ---- Recovery snapshot for never-saved decks (light, debounced) ----
+  // On-disk decks autosave to their file above; this is the safety net for a
+  // brand-new deck that has no path yet, so an unexpected close loses nothing.
+  useEffect(() => {
+    if (filePath || !dirty) return;
+    const id = window.setTimeout(() => {
+      const st = useStore.getState();
+      if (!st.filePath && st.dirty) saveRecovery(st.deck);
+    }, 4000);
+    return () => clearTimeout(id);
+  }, [deck, dirty, filePath]);
+
+  // Offer to restore an unsaved deck from a previous session (once, on launch).
+  const recoveryChecked = useRef(false);
+  useEffect(() => {
+    if (recoveryChecked.current) return;
+    recoveryChecked.current = true;
+    const rec = loadRecovery();
+    if (!rec) return;
+    // Wait a beat so a file opened at startup wins over the recovery prompt.
+    const t = window.setTimeout(() => {
+      const st = useStore.getState();
+      if (st.filePath || st.dirty) return;
+      const when = new Date(rec.savedAt).toLocaleString();
+      if (window.confirm(`Restaurar a apresentação não salva da sessão anterior?\n(salva em ${when})`)) {
+        loadDeck(rec.deck, null);
+      } else {
+        clearRecovery();
+      }
+    }, 700);
+    return () => clearTimeout(t);
+  }, [loadDeck]);
 
   // ---- Window close confirmation (Rust intercepts → emits close-requested) ----
   useEffect(() => {
