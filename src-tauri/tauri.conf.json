@@ -1,7 +1,7 @@
-{
+﻿{
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "LocalSlides",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "identifier": "com.taylor.localslides",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -35,8 +35,8 @@
     "fileAssociations": [
       {
         "ext": ["tslides"],
-        "name": "Apresentação",
-        "description": "Apresentação do LocalSlides",
+        "name": "ApresentaÃ§Ã£o",
+        "description": "ApresentaÃ§Ã£o do LocalSlides",
         "role": "Editor"
       }
     ],
