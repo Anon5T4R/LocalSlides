@@ -353,11 +353,6 @@ body {
 .tt-color-wrap .cp-swatch {
   border-color: #4b5563;
 }
-.tt-color-wrap .cp-popover {
-  /* Popover drops down below the toolbar, which is already above the slide */
-  top: calc(100% + 4px);
-  left: 0;
-}
 .tt-select {
   font: inherit;
   font-size: 12px;
@@ -1425,6 +1420,11 @@ body {
   padding: 3px 6px;
   font-size: 13px;
 }
+.ctx-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
 .ctx-btn.ctx-danger {
   color: #ef4444;
 }
@@ -1541,9 +1541,7 @@ body {
   border-color: var(--muted);
 }
 .cp-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+  /* position/left/top are set inline (fixed, viewport-clamped) */
   z-index: 1200;
   background: var(--panel);
   border: 1px solid var(--border);

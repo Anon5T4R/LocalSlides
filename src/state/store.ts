@@ -61,6 +61,8 @@ export interface SlidesState {
   croppingId: string | null;
   /** Freehand drawing tool state (ephemeral UI). */
   drawing: boolean;
+  /** Pen draws strokes; eraser removes whole strokes it touches. */
+  inkMode: "pen" | "eraser";
   inkColor: string;
   inkWidth: number;
   inkStyle: StrokeStyle;
@@ -96,12 +98,15 @@ export interface SlidesState {
   setCurrentSlide: (id: string) => void;
   setCropping: (id: string | null) => void;
   setDrawing: (b: boolean) => void;
+  setInkMode: (m: "pen" | "eraser") => void;
   setInkColor: (c: string) => void;
   setInkWidth: (n: number) => void;
   setInkStyle: (s: StrokeStyle) => void;
   setCommenting: (b: boolean) => void;
   /** Append a freehand stroke to the current slide's ink layer (creates one if needed). */
   appendStroke: (stroke: InkStroke) => void;
+  /** Remove ink strokes near (absolute slide coords) within `radius`; drops the ink element if empty. */
+  eraseStrokesAt: (x: number, y: number, radius: number) => void;
   setZoom: (z: number) => void;
   select: (ids: string[]) => void;
   toggleSelect: (id: string, additive: boolean) => void;
@@ -169,6 +174,7 @@ export const useStore = create<SlidesState>((set, get) => ({
   currentSlideId: initialDeck.slides[0].id,
   croppingId: null,
   drawing: false,
+  inkMode: "pen",
   inkColor: "#ef4444",
   inkWidth: 4,
   inkStyle: "solid",
@@ -287,7 +293,8 @@ export const useStore = create<SlidesState>((set, get) => ({
 
   setCurrentSlide: (id) => set({ currentSlideId: id, selection: [], croppingId: null }),
   setCropping: (id) => set({ croppingId: id }),
-  setDrawing: (b) => set({ drawing: b, croppingId: null, commenting: false }),
+  setDrawing: (b) => set({ drawing: b, croppingId: null, commenting: false, inkMode: b ? get().inkMode : "pen" }),
+  setInkMode: (m) => set({ inkMode: m }),
   setInkColor: (c) => set({ inkColor: c }),
   setInkWidth: (n) => set({ inkWidth: n }),
   setInkStyle: (s) => set({ inkStyle: s }),
@@ -335,6 +342,35 @@ export const useStore = create<SlidesState>((set, get) => ({
         ink.base = { w: nw, h: nh };
       }
       ink.strokes.push({ ...stroke, points: stroke.points.map((v, i) => (i % 2 ? v - ny : v - nx)) });
+    });
+  },
+
+  eraseStrokesAt: (x, y, radius) => {
+    const { currentSlideId } = get();
+    get().apply((d) => {
+      const slide = findSlide(d, currentSlideId);
+      if (!slide) return;
+      const ink = slide.elements.find((e): e is InkEl => e.type === "ink");
+      if (!ink) return;
+      // Stroke points are stored relative to the ink box origin.
+      const lx = x - ink.geom.x;
+      const ly = y - ink.geom.y;
+      const kept = ink.strokes.filter((s) => {
+        const r = radius + (s.width || 1) / 2;
+        const r2 = r * r;
+        for (let i = 0; i + 1 < s.points.length; i += 2) {
+          const dx = s.points[i] - lx;
+          const dy = s.points[i + 1] - ly;
+          if (dx * dx + dy * dy <= r2) return false; // touched → erase whole stroke
+        }
+        return true;
+      });
+      if (kept.length === ink.strokes.length) return; // nothing erased
+      if (kept.length === 0) {
+        slide.elements = slide.elements.filter((e) => e.id !== ink.id);
+      } else {
+        ink.strokes = kept;
+      }
     });
   },
   setZoom: (z) => set({ zoom: z }),

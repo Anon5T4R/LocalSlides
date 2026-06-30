@@ -1,7 +1,7 @@
 // Custom color picker popover: theme swatches, curated palette, recent colors,
 // hex input, and (when available) the browser EyeDropper API.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 // Module-level recent colors, shared across all pickers, capped at 12.
 const recent: string[] = [];
@@ -37,17 +37,40 @@ export function ColorPicker({
   const [open, setOpen] = useState(false);
   const [hex, setHex] = useState(value);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  // Fixed-viewport coords for the popover, so it never spills off-screen.
+  const [coords, setCoords] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
 
   // Keep hex input in sync with external value changes.
   useEffect(() => setHex(value), [value]);
+
+  // Position the popover within the viewport once it's rendered (flip/clamp).
+  useLayoutEffect(() => {
+    if (!open) return;
+    const swatch = wrapRef.current?.getBoundingClientRect();
+    const pop = popRef.current?.getBoundingClientRect();
+    if (!swatch) return;
+    const pw = pop?.width ?? 210;
+    const ph = pop?.height ?? 260;
+    const margin = 8;
+    // Prefer left-aligned below the swatch; flip left if it would overflow right.
+    let left = swatch.left;
+    if (left + pw > window.innerWidth - margin) left = swatch.right - pw;
+    left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
+    // Prefer below; flip above if it would overflow the bottom.
+    let top = swatch.bottom + 6;
+    if (top + ph > window.innerHeight - margin) top = swatch.top - ph - 6;
+    top = Math.max(margin, top);
+    setCoords({ left, top });
+  }, [open]);
 
   // Close on outside click.
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
     };
     window.addEventListener("mousedown", handler);
     return () => window.removeEventListener("mousedown", handler);
@@ -87,7 +110,11 @@ export function ColorPicker({
         onClick={() => setOpen((v) => !v)}
       />
       {open && (
-        <div className="cp-popover">
+        <div
+          className="cp-popover"
+          ref={popRef}
+          style={{ position: "fixed", left: coords.left, top: coords.top }}
+        >
           {/* Theme colors */}
           {themeColors && themeColors.length > 0 && (
             <div className="cp-section">

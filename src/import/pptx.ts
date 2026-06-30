@@ -548,14 +548,35 @@ export async function importPptxToDeck(bytes: Uint8Array): Promise<Deck> {
   const order = await slideOrder(zip);
 
   const slides: Slide[] = [];
+  const errors: string[] = [];
   for (const path of order) {
     try {
       slides.push(await parseSlide(zip, path, size));
-    } catch {
+    } catch (e) {
+      // Don't swallow silently: a parse failure here is exactly why slides come
+      // in blank. Record it so the caller can surface a real diagnostic.
+      errors.push(`${path}: ${e instanceof Error ? e.message : String(e)}`);
+      console.error("[pptx import] falha ao ler slide", path, e);
       slides.push({ id: makeId("slide"), elements: [] }); // keep deck length on a bad slide
     }
   }
   if (!slides.length) slides.push({ id: makeId("slide"), elements: [] });
+
+  // If every slide failed, the import is effectively blank — surface why.
+  if (errors.length && errors.length === order.length) {
+    throw new Error(`Falha ao importar os slides:\n${errors.slice(0, 3).join("\n")}`);
+  }
+
+  // Case (b): slides parsed without error but produced nothing. Tell the user
+  // instead of silently handing back blank frames.
+  const totalEls = slides.reduce((n, s) => n + s.elements.length, 0);
+  if (totalEls === 0) {
+    console.warn("[pptx import] nenhum elemento reconhecido em", order.length, "slide(s)");
+    throw new Error(
+      "O PPTX foi lido, mas nenhum conteúdo de slide foi reconhecido " +
+        "(formas/textos podem estar herdados do layout ou em formato não suportado)."
+    );
+  }
 
   return {
     version: 1,

@@ -16,6 +16,8 @@ export function ContextBar({
 }) {
   const selection = useStore((s) => s.selection);
   const drawing = useStore((s) => s.drawing);
+  const inkMode = useStore((s) => s.inkMode);
+  const setInkMode = useStore((s) => s.setInkMode);
   const inkColor = useStore((s) => s.inkColor);
   const inkWidth = useStore((s) => s.inkWidth);
   const inkStyle = useStore((s) => s.inkStyle);
@@ -39,36 +41,57 @@ export function ContextBar({
     <div className="context-bar">
       {drawing && (
         <>
-          <span className="ctx-label">Traço</span>
-          <input
-            type="color"
-            className="ctx-color"
-            value={inkColor}
-            onChange={(e) => onInkColor(e.target.value)}
-            title="Cor do traço"
-          />
-          <input
-            type="range"
-            min={1}
-            max={24}
-            value={inkWidth}
-            onChange={(e) => onInkWidth(Number(e.target.value))}
-            style={{ width: 70 }}
-            title={`Espessura: ${inkWidth}px`}
-          />
-          <span className="ctx-label">{inkWidth}px</span>
-          <select
-            value={inkStyle}
-            onChange={(e) => onInkStyle(e.target.value as StrokeStyle)}
-            className="ctx-select"
-            title="Estilo do traço"
+          <button
+            className={"ctx-btn ctx-icon" + (inkMode === "pen" ? " active" : "")}
+            onClick={() => setInkMode("pen")}
+            title="Caneta"
           >
-            <option value="solid">Normal</option>
-            <option value="dash">Tracejado</option>
-            <option value="dot">Pontilhado</option>
-            <option value="chalk">Giz</option>
-            <option value="smudge">Esfumaçado</option>
-          </select>
+            ✏
+          </button>
+          <button
+            className={"ctx-btn ctx-icon" + (inkMode === "eraser" ? " active" : "")}
+            onClick={() => setInkMode("eraser")}
+            title="Borracha (apaga traços inteiros)"
+          >
+            🧽
+          </button>
+          <span className="ctx-sep" />
+          {inkMode === "pen" ? (
+            <>
+              <span className="ctx-label">Traço</span>
+              <input
+                type="color"
+                className="ctx-color"
+                value={inkColor}
+                onChange={(e) => onInkColor(e.target.value)}
+                title="Cor do traço"
+              />
+              <input
+                type="range"
+                min={1}
+                max={24}
+                value={inkWidth}
+                onChange={(e) => onInkWidth(Number(e.target.value))}
+                style={{ width: 70 }}
+                title={`Espessura: ${inkWidth}px`}
+              />
+              <span className="ctx-label">{inkWidth}px</span>
+              <select
+                value={inkStyle}
+                onChange={(e) => onInkStyle(e.target.value as StrokeStyle)}
+                className="ctx-select"
+                title="Estilo do traço"
+              >
+                <option value="solid">Normal</option>
+                <option value="dash">Tracejado</option>
+                <option value="dot">Pontilhado</option>
+                <option value="chalk">Giz</option>
+                <option value="smudge">Esfumaçado</option>
+              </select>
+            </>
+          ) : (
+            <span className="ctx-label">Arraste sobre os traços para apagar</span>
+          )}
         </>
       )}
 
