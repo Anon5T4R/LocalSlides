@@ -1,7 +1,7 @@
 // Generic dropdown menu with separator and submenu (hover-to-open) support.
 // Uses the same backdrop pattern as the existing shape-picker.
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 export type MenuItemDef =
   | { kind: "item"; label: string; shortcut?: string; icon?: string; onClick: () => void; disabled?: boolean }
@@ -40,6 +40,17 @@ function SubMenuItem({
   onClose: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [flipLeft, setFlipLeft] = useState(false);
+
+  // Open to the left instead if the submenu would overflow the right edge.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const r = popRef.current?.getBoundingClientRect();
+    if (r && r.right > window.innerWidth - 8) setFlipLeft(true);
+    else setFlipLeft(false);
+  }, [open]);
+
   return (
     <div
       className={"menu-sub" + (open ? " open" : "")}
@@ -52,7 +63,7 @@ function SubMenuItem({
         <span className="menu-arrow">›</span>
       </button>
       {open && (
-        <div className="menu-sub-popover">
+        <div ref={popRef} className={"menu-sub-popover" + (flipLeft ? " flip-left" : "")}>
           <MenuItems items={item.items} onClose={onClose} />
         </div>
       )}
@@ -73,6 +84,8 @@ export function Menu({
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [alignRight, setAlignRight] = useState(align === "right");
 
   useEffect(() => {
     if (!open) return;
@@ -88,6 +101,13 @@ export function Menu({
     };
   }, [open]);
 
+  // Flip to right-aligned if the menu would overflow the right edge.
+  useLayoutEffect(() => {
+    if (!open) { setAlignRight(align === "right"); return; }
+    const r = popRef.current?.getBoundingClientRect();
+    if (r && r.right > window.innerWidth - 8) setAlignRight(true);
+  }, [open, align]);
+
   return (
     <div ref={wrapRef} className={"menu-wrap" + (className ? " " + className : "")}>
       <button
@@ -97,7 +117,7 @@ export function Menu({
         {trigger}
       </button>
       {open && (
-        <div className={"menu-popover" + (align === "right" ? " align-right" : "")}>
+        <div ref={popRef} className={"menu-popover" + (alignRight ? " align-right" : "")}>
           <MenuItems items={items} onClose={() => setOpen(false)} />
         </div>
       )}

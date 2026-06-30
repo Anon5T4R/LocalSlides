@@ -7,8 +7,13 @@ import type { Editor } from "@tiptap/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { FONT_FAMILIES, FONT_SIZES } from "./tiptapExtensions";
 import { ColorPicker } from "../ui/ColorPicker";
+import { useStore } from "../state/store";
+import { pickAndLoadFont } from "../lib/fonts";
+
+const IMPORT_FONT = "__import_font__";
 
 const LINE_HEIGHTS = [
+  { label: "Padrão", value: "" },
   { label: "1×", value: "1" },
   { label: "1.15×", value: "1.15" },
   { label: "1.5×", value: "1.5" },
@@ -21,6 +26,18 @@ const LETTER_SPACINGS = [
   { label: "+8%", value: "0.08em" },
   { label: "+16%", value: "0.16em" },
 ];
+
+const DEFAULT_HIGHLIGHT = "#fde68a";
+
+/** Small highlighter-marker icon (currentColor stroke). */
+function MarkerIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3l6 6-9 9-6 1 1-6 9-9z" />
+      <path d="M5 19h6" />
+    </svg>
+  );
+}
 
 function Btn({
   active,
@@ -51,6 +68,8 @@ function Btn({
 export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; scale: number; themeColors?: string[] }) {
   // Re-render on selection/transaction so active states stay in sync.
   void editor.state.selection;
+  const customFonts = useStore((s) => s.customFonts);
+  const addCustomFont = useStore((s) => s.addCustomFont);
   const chain = () => editor.chain().focus();
   const ts = editor.getAttributes("textStyle") as {
     fontFamily?: string;
@@ -64,11 +83,38 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
   const curSize = ts.fontSize ? String(parseInt(ts.fontSize, 10)) : "";
   const strokeOn = !!ts.textStroke;
   const strokeColor = ts.textStroke?.split(" ").pop() || "#000000";
-  const highlightOn = !!ts.highlight;
-  const setMark = (attrs: Record<string, unknown>) =>
-    editor.chain().focus().setMark("textStyle", attrs).run();
-  const setParaAttr = (attr: string, value: string | null) =>
-    editor.chain().focus().updateAttributes("paragraph", { [attr]: value }).run();
+
+  // Set a textStyle attribute; passing null cleanly removes it (and drops the
+  // textStyle mark entirely when nothing else is left on it).
+  const setStyle = (attr: string, value: string | null) => {
+    if (value == null) {
+      editor.chain().focus().setMark("textStyle", { [attr]: null }).removeEmptyTextStyle().run();
+    } else {
+      editor.chain().focus().setMark("textStyle", { [attr]: value }).run();
+    }
+  };
+  // Line height lives on the block node (paragraph/heading), not textStyle.
+  const setLineHeight = (value: string | null) =>
+    editor.chain().focus()
+      .updateAttributes("paragraph", { lineHeight: value })
+      .updateAttributes("heading", { lineHeight: value })
+      .run();
+
+  const onFontChange = async (v: string) => {
+    if (v === IMPORT_FONT) {
+      try {
+        const font = await pickAndLoadFont();
+        if (font) {
+          addCustomFont(font.label, font.value);
+          setStyle("fontFamily", font.value); // apply to the current selection
+        }
+      } catch (e) {
+        window.alert(`Não foi possível carregar a fonte:\n${e}`);
+      }
+      return;
+    }
+    setStyle("fontFamily", v || null);
+  };
 
   return (
     <div
@@ -95,57 +141,38 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       <Btn title="Tachado" active={editor.isActive("strike")} onRun={() => chain().toggleStrike().run()}>
         <s>S</s>
       </Btn>
+
       <span className="tt-sep" />
-      <Btn title="Lista" active={editor.isActive("bulletList")} onRun={() => chain().toggleBulletList().run()}>
-        •
-      </Btn>
-      <Btn title="Lista numerada" active={editor.isActive("orderedList")} onRun={() => chain().toggleOrderedList().run()}>
-        1.
-      </Btn>
-      <span className="tt-sep" />
-      <Btn title="Alinhar à esquerda" active={editor.isActive({ textAlign: "left" })} onRun={() => chain().setTextAlign("left").run()}>
-        ⬅
-      </Btn>
-      <Btn title="Centralizar" active={editor.isActive({ textAlign: "center" })} onRun={() => chain().setTextAlign("center").run()}>
-        ⬌
-      </Btn>
-      <Btn title="Alinhar à direita" active={editor.isActive({ textAlign: "right" })} onRun={() => chain().setTextAlign("right").run()}>
-        ➡
-      </Btn>
-      <span className="tt-sep" />
-      <select
-        className="tt-select"
-        title="Fonte"
-        value={ts.fontFamily ?? ""}
-        onMouseDown={(e) => e.stopPropagation()}
-        onChange={(e) => setMark({ fontFamily: e.target.value || null })}
-      >
-        {FONT_FAMILIES.map((f) => (
-          <option key={f.label} value={f.value} style={{ fontFamily: f.value || undefined }}>
-            {f.label}
-          </option>
-        ))}
-      </select>
-      <input
-        className="tt-select tt-size"
-        type="number"
-        title="Tamanho"
-        list="tt-size-list"
-        min={4}
-        max={400}
-        placeholder="Auto"
-        value={curSize}
-        onMouseDown={(e) => e.stopPropagation()}
-        onChange={(e) => setMark({ fontSize: e.target.value ? `${e.target.value}px` : null })}
-      />
-      <datalist id="tt-size-list">
-        {FONT_SIZES.map((s) => <option key={s} value={s} />)}
-      </datalist>
-      <span className="tt-sep" />
+
+      {/* Text color — "A" with a colored underline (Canva-style). */}
+      <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
+        <ColorPicker
+          glyph={<b>A</b>}
+          title="Cor do texto"
+          active={!!ts.color}
+          value={ts.color ?? "#1e293b"}
+          themeColors={themeColors}
+          onChange={(c) => chain().setColor(c).run()}
+          onClear={() => chain().unsetColor().run()}
+        />
+      </span>
+      {/* Highlight — marker icon with a colored underline; "Nenhuma" removes it. */}
+      <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
+        <ColorPicker
+          glyph={<MarkerIcon />}
+          title="Realce (marca-texto)"
+          active={!!ts.highlight}
+          value={ts.highlight ?? DEFAULT_HIGHLIGHT}
+          themeColors={themeColors}
+          onChange={(c) => setStyle("highlight", c)}
+          onClear={() => setStyle("highlight", null)}
+        />
+      </span>
+      {/* Letter outline. */}
       <Btn
         title="Contorno da letra"
         active={strokeOn}
-        onRun={() => setMark({ textStroke: strokeOn ? null : `1px ${strokeColor}` })}
+        onRun={() => setStyle("textStroke", strokeOn ? null : `1px ${strokeColor}`)}
       >
         <span style={{ WebkitTextStroke: "1px currentColor", color: "transparent" }}>O</span>
       </Btn>
@@ -154,47 +181,90 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
           <ColorPicker
             value={strokeColor}
             themeColors={themeColors}
-            onChange={(c) => setMark({ textStroke: `1px ${c}` })}
+            title="Cor do contorno"
+            onChange={(c) => setStyle("textStroke", `1px ${c}`)}
           />
         </span>
       )}
+
       <span className="tt-sep" />
-      {/* Highlight / realce */}
-      <Btn
-        title="Realce"
-        active={highlightOn}
-        onRun={() => setMark({ highlight: highlightOn ? null : "#fde68a" })}
-      >
-        <span style={{ background: ts.highlight ?? "#fde68a", padding: "0 2px", borderRadius: 2 }}>H</span>
+
+      {/* Lists */}
+      <Btn title="Lista com marcadores" active={editor.isActive("bulletList")} onRun={() => chain().toggleBulletList().run()}>
+        •
       </Btn>
-      {highlightOn && (
-        <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
-          <ColorPicker
-            value={ts.highlight ?? "#fde68a"}
-            themeColors={themeColors}
-            onChange={(c) => setMark({ highlight: c })}
-          />
-        </span>
-      )}
+      <Btn title="Lista numerada" active={editor.isActive("orderedList")} onRun={() => chain().toggleOrderedList().run()}>
+        1.
+      </Btn>
+
       <span className="tt-sep" />
-      {/* Text color */}
-      <span className="tt-color-wrap" title="Cor do texto" onMouseDown={(e) => e.preventDefault()}>
-        <ColorPicker
-          value={ts.color ?? "#1e293b"}
-          themeColors={themeColors}
-          onChange={(c) => chain().setColor(c).run()}
-        />
-      </span>
+
+      {/* Alignment (incl. justify) */}
+      <Btn title="Alinhar à esquerda" active={editor.isActive({ textAlign: "left" })} onRun={() => chain().setTextAlign("left").run()}>
+        ⯇
+      </Btn>
+      <Btn title="Centralizar" active={editor.isActive({ textAlign: "center" })} onRun={() => chain().setTextAlign("center").run()}>
+        ⊟
+      </Btn>
+      <Btn title="Alinhar à direita" active={editor.isActive({ textAlign: "right" })} onRun={() => chain().setTextAlign("right").run()}>
+        ⯈
+      </Btn>
+      <Btn title="Justificar" active={editor.isActive({ textAlign: "justify" })} onRun={() => chain().setTextAlign("justify").run()}>
+        ≣
+      </Btn>
+
       <span className="tt-sep" />
+
+      {/* Font family + size */}
+      <select
+        className="tt-select"
+        title="Fonte"
+        value={ts.fontFamily ?? ""}
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => onFontChange(e.target.value)}
+      >
+        {FONT_FAMILIES.map((f) => (
+          <option key={f.label} value={f.value} style={{ fontFamily: f.value || undefined }}>
+            {f.label}
+          </option>
+        ))}
+        {customFonts.length > 0 && (
+          <optgroup label="Importadas">
+            {customFonts.map((f) => (
+              <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
+                {f.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        <option value={IMPORT_FONT}>＋ Importar fonte do PC…</option>
+      </select>
+      <input
+        className="tt-select tt-size"
+        type="number"
+        title="Tamanho da fonte"
+        list="tt-size-list"
+        min={4}
+        max={400}
+        placeholder="Auto"
+        value={curSize}
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => setStyle("fontSize", e.target.value ? `${e.target.value}px` : null)}
+      />
+      <datalist id="tt-size-list">
+        {FONT_SIZES.map((s) => <option key={s} value={s} />)}
+      </datalist>
+
+      <span className="tt-sep" />
+
       {/* Line height */}
       <select
         className="tt-select"
         title="Espaçamento entre linhas"
         value={paraAttrs.lineHeight ?? ""}
         onMouseDown={(e) => e.stopPropagation()}
-        onChange={(e) => setParaAttr("lineHeight", e.target.value || null)}
+        onChange={(e) => setLineHeight(e.target.value || null)}
       >
-        <option value="">Auto</option>
         {LINE_HEIGHTS.map((lh) => (
           <option key={lh.value} value={lh.value}>{lh.label}</option>
         ))}
@@ -205,7 +275,7 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
         title="Espaçamento entre letras"
         value={ts.letterSpacing ?? ""}
         onMouseDown={(e) => e.stopPropagation()}
-        onChange={(e) => setMark({ letterSpacing: e.target.value || null })}
+        onChange={(e) => setStyle("letterSpacing", e.target.value || null)}
       >
         {LETTER_SPACINGS.map((ls) => (
           <option key={ls.value} value={ls.value}>{ls.label}</option>

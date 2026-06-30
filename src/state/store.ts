@@ -70,6 +70,9 @@ export interface SlidesState {
   commenting: boolean;
   /** 0 = fit-to-container (computed by the canvas); otherwise a literal scale. */
   zoom: number;
+  /** Fonts imported from disk this session (not persisted in the deck). */
+  customFonts: { label: string; value: string }[];
+  addCustomFont: (label: string, value: string) => void;
 
   past: Deck[];
   future: Deck[];
@@ -180,6 +183,7 @@ export const useStore = create<SlidesState>((set, get) => ({
   inkStyle: "solid",
   commenting: false,
   zoom: 0,
+  customFonts: [],
   clipboardSize: 0,
 
   past: [],
@@ -295,6 +299,8 @@ export const useStore = create<SlidesState>((set, get) => ({
   setCropping: (id) => set({ croppingId: id }),
   setDrawing: (b) => set({ drawing: b, croppingId: null, commenting: false, inkMode: b ? get().inkMode : "pen" }),
   setInkMode: (m) => set({ inkMode: m }),
+  addCustomFont: (label, value) =>
+    set((s) => (s.customFonts.some((f) => f.value === value) ? {} : { customFonts: [...s.customFonts, { label, value }] })),
   setInkColor: (c) => set({ inkColor: c }),
   setInkWidth: (n) => set({ inkWidth: n }),
   setInkStyle: (s) => set({ inkStyle: s }),

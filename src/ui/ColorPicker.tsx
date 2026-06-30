@@ -28,11 +28,22 @@ const PALETTE: string[] = [
 export function ColorPicker({
   value,
   onChange,
+  onClear,
   themeColors,
+  glyph,
+  active,
+  title,
 }: {
   value: string;
   onChange: (color: string) => void;
+  /** When provided, a "Nenhuma" tile appears that clears the color. */
+  onClear?: () => void;
   themeColors?: string[];
+  /** When set, the trigger shows this glyph with a colored underline (Canva-style). */
+  glyph?: import("react").ReactNode;
+  /** Highlight the trigger as active (e.g. a color/highlight is applied). */
+  active?: boolean;
+  title?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [hex, setHex] = useState(value);
@@ -101,20 +112,44 @@ export function ColorPicker({
     }
   };
 
+  const clear = () => {
+    onClear?.();
+    setOpen(false);
+  };
+
   return (
     <div className="cp-wrap" ref={wrapRef}>
-      <button
-        className="cp-swatch"
-        style={{ background: value }}
-        title={value}
-        onClick={() => setOpen((v) => !v)}
-      />
+      {glyph != null ? (
+        <button
+          className={"cp-swatch-glyph" + (active ? " active" : "")}
+          title={title ?? value}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className="cp-glyph">{glyph}</span>
+          <span className="cp-glyph-bar" style={{ background: active ? value : "transparent" }} />
+        </button>
+      ) : (
+        <button
+          className="cp-swatch"
+          style={{ background: value }}
+          title={title ?? value}
+          onClick={() => setOpen((v) => !v)}
+        />
+      )}
       {open && (
         <div
           className="cp-popover"
           ref={popRef}
           style={{ position: "fixed", left: coords.left, top: coords.top }}
         >
+          {/* Clear / none */}
+          {onClear && (
+            <button className="cp-none" onClick={clear} title="Nenhuma (remover)">
+              <span className="cp-none-swatch" />
+              Nenhuma
+            </button>
+          )}
+
           {/* Theme colors */}
           {themeColors && themeColors.length > 0 && (
             <div className="cp-section">
