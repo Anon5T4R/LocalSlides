@@ -143,8 +143,15 @@ function InkSvg({ el }: { el: InkEl }) {
 
 function ShapeSvg({ el }: { el: ShapeEl }) {
   const { w, h } = el.geom;
-  // Undefined fill → default gray; explicit "none" → transparent (SVG "none").
-  const fill = !el.fill ? "#cbd5e1" : el.fill.kind === "none" ? "none" : el.fill.color;
+  // Gradient fill uses an SVG linearGradient keyed to the element id.
+  const gradId = el.fill?.kind === "gradient" ? `g-${el.id}` : null;
+  const fill = !el.fill
+    ? "#cbd5e1"
+    : el.fill.kind === "none"
+    ? "none"
+    : el.fill.kind === "gradient"
+    ? `url(#${gradId})`
+    : el.fill.color;
   const stroke = el.stroke?.color ?? "none";
   const sw = el.stroke?.width ?? 0;
   const style = effectiveStyle(el.stroke);
@@ -253,6 +260,18 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", overflow: "visible" }}>
       {needsDefs(style) && <StrokeDefs />}
+      {gradId && el.fill?.kind === "gradient" && (
+        <defs>
+          <linearGradient
+            id={gradId}
+            gradientTransform={`rotate(${el.fill.angle}, 0.5, 0.5)`}
+            gradientUnits="objectBoundingBox"
+          >
+            <stop offset="0%" stopColor={el.fill.from} />
+            <stop offset="100%" stopColor={el.fill.to} />
+          </linearGradient>
+        </defs>
+      )}
       {shape}
     </svg>
   );

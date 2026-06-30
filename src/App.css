@@ -345,6 +345,19 @@ body {
   opacity: 0;
   cursor: pointer;
 }
+/* Wrapper so ColorPicker popover appears outside the dark toolbar */
+.tt-color-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+.tt-color-wrap .cp-swatch {
+  border-color: #4b5563;
+}
+.tt-color-wrap .cp-popover {
+  /* Popover drops down below the toolbar, which is already above the slide */
+  top: calc(100% + 4px);
+  left: 0;
+}
 .tt-select {
   font: inherit;
   font-size: 12px;
@@ -1503,4 +1516,108 @@ body {
 }
 .insp-geom-input:disabled {
   opacity: 0.4;
+}
+
+/* ---- ColorPicker ---- */
+.cp-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.cp-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.cp-swatch:hover {
+  border-color: var(--muted);
+}
+.cp-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1200;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: var(--shadow);
+  min-width: 196px;
+}
+.cp-section {
+  margin-bottom: 6px;
+}
+.cp-row-label {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cp-grid {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 3px;
+  margin-bottom: 8px;
+}
+.cp-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.15);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.cp-dot.active {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.cp-dot:hover {
+  transform: scale(1.25);
+  border-color: var(--muted);
+}
+.cp-bottom {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.cp-hex {
+  flex: 1;
+  font: inherit;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  color: var(--text);
+  min-width: 0;
+}
+.cp-hex:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.cp-eyedrop,
+.cp-native {
+  cursor: pointer;
+  font-size: 14px;
+  background: none;
+  border: none;
+  padding: 2px 3px;
+  border-radius: 4px;
+  line-height: 1;
+  position: relative;
+}
+.cp-eyedrop:hover,
+.cp-native:hover {
+  background: var(--panel-2);
 }

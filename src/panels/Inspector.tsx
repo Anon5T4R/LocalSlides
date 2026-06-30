@@ -16,6 +16,7 @@ import {
 } from "../model/deck";
 import { THEME_PRESETS, findThemePreset } from "../model/themes";
 import { LAYOUTS } from "../model/layouts";
+import { ColorPicker } from "../ui/ColorPicker";
 
 const ANIMS: { value: AnimKind; label: string }[] = [
   { value: "none", label: "Nenhuma" },
@@ -196,10 +197,9 @@ function ElementInspector({ el }: { el: Element }) {
       {el.outline && (
         <>
           <Row label="Cor do contorno">
-            <input
-              type="color"
+            <ColorPicker
               value={el.outline.color}
-              onChange={(e) => set((x) => x.outline && (x.outline.color = e.target.value))}
+              onChange={(c) => set((x) => x.outline && (x.outline.color = c))}
             />
           </Row>
           <Row label="Espessura">
@@ -354,24 +354,55 @@ function ElementInspector({ el }: { el: Element }) {
             </select>
           </Row>
           <Row label="Preenchimento">
-            <input
-              type="checkbox"
-              checked={el.fill?.kind !== "none"}
-              onChange={(e) =>
-                set((x) => x.type === "shape" && (x.fill = e.target.checked ? { kind: "solid", color: "#2563eb" } : { kind: "none" }))
-              }
-            />
+            <select
+              value={el.fill?.kind ?? "solid"}
+              onChange={(e) => {
+                const kind = e.target.value as "none" | "solid" | "gradient";
+                set((x) => {
+                  if (x.type !== "shape") return;
+                  if (kind === "none") x.fill = { kind: "none" };
+                  else if (kind === "solid") x.fill = { kind: "solid", color: x.fill?.kind === "solid" ? x.fill.color : "#2563eb" };
+                  else x.fill = { kind: "gradient", from: "#2563eb", to: "#0ea5e9", angle: 135 };
+                });
+              }}
+            >
+              <option value="none">Nenhum</option>
+              <option value="solid">Sólido</option>
+              <option value="gradient">Gradiente</option>
+            </select>
           </Row>
-          {el.fill?.kind !== "none" && (
+          {el.fill?.kind === "solid" && (
             <Row label="Cor">
-              <input
-                type="color"
-                value={el.fill?.kind === "solid" ? el.fill.color : "#2563eb"}
-                onChange={(e) =>
-                  set((x) => x.type === "shape" && (x.fill = { kind: "solid", color: e.target.value }))
-                }
+              <ColorPicker
+                value={el.fill.color}
+                onChange={(c) => set((x) => x.type === "shape" && (x.fill = { kind: "solid", color: c }))}
               />
             </Row>
+          )}
+          {el.fill?.kind === "gradient" && (
+            <>
+              <Row label="Cor inicial">
+                <ColorPicker
+                  value={el.fill.from}
+                  onChange={(c) => set((x) => x.type === "shape" && x.fill?.kind === "gradient" && (x.fill.from = c))}
+                />
+              </Row>
+              <Row label="Cor final">
+                <ColorPicker
+                  value={el.fill.to}
+                  onChange={(c) => set((x) => x.type === "shape" && x.fill?.kind === "gradient" && (x.fill.to = c))}
+                />
+              </Row>
+              <Row label="Ângulo (°)">
+                <input
+                  type="number"
+                  min={0}
+                  max={360}
+                  value={el.fill.angle}
+                  onChange={(e) => set((x) => x.type === "shape" && x.fill?.kind === "gradient" && (x.fill.angle = Number(e.target.value)))}
+                />
+              </Row>
+            </>
           )}
           <Row label="Traço">
             <input
@@ -385,10 +416,9 @@ function ElementInspector({ el }: { el: Element }) {
           {el.stroke && (
             <>
               <Row label="Cor do traço">
-                <input
-                  type="color"
+                <ColorPicker
                   value={el.stroke.color}
-                  onChange={(e) => set((x) => x.type === "shape" && x.stroke && (x.stroke.color = e.target.value))}
+                  onChange={(c) => set((x) => x.type === "shape" && x.stroke && (x.stroke.color = c))}
                 />
               </Row>
               <Row label="Espessura">

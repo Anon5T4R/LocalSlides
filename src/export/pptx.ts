@@ -38,6 +38,7 @@ function hex(color: string | undefined, fallback = "000000"): string {
 
 function fillColor(fill: Fill | undefined): string | null {
   if (!fill || fill.kind === "none") return null;
+  if (fill.kind === "gradient") return hex(fill.from); // PPTX export: use first gradient color
   return hex(fill.color);
 }
 

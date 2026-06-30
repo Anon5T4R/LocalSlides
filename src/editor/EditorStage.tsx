@@ -12,6 +12,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useStore, expandToGroups } from "../state/store";
@@ -21,7 +22,7 @@ import { SlideView } from "../render/SlideView";
 import { SelectionLayer } from "../render/SelectionLayer";
 import { GuidesLayer } from "../render/GuidesLayer";
 import { resizeGeom, rotationFromPointer, type Handle } from "../interactions/geometry";
-import { computeSnap } from "../interactions/snapping";
+import { computeSnap, type GapGuide } from "../interactions/snapping";
 import { TextBoxEditor } from "./TextBoxEditor";
 import { TableCellEditor } from "./TableCellEditor";
 import { CropOverlay } from "./CropOverlay";
@@ -60,6 +61,7 @@ export function EditorStage() {
   const setCommenting = useStore((s) => s.setCommenting);
   const addComment = useStore((s) => s.addComment);
   const zoom = useStore((s) => s.zoom);
+  const setZoom = useStore((s) => s.setZoom);
   const select = useStore((s) => s.select);
   const clearSelection = useStore((s) => s.clearSelection);
   const updateElement = useStore((s) => s.updateElement);
@@ -81,10 +83,18 @@ export function EditorStage() {
   const [avail, setAvail] = useState({ w: 0, h: 0 });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<CellTarget | null>(null);
-  const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
+  const [guides, setGuides] = useState<{ v: number[]; h: number[]; gap: GapGuide[] }>({ v: [], h: [], gap: [] });
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [activeComment, setActiveComment] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; elId: string | null } | null>(null);
+  // Tooltip shown during move/resize/rotate (W×H, x,y, °).
+  const [hint, setHint] = useState<{ text: string; cx: number; cy: number } | null>(null);
+  // Pan offset (screen px) — not stored in the deck, resets on zoom change.
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const panRef = useRef(pan);
+  panRef.current = pan;
+  const spaceDown = useRef(false);
+  const panGesture = useRef<{ startX: number; startY: number; originPan: { x: number; y: number } } | null>(null);
 
   useLayoutEffect(() => {
     const el = stageRef.current;
@@ -120,6 +130,14 @@ export function EditorStage() {
   // --- Window-level gesture handlers ---
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
+      // Space+drag pan (handled independently of normal gestures).
+      if (panGesture.current) {
+        const dx = e.clientX - panGesture.current.startX;
+        const dy = e.clientY - panGesture.current.startY;
+        setPan({ x: panGesture.current.originPan.x + dx, y: panGesture.current.originPan.y + dy });
+        return;
+      }
+
       const g = gesture.current;
       if (!g) return;
       const s = scaleRef.current;
@@ -137,7 +155,14 @@ export function EditorStage() {
         const snap = computeSnap(proposed, others, deck.size);
         const adjDx = snap.x - primaryStart.x;
         const adjDy = snap.y - primaryStart.y;
-        setGuides({ v: snap.vGuides, h: snap.hGuides });
+        setGuides({ v: snap.vGuides, h: snap.hGuides, gap: snap.gapGuides });
+        const finalX = Math.round(primaryStart.x + adjDx);
+        const finalY = Math.round(primaryStart.y + adjDy);
+        setHint({
+          text: `${finalX}, ${finalY}`,
+          cx: e.clientX,
+          cy: e.clientY,
+        });
         g.starts.forEach((st) =>
           updateElement(st.id, (el) => {
             el.geom.x = Math.round(st.geom.x + adjDx);
@@ -147,17 +172,23 @@ export function EditorStage() {
       } else if (g.kind === "resize") {
         const dx = (e.clientX - g.px) / s;
         const dy = (e.clientY - g.py) / s;
-        const next = resizeGeom(g.start, g.handle, dx, dy, e.shiftKey);
+        const next = resizeGeom(g.start, g.handle, dx, dy, e.shiftKey, e.altKey);
         updateElement(g.elId, (el) => {
           el.geom.x = Math.round(next.x);
           el.geom.y = Math.round(next.y);
           el.geom.w = Math.round(next.w);
           el.geom.h = Math.round(next.h);
         });
+        setHint({
+          text: `${Math.round(next.w)} × ${Math.round(next.h)}`,
+          cx: e.clientX,
+          cy: e.clientY,
+        });
       } else if (g.kind === "rotate") {
         const p = toLogical(e.clientX, e.clientY);
         const deg = rotationFromPointer(g.start, p.x, p.y, e.shiftKey);
         updateElement(g.elId, (el) => (el.geom.rotation = deg));
+        setHint({ text: `${deg}°`, cx: e.clientX, cy: e.clientY });
       } else if (g.kind === "marquee") {
         const p = toLogical(e.clientX, e.clientY);
         setMarquee({
@@ -170,6 +201,7 @@ export function EditorStage() {
     };
 
     const onUp = () => {
+      if (panGesture.current) { panGesture.current = null; return; }
       const g = gesture.current;
       if (!g) return;
       if (g.kind === "marquee") {
@@ -193,7 +225,8 @@ export function EditorStage() {
       } else {
         endTx();
       }
-      setGuides({ v: [], h: [] });
+      setGuides({ v: [], h: [], gap: [] });
+      setHint(null);
       gesture.current = null;
     };
 
@@ -221,6 +254,46 @@ export function EditorStage() {
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, [croppingId, setCropping]);
+
+  // Space key toggles pan-cursor on the stage.
+  useEffect(() => {
+    const onDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !editingId && !editingCell) {
+        spaceDown.current = true;
+        // Prevent page scroll.
+        if (e.target === document.body || e.target === stageRef.current) e.preventDefault();
+      }
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        spaceDown.current = false;
+        panGesture.current = null;
+      }
+    };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+    };
+  }, [editingId, editingCell]);
+
+  // Ctrl+scroll zoom (must use passive:false to preventDefault).
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const current = scaleRef.current;
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      const next = Math.min(5, Math.max(0.1, current * factor));
+      setZoom(Math.round(next * 100) / 100);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // --- Start gestures ---
   const startMove = useCallback(
@@ -376,13 +449,19 @@ export function EditorStage() {
       tabIndex={0}
       onKeyDown={onKeyDown}
       onPointerDown={(e) => {
+        if (spaceDown.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          panGesture.current = { startX: e.clientX, startY: e.clientY, originPan: panRef.current };
+          return;
+        }
         // Empty-area press starts a marquee (or clears on a plain click).
         if (!editingId && !editingCell && e.target === e.currentTarget) startMarquee(e);
       }}
     >
       <div
         className="slide-frame"
-        style={{ width: deck.size.w * scale, height: deck.size.h * scale }}
+        style={{ width: deck.size.w * scale, height: deck.size.h * scale, translate: `${pan.x}px ${pan.y}px` }}
         onPointerDown={(e) => {
           if (e.target === e.currentTarget || e.target === scaledRef.current) {
             e.stopPropagation();
@@ -449,9 +528,9 @@ export function EditorStage() {
             />
           ))}
 
-          {/* snapping guides */}
-          {(guides.v.length > 0 || guides.h.length > 0) && (
-            <GuidesLayer vGuides={guides.v} hGuides={guides.h} size={deck.size} scale={scale} />
+          {/* snapping guides + gap guides */}
+          {(guides.v.length > 0 || guides.h.length > 0 || guides.gap.length > 0) && (
+            <GuidesLayer vGuides={guides.v} hGuides={guides.h} gapGuides={guides.gap} size={deck.size} scale={scale} />
           )}
 
           {/* image crop overlay */}
@@ -527,6 +606,27 @@ export function EditorStage() {
           )}
         </div>
       </div>
+
+      {/* Drag tooltip (W×H / x,y / °) */}
+      {hint && (
+        <div
+          style={{
+            position: "fixed",
+            left: hint.cx + 14,
+            top: hint.cy + 14,
+            background: "rgba(0,0,0,0.75)",
+            color: "#fff",
+            fontSize: 11,
+            padding: "2px 6px",
+            borderRadius: 3,
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+            zIndex: 9999,
+          } as CSSProperties}
+        >
+          {hint.text}
+        </div>
+      )}
 
       {/* Right-click context menu */}
       {ctxMenu && (() => {

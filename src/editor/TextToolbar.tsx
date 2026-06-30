@@ -6,6 +6,21 @@
 import type { Editor } from "@tiptap/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { FONT_FAMILIES, FONT_SIZES } from "./tiptapExtensions";
+import { ColorPicker } from "../ui/ColorPicker";
+
+const LINE_HEIGHTS = [
+  { label: "1×", value: "1" },
+  { label: "1.15×", value: "1.15" },
+  { label: "1.5×", value: "1.5" },
+  { label: "2×", value: "2" },
+];
+
+const LETTER_SPACINGS = [
+  { label: "Normal", value: "" },
+  { label: "-5%", value: "-0.05em" },
+  { label: "+8%", value: "0.08em" },
+  { label: "+16%", value: "0.16em" },
+];
 
 function Btn({
   active,
@@ -41,12 +56,19 @@ export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }
     fontFamily?: string;
     fontSize?: string;
     textStroke?: string;
+    letterSpacing?: string;
+    highlight?: string;
+    color?: string;
   };
+  const paraAttrs = editor.getAttributes("paragraph") as { lineHeight?: string };
   const curSize = ts.fontSize ? String(parseInt(ts.fontSize, 10)) : "";
   const strokeOn = !!ts.textStroke;
   const strokeColor = ts.textStroke?.split(" ").pop() || "#000000";
+  const highlightOn = !!ts.highlight;
   const setMark = (attrs: Record<string, unknown>) =>
     editor.chain().focus().setMark("textStyle", attrs).run();
+  const setParaAttr = (attr: string, value: string | null) =>
+    editor.chain().focus().updateAttributes("paragraph", { [attr]: value }).run();
 
   return (
     <div
@@ -127,23 +149,64 @@ export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }
         <span style={{ WebkitTextStroke: "1px currentColor", color: "transparent" }}>O</span>
       </Btn>
       {strokeOn && (
-        <label className="tt-color" title="Cor do contorno" onMouseDown={(e) => e.preventDefault()}>
-          ◐
-          <input
-            type="color"
+        <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
+          <ColorPicker
             value={strokeColor}
-            onChange={(e) => setMark({ textStroke: `1px ${e.target.value}` })}
+            onChange={(c) => setMark({ textStroke: `1px ${c}` })}
           />
-        </label>
+        </span>
       )}
-      <label className="tt-color" title="Cor do texto" onMouseDown={(e) => e.preventDefault()}>
-        A
-        <input
-          type="color"
-          onChange={(e) => chain().setColor(e.target.value).run()}
-          defaultValue="#1e293b"
+      <span className="tt-sep" />
+      {/* Highlight / realce */}
+      <Btn
+        title="Realce"
+        active={highlightOn}
+        onRun={() => setMark({ highlight: highlightOn ? null : "#fde68a" })}
+      >
+        <span style={{ background: ts.highlight ?? "#fde68a", padding: "0 2px", borderRadius: 2 }}>H</span>
+      </Btn>
+      {highlightOn && (
+        <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
+          <ColorPicker
+            value={ts.highlight ?? "#fde68a"}
+            onChange={(c) => setMark({ highlight: c })}
+          />
+        </span>
+      )}
+      <span className="tt-sep" />
+      {/* Text color */}
+      <span className="tt-color-wrap" title="Cor do texto" onMouseDown={(e) => e.preventDefault()}>
+        <ColorPicker
+          value={ts.color ?? "#1e293b"}
+          onChange={(c) => chain().setColor(c).run()}
         />
-      </label>
+      </span>
+      <span className="tt-sep" />
+      {/* Line height */}
+      <select
+        className="tt-select"
+        title="Espaçamento entre linhas"
+        value={paraAttrs.lineHeight ?? ""}
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => setParaAttr("lineHeight", e.target.value || null)}
+      >
+        <option value="">Auto</option>
+        {LINE_HEIGHTS.map((lh) => (
+          <option key={lh.value} value={lh.value}>{lh.label}</option>
+        ))}
+      </select>
+      {/* Letter spacing */}
+      <select
+        className="tt-select"
+        title="Espaçamento entre letras"
+        value={ts.letterSpacing ?? ""}
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => setMark({ letterSpacing: e.target.value || null })}
+      >
+        {LETTER_SPACINGS.map((ls) => (
+          <option key={ls.value} value={ls.value}>{ls.label}</option>
+        ))}
+      </select>
     </div>
   );
 }

@@ -30,7 +30,8 @@ export const FONT_FAMILIES: { label: string; value: string }[] = [
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 60, 72];
 
-/** Adds `fontSize`, `fontFamily` and `textStroke` (letter outline) to textStyle. */
+/** Adds `fontSize`, `fontFamily`, `textStroke`, `letterSpacing`, `highlight` to textStyle,
+ *  and `lineHeight` as a paragraph-level attribute. */
 const TextStyleExtras = Extension.create({
   name: "textStyleExtras",
   addGlobalAttributes() {
@@ -58,6 +59,29 @@ const TextStyleExtras = Extension.create({
               attrs.textStroke
                 ? { style: `-webkit-text-stroke:${attrs.textStroke};paint-order:stroke fill` }
                 : {},
+          },
+          letterSpacing: {
+            default: null,
+            parseHTML: (el: HTMLElement) => el.style.letterSpacing || null,
+            renderHTML: (attrs: Record<string, unknown>) =>
+              attrs.letterSpacing ? { style: `letter-spacing:${attrs.letterSpacing}` } : {},
+          },
+          highlight: {
+            default: null,
+            parseHTML: (el: HTMLElement) => el.style.backgroundColor || null,
+            renderHTML: (attrs: Record<string, unknown>) =>
+              attrs.highlight ? { style: `background-color:${attrs.highlight};border-radius:2px;padding:0 1px` } : {},
+          },
+        },
+      },
+      {
+        types: ["paragraph", "heading"],
+        attributes: {
+          lineHeight: {
+            default: null,
+            parseHTML: (el: HTMLElement) => el.style.lineHeight || null,
+            renderHTML: (attrs: Record<string, unknown>) =>
+              attrs.lineHeight ? { style: `line-height:${attrs.lineHeight}` } : {},
           },
         },
       },

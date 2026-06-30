@@ -25,12 +25,20 @@ function applyMarks(text: ReactNode, marks: Mark[] | undefined, key: number): Re
         const fontSize = mark.attrs?.fontSize as string | undefined;
         const fontFamily = mark.attrs?.fontFamily as string | undefined;
         const textStroke = mark.attrs?.textStroke as string | undefined;
+        const letterSpacing = mark.attrs?.letterSpacing as string | undefined;
+        const highlight = mark.attrs?.highlight as string | undefined;
         if (color) style.color = color;
         if (fontSize) style.fontSize = fontSize;
         if (fontFamily) style.fontFamily = fontFamily;
         if (textStroke) {
           (style as CSSProperties & { WebkitTextStroke?: string }).WebkitTextStroke = textStroke;
           style.paintOrder = "stroke fill";
+        }
+        if (letterSpacing) style.letterSpacing = letterSpacing;
+        if (highlight) {
+          style.backgroundColor = highlight;
+          style.borderRadius = "2px";
+          style.padding = "0 1px";
         }
         return (
           <span key={i} style={style}>
@@ -52,7 +60,10 @@ function renderNode(node: ProseMirrorJSON, key: number): ReactNode {
       return <br key={key} />;
     case "paragraph": {
       const align = node.attrs?.textAlign as string | undefined;
-      const style: CSSProperties = align ? { textAlign: align as CSSProperties["textAlign"] } : {};
+      const lineHeight = node.attrs?.lineHeight as string | undefined;
+      const style: CSSProperties = {};
+      if (align) style.textAlign = align as CSSProperties["textAlign"];
+      if (lineHeight) style.lineHeight = lineHeight;
       return (
         <p key={key} style={style}>
           {(node.content ?? []).map((c, i) => renderNode(c, i))}
@@ -63,7 +74,10 @@ function renderNode(node: ProseMirrorJSON, key: number): ReactNode {
     case "heading": {
       const level = Math.min(Math.max((node.attrs?.level as number) ?? 1, 1), 6);
       const align = node.attrs?.textAlign as string | undefined;
-      const style: CSSProperties = align ? { textAlign: align as CSSProperties["textAlign"] } : {};
+      const lineHeight = node.attrs?.lineHeight as string | undefined;
+      const style: CSSProperties = {};
+      if (align) style.textAlign = align as CSSProperties["textAlign"];
+      if (lineHeight) style.lineHeight = lineHeight;
       return createElement(
         `h${level}`,
         { key, style },

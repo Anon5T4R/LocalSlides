@@ -36,6 +36,7 @@ export type AspectRatio = keyof typeof SLIDE_SIZES;
 
 export type Fill =
   | { kind: "solid"; color: string }
+  | { kind: "gradient"; from: string; to: string; angle: number }
   | { kind: "none" };
 
 /** Visual style of a line/stroke: plain, dashed, dotted, chalky, or smudged. */
