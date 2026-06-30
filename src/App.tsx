@@ -386,6 +386,20 @@ function App() {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       const k = e.key.toLowerCase();
+      // When typing in a text field/editor, editing shortcuts (select-all, undo,
+      // redo) belong to that field — don't hijack them for the deck.
+      const t = e.target as HTMLElement | null;
+      const inField =
+        !!t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA");
+      if (inField && (k === "a" || k === "z" || k === "y")) return;
+      if (k === "a") {
+        // Select all objects on the current slide.
+        e.preventDefault();
+        const st = useStore.getState();
+        const slide = findSlide(st.deck, st.currentSlideId);
+        if (slide) st.select(slide.elements.filter((el) => !el.hidden && !el.locked).map((el) => el.id));
+        return;
+      }
       if (k === "s") {
         e.preventDefault();
         e.shiftKey ? handleSaveAs() : handleSave();
