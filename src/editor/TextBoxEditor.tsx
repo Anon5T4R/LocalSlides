@@ -104,11 +104,22 @@ export function TextBoxEditor({
         fontWeight: isTitle ? 700 : 400,
         lineHeight: 1.25,
         color: deck.theme.colors.text,
-        background: "transparent",
+        background:
+          !el.fill || el.fill.kind === "none"
+            ? "transparent"
+            : el.fill.kind === "gradient"
+            ? `linear-gradient(${el.fill.angle}deg, ${el.fill.from}, ${el.fill.to})`
+            : el.fill.color,
       }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {editor && <TextToolbar editor={editor} scale={scale} />}
+      {editor && (
+        <TextToolbar
+          editor={editor}
+          scale={scale}
+          themeColors={Object.values(deck.theme.colors)}
+        />
+      )}
       <EditorContent editor={editor} className="tt-content" />
     </div>
   );

@@ -349,6 +349,13 @@ export function ElementView({
       : undefined;
   if (anim) base.animation = anim;
 
+  // Drop shadow applied via filter (works on all element types).
+  if (el.shadow) {
+    const sh = el.shadow;
+    const shadowFilter = `drop-shadow(${sh.x}px ${sh.y}px ${sh.blur}px ${sh.color})`;
+    base.filter = shadowFilter;
+  }
+
   // Images outline their alpha silhouette (Canva sticker/shadow); every other
   // type gets the rectangular SVG outline overlay appended at the end.
   const imgOutline =
@@ -359,6 +366,12 @@ export function ElementView({
   const body: ReactNode = (() => {
   if (el.type === "text") {
     const isTitle = el.placeholder === "title";
+    const textBg =
+      !el.fill || el.fill.kind === "none"
+        ? undefined
+        : el.fill.kind === "gradient"
+        ? `linear-gradient(${el.fill.angle}deg, ${el.fill.from}, ${el.fill.to})`
+        : el.fill.color;
     return (
       <div
         style={{
@@ -369,6 +382,7 @@ export function ElementView({
           fontWeight: isTitle ? 700 : 400,
           lineHeight: 1.25,
           color: theme.colors.text,
+          background: textBg,
         }}
       >
         <AutoFitText

@@ -3,13 +3,14 @@
 // selected, the current slide's properties (background, transition). Every change
 // flows through the store, so all of it is undoable.
 
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import { useStore } from "../state/store";
 import {
   findSlide,
   plainTextToPM,
   type AnimKind,
   type Element,
+  type Fill,
   type ShapeKind,
   type StrokeStyle,
   type TransitionKind,
@@ -108,6 +109,8 @@ function ElementInspector({ el }: { el: Element }) {
   const reorder = useStore((s) => s.reorder);
   const deleteElements = useStore((s) => s.deleteElements);
   const setCropping = useStore((s) => s.setCropping);
+  const theme = useStore((s) => s.deck.theme);
+  const themeColors = Object.values(theme.colors) as string[];
 
   const set = (recipe: (e: Element) => void) => updateElement(el.id, recipe);
 
@@ -199,6 +202,7 @@ function ElementInspector({ el }: { el: Element }) {
           <Row label="Cor do contorno">
             <ColorPicker
               value={el.outline.color}
+              themeColors={themeColors}
               onChange={(c) => set((x) => x.outline && (x.outline.color = c))}
             />
           </Row>
@@ -224,6 +228,118 @@ function ElementInspector({ el }: { el: Element }) {
               ))}
             </select>
           </Row>
+        </>
+      )}
+
+      {/* Shadow */}
+      <Row label="Sombra">
+        <input
+          type="checkbox"
+          checked={!!el.shadow}
+          onChange={(e) =>
+            set((x) => (x.shadow = e.target.checked ? { color: "#00000066", blur: 8, x: 4, y: 4 } : undefined))
+          }
+        />
+      </Row>
+      {el.shadow && (
+        <>
+          <Row label="Cor da sombra">
+            <ColorPicker
+              value={el.shadow.color}
+              themeColors={themeColors}
+              onChange={(c) => set((x) => x.shadow && (x.shadow.color = c))}
+            />
+          </Row>
+          <Row label="Desfoque">
+            <input
+              type="range"
+              min={0}
+              max={60}
+              value={el.shadow.blur}
+              onChange={(e) => set((x) => x.shadow && (x.shadow.blur = Number(e.target.value)))}
+            />
+            <span className="insp-num">{el.shadow.blur}px</span>
+          </Row>
+          <Row label="Deslocamento X">
+            <input
+              type="range"
+              min={-40}
+              max={40}
+              value={el.shadow.x}
+              onChange={(e) => set((x) => x.shadow && (x.shadow.x = Number(e.target.value)))}
+            />
+            <span className="insp-num">{el.shadow.x}px</span>
+          </Row>
+          <Row label="Deslocamento Y">
+            <input
+              type="range"
+              min={-40}
+              max={40}
+              value={el.shadow.y}
+              onChange={(e) => set((x) => x.shadow && (x.shadow.y = Number(e.target.value)))}
+            />
+            <span className="insp-num">{el.shadow.y}px</span>
+          </Row>
+        </>
+      )}
+
+      {/* Text box fill */}
+      {el.type === "text" && (
+        <>
+          <Row label="Fundo">
+            <select
+              value={(el.fill as Fill | undefined)?.kind ?? "none"}
+              onChange={(e) => {
+                const kind = e.target.value as "none" | "solid" | "gradient";
+                set((x) => {
+                  if (x.type !== "text") return;
+                  if (kind === "none") x.fill = undefined;
+                  else if (kind === "solid") x.fill = { kind: "solid", color: "#ffffff" };
+                  else x.fill = { kind: "gradient", from: "#ffffff", to: "#e2e8f0", angle: 135 };
+                });
+              }}
+            >
+              <option value="none">Nenhum</option>
+              <option value="solid">Sólido</option>
+              <option value="gradient">Gradiente</option>
+            </select>
+          </Row>
+          {el.fill?.kind === "solid" && (
+            <Row label="Cor">
+              <ColorPicker
+                value={el.fill.color}
+                themeColors={themeColors}
+                onChange={(c) => set((x) => x.type === "text" && (x.fill = { kind: "solid", color: c }))}
+              />
+            </Row>
+          )}
+          {el.fill?.kind === "gradient" && (
+            <>
+              <Row label="Cor inicial">
+                <ColorPicker
+                  value={el.fill.from}
+                  themeColors={themeColors}
+                  onChange={(c) => set((x) => x.type === "text" && x.fill?.kind === "gradient" && (x.fill.from = c))}
+                />
+              </Row>
+              <Row label="Cor final">
+                <ColorPicker
+                  value={el.fill.to}
+                  themeColors={themeColors}
+                  onChange={(c) => set((x) => x.type === "text" && x.fill?.kind === "gradient" && (x.fill.to = c))}
+                />
+              </Row>
+              <Row label="Ângulo (°)">
+                <input
+                  type="number"
+                  min={0}
+                  max={360}
+                  value={el.fill.angle}
+                  onChange={(e) => set((x) => x.type === "text" && x.fill?.kind === "gradient" && (x.fill.angle = Number(e.target.value)))}
+                />
+              </Row>
+            </>
+          )}
         </>
       )}
 
@@ -375,6 +491,7 @@ function ElementInspector({ el }: { el: Element }) {
             <Row label="Cor">
               <ColorPicker
                 value={el.fill.color}
+                themeColors={themeColors}
                 onChange={(c) => set((x) => x.type === "shape" && (x.fill = { kind: "solid", color: c }))}
               />
             </Row>
@@ -384,12 +501,14 @@ function ElementInspector({ el }: { el: Element }) {
               <Row label="Cor inicial">
                 <ColorPicker
                   value={el.fill.from}
+                  themeColors={themeColors}
                   onChange={(c) => set((x) => x.type === "shape" && x.fill?.kind === "gradient" && (x.fill.from = c))}
                 />
               </Row>
               <Row label="Cor final">
                 <ColorPicker
                   value={el.fill.to}
+                  themeColors={themeColors}
                   onChange={(c) => set((x) => x.type === "shape" && x.fill?.kind === "gradient" && (x.fill.to = c))}
                 />
               </Row>
@@ -418,6 +537,7 @@ function ElementInspector({ el }: { el: Element }) {
               <Row label="Cor do traço">
                 <ColorPicker
                   value={el.stroke.color}
+                  themeColors={themeColors}
                   onChange={(c) => set((x) => x.type === "shape" && x.stroke && (x.stroke.color = c))}
                 />
               </Row>
@@ -495,10 +615,10 @@ function ElementInspector({ el }: { el: Element }) {
             </div>
           </Row>
           <Row label="Cabeçalho">
-            <input
-              type="color"
+            <ColorPicker
               value={el.headerFill ?? "#2563eb"}
-              onChange={(e) => set((x) => x.type === "table" && (x.headerFill = e.target.value))}
+              themeColors={themeColors}
+              onChange={(c) => set((x) => x.type === "table" && (x.headerFill = c))}
             />
           </Row>
         </>
@@ -550,8 +670,7 @@ function SlideInspector() {
   if (!slide) return null;
 
   const bgColor = slide.background?.kind === "solid" ? slide.background.color : deck.theme.colors.bg;
-  const onBg = (e: ChangeEvent<HTMLInputElement>) =>
-    updateCurrentSlide((s) => (s.background = { kind: "solid", color: e.target.value }));
+  const themeColors = Object.values(deck.theme.colors) as string[];
   const activeTheme = findThemePreset(deck.theme);
 
   return (
@@ -597,7 +716,11 @@ function SlideInspector() {
 
       <div className="insp-head">Slide</div>
       <Row label="Fundo">
-        <input type="color" value={bgColor} onChange={onBg} />
+        <ColorPicker
+          value={bgColor}
+          themeColors={themeColors}
+          onChange={(c) => updateCurrentSlide((s) => (s.background = { kind: "solid", color: c }))}
+        />
       </Row>
       <Row label="Usar tema">
         <button

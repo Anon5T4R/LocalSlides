@@ -71,6 +71,13 @@ export interface Anim {
   delay: number;
 }
 
+export interface Shadow {
+  color: string;
+  blur: number;
+  x: number;
+  y: number;
+}
+
 export interface Base {
   id: string;
   geom: Geom;
@@ -81,6 +88,8 @@ export interface Base {
   opacity?: number;
   /** Decorative ring drawn around the element ("contorno"). */
   outline?: Stroke;
+  /** Drop shadow. */
+  shadow?: Shadow;
   /** Entrance animation for present mode. */
   anim?: Anim;
   /** Elements sharing a groupId select and move together (flat grouping). */
@@ -98,6 +107,8 @@ export interface TextBox extends Base {
   placeholder?: "title" | "body";
   /** Shrink the text to never overflow the box. Undefined = on (only shrinks on overflow). */
   autoFit?: boolean;
+  /** Background fill for the text box. */
+  fill?: Fill;
 }
 
 /** Crop rectangle as fractions (0..1) of the natural image. Undefined = full. */

@@ -48,7 +48,7 @@ function Btn({
   );
 }
 
-export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }) {
+export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; scale: number; themeColors?: string[] }) {
   // Re-render on selection/transaction so active states stay in sync.
   void editor.state.selection;
   const chain = () => editor.chain().focus();
@@ -126,20 +126,21 @@ export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }
           </option>
         ))}
       </select>
-      <select
+      <input
         className="tt-select tt-size"
+        type="number"
         title="Tamanho"
+        list="tt-size-list"
+        min={4}
+        max={400}
+        placeholder="Auto"
         value={curSize}
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => setMark({ fontSize: e.target.value ? `${e.target.value}px` : null })}
-      >
-        <option value="">Auto</option>
-        {FONT_SIZES.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
+      />
+      <datalist id="tt-size-list">
+        {FONT_SIZES.map((s) => <option key={s} value={s} />)}
+      </datalist>
       <span className="tt-sep" />
       <Btn
         title="Contorno da letra"
@@ -152,6 +153,7 @@ export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }
         <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
           <ColorPicker
             value={strokeColor}
+            themeColors={themeColors}
             onChange={(c) => setMark({ textStroke: `1px ${c}` })}
           />
         </span>
@@ -169,6 +171,7 @@ export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }
         <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
           <ColorPicker
             value={ts.highlight ?? "#fde68a"}
+            themeColors={themeColors}
             onChange={(c) => setMark({ highlight: c })}
           />
         </span>
@@ -178,6 +181,7 @@ export function TextToolbar({ editor, scale }: { editor: Editor; scale: number }
       <span className="tt-color-wrap" title="Cor do texto" onMouseDown={(e) => e.preventDefault()}>
         <ColorPicker
           value={ts.color ?? "#1e293b"}
+          themeColors={themeColors}
           onChange={(c) => chain().setColor(c).run()}
         />
       </span>

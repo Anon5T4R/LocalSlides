@@ -81,6 +81,8 @@ export function EditorStage() {
   const stageRef = useRef<HTMLDivElement>(null);
   const scaledRef = useRef<HTMLDivElement>(null);
   const [avail, setAvail] = useState({ w: 0, h: 0 });
+  const availRef = useRef(avail);
+  availRef.current = avail;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<CellTarget | null>(null);
   const [guides, setGuides] = useState<{ v: number[]; h: number[]; gap: GapGuide[] }>({ v: [], h: [], gap: [] });
@@ -255,6 +257,9 @@ export function EditorStage() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [croppingId, setCropping]);
 
+  // Reset pan when the user navigates to a different slide.
+  useEffect(() => { setPan({ x: 0, y: 0 }); }, [currentSlideId]);
+
   // Space key toggles pan-cursor on the stage.
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
@@ -278,7 +283,7 @@ export function EditorStage() {
     };
   }, [editingId, editingCell]);
 
-  // Ctrl+scroll zoom (must use passive:false to preventDefault).
+  // Ctrl+scroll zoom, centered on the cursor position.
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
@@ -287,13 +292,35 @@ export function EditorStage() {
       e.preventDefault();
       const current = scaleRef.current;
       const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-      const next = Math.min(5, Math.max(0.1, current * factor));
-      setZoom(Math.round(next * 100) / 100);
+      const next = Math.round(Math.min(5, Math.max(0.1, current * factor)) * 100) / 100;
+      if (next === current) return;
+
+      // Adjust pan so the point under the cursor stays fixed.
+      const a = availRef.current;
+      const p = panRef.current;
+      const stageRect = el.getBoundingClientRect();
+      const cx = e.clientX - stageRect.left;   // cursor relative to stage
+      const cy = e.clientY - stageRect.top;
+      // Frame origin in stage coords (without pan):
+      const fx0 = a.w / 2 - (deck.size.w * current) / 2;
+      const fy0 = a.h / 2 - (deck.size.h * current) / 2;
+      // Logical coords under cursor:
+      const lx = (cx - fx0 - p.x) / current;
+      const ly = (cy - fy0 - p.y) / current;
+      // New frame origin:
+      const nfx0 = a.w / 2 - (deck.size.w * next) / 2;
+      const nfy0 = a.h / 2 - (deck.size.h * next) / 2;
+      // Pan that keeps lx,ly under the cursor:
+      const newPanX = cx - nfx0 - lx * next;
+      const newPanY = cy - nfy0 - ly * next;
+
+      setZoom(next);
+      setPan({ x: newPanX, y: newPanY });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [deck.size.w, deck.size.h]);
 
   // --- Start gestures ---
   const startMove = useCallback(

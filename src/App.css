@@ -372,6 +372,11 @@ body {
 }
 .tt-select.tt-size {
   max-width: 58px;
+  -moz-appearance: textfield;
+}
+.tt-select.tt-size::-webkit-inner-spin-button,
+.tt-select.tt-size::-webkit-outer-spin-button {
+  display: none;
 }
 .tt-select option {
   color: #111827;
