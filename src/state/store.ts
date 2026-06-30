@@ -27,6 +27,7 @@ import {
   findSlide,
   makeId,
 } from "../model/deck";
+import { copyElements, pasteElements } from "../lib/clipboard";
 import { buildLayout } from "../model/layouts";
 
 const HISTORY_LIMIT = 100;
@@ -117,9 +118,17 @@ export interface SlidesState {
 
   // element ops (undoable)
   addElement: (el: Element) => void;
+  addElements: (els: Element[]) => void;
   updateElement: (elId: string, recipe: (el: Element) => void) => void;
   deleteElements: (ids: string[]) => void;
   reorder: (id: string, dir: "front" | "back" | "forward" | "backward") => void;
+  duplicateElements: (ids: string[]) => void;
+
+  // clipboard (wraps lib/clipboard; clipboardSize drives paste-button reactivity)
+  clipboardSize: number;
+  copySelection: () => void;
+  cutSelection: () => void;
+  pasteFromClipboard: () => void;
 
   // comments (undoable)
   addComment: (x: number, y: number) => string;
@@ -165,6 +174,7 @@ export const useStore = create<SlidesState>((set, get) => ({
   inkStyle: "solid",
   commenting: false,
   zoom: 0,
+  clipboardSize: 0,
 
   past: [],
   future: [],
@@ -409,6 +419,62 @@ export const useStore = create<SlidesState>((set, get) => ({
       findSlide(d, currentSlideId)?.elements.push(el);
     });
     set({ selection: [el.id] });
+  },
+
+  addElements: (els) => {
+    if (!els.length) return;
+    const { currentSlideId } = get();
+    get().apply((d) => {
+      const slide = findSlide(d, currentSlideId);
+      if (slide) slide.elements.push(...els);
+    });
+    set({ selection: els.map((e) => e.id) });
+  },
+
+  duplicateElements: (ids) => {
+    if (!ids.length) return;
+    const { currentSlideId, deck } = get();
+    const slide = findSlide(deck, currentSlideId);
+    if (!slide) return;
+    const groupMap = new Map<string, string>();
+    const clones: Element[] = [];
+    ids.forEach((id) => {
+      const el = slide.elements.find((e) => e.id === id);
+      if (!el) return;
+      const clone = structuredClone(el) as Element;
+      clone.id = makeId(el.type);
+      clone.geom = { ...clone.geom, x: clone.geom.x + 16, y: clone.geom.y + 16 };
+      if (clone.groupId) {
+        if (!groupMap.has(clone.groupId)) groupMap.set(clone.groupId, makeId("group"));
+        clone.groupId = groupMap.get(clone.groupId)!;
+      }
+      clones.push(clone);
+    });
+    get().apply((d) => {
+      findSlide(d, currentSlideId)?.elements.push(...clones);
+    });
+    set({ selection: clones.map((c) => c.id) });
+  },
+
+  copySelection: () => {
+    const { deck, currentSlideId, selection } = get();
+    const slide = findSlide(deck, currentSlideId);
+    const els = slide?.elements.filter((e) => selection.includes(e.id)) ?? [];
+    if (els.length) {
+      copyElements(els);
+      set({ clipboardSize: els.length });
+    }
+  },
+
+  cutSelection: () => {
+    get().copySelection();
+    const { selection } = get();
+    if (selection.length) get().deleteElements(selection);
+  },
+
+  pasteFromClipboard: () => {
+    const els = pasteElements();
+    if (els.length) get().addElements(els);
   },
 
   updateElement: (elId, recipe) => {

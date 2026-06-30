@@ -114,6 +114,64 @@ function ElementInspector({ el }: { el: Element }) {
     <>
       <div className="insp-head">{typeLabel(el)}</div>
 
+      {/* Position & size */}
+      <Section title="Posição e tamanho" defaultOpen>
+        <div className="insp-geom-grid">
+          <label className="insp-geom-cell">
+            <span className="insp-geom-label">X</span>
+            <input
+              type="number"
+              className="insp-geom-input"
+              value={Math.round(el.geom.x)}
+              disabled={!!el.locked}
+              onChange={(e) => set((x) => { x.geom.x = Number(e.target.value); })}
+            />
+          </label>
+          <label className="insp-geom-cell">
+            <span className="insp-geom-label">Y</span>
+            <input
+              type="number"
+              className="insp-geom-input"
+              value={Math.round(el.geom.y)}
+              disabled={!!el.locked}
+              onChange={(e) => set((x) => { x.geom.y = Number(e.target.value); })}
+            />
+          </label>
+          <label className="insp-geom-cell">
+            <span className="insp-geom-label">L</span>
+            <input
+              type="number"
+              className="insp-geom-input"
+              min={24}
+              value={Math.round(el.geom.w)}
+              disabled={!!el.locked}
+              onChange={(e) => set((x) => { x.geom.w = Math.max(24, Number(e.target.value)); })}
+            />
+          </label>
+          <label className="insp-geom-cell">
+            <span className="insp-geom-label">A</span>
+            <input
+              type="number"
+              className="insp-geom-input"
+              min={24}
+              value={Math.round(el.geom.h)}
+              disabled={!!el.locked}
+              onChange={(e) => set((x) => { x.geom.h = Math.max(24, Number(e.target.value)); })}
+            />
+          </label>
+          <label className="insp-geom-cell insp-geom-rot">
+            <span className="insp-geom-label">°</span>
+            <input
+              type="number"
+              className="insp-geom-input"
+              value={Math.round(el.geom.rotation ?? 0)}
+              disabled={!!el.locked}
+              onChange={(e) => set((x) => { x.geom.rotation = ((Number(e.target.value) % 360) + 360) % 360; })}
+            />
+          </label>
+        </div>
+      </Section>
+
       <Row label="Opacidade">
         <input
           type="range"

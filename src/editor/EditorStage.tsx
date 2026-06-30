@@ -15,7 +15,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useStore, expandToGroups } from "../state/store";
-import { findSlide, type Geom } from "../model/deck";
+import { findSlide, makeId, type Element, type Geom } from "../model/deck";
+import { ContextMenu, type CtxItemDef } from "../ui/ContextMenu";
 import { SlideView } from "../render/SlideView";
 import { SelectionLayer } from "../render/SelectionLayer";
 import { GuidesLayer } from "../render/GuidesLayer";
@@ -63,6 +64,13 @@ export function EditorStage() {
   const clearSelection = useStore((s) => s.clearSelection);
   const updateElement = useStore((s) => s.updateElement);
   const deleteElements = useStore((s) => s.deleteElements);
+  const addElements = useStore((s) => s.addElements);
+  const copySelection = useStore((s) => s.copySelection);
+  const cutSelection = useStore((s) => s.cutSelection);
+  const pasteFromClipboard = useStore((s) => s.pasteFromClipboard);
+  const duplicateElements = useStore((s) => s.duplicateElements);
+  const clipboardSize = useStore((s) => s.clipboardSize);
+  const reorder = useStore((s) => s.reorder);
   const beginTx = useStore((s) => s.beginTx);
   const endTx = useStore((s) => s.endTx);
 
@@ -76,6 +84,7 @@ export function EditorStage() {
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [activeComment, setActiveComment] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; elId: string | null } | null>(null);
 
   useLayoutEffect(() => {
     const el = stageRef.current;
@@ -239,6 +248,26 @@ export function EditorStage() {
         select(nextSelection);
       }
 
+      // Alt+drag: clone the selection and drag the copies (originals stay).
+      if (e.altKey) {
+        const groupMap = new Map<string, string>();
+        const clones: Element[] = [];
+        sl.elements.filter((x) => nextSelection.includes(x.id)).forEach((x) => {
+          const clone = structuredClone(x) as Element;
+          clone.id = makeId(x.type);
+          if (clone.groupId) {
+            if (!groupMap.has(clone.groupId)) groupMap.set(clone.groupId, makeId("group"));
+            clone.groupId = groupMap.get(clone.groupId)!;
+          }
+          clones.push(clone);
+        });
+        beginTx();
+        addElements(clones); // within the transaction
+        const starts = clones.map((c) => ({ id: c.id, geom: { ...c.geom } }));
+        gesture.current = { kind: "move", primaryId: clones[0].id, starts, px: e.clientX, py: e.clientY, moved: false };
+        return;
+      }
+
       const starts = (sl.elements.filter((x) => nextSelection.includes(x.id)) || []).map((x) => ({
         id: x.id,
         geom: { ...x.geom },
@@ -246,7 +275,7 @@ export function EditorStage() {
       beginTx();
       gesture.current = { kind: "move", primaryId: elId, starts, px: e.clientX, py: e.clientY, moved: false };
     },
-    [editingId, editingCell, select, beginTx]
+    [editingId, editingCell, select, beginTx, addElements]
   );
 
   const startResize = useCallback(
@@ -360,6 +389,10 @@ export function EditorStage() {
             startMarquee(e);
           }
         }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setCtxMenu({ x: e.clientX, y: e.clientY, elId: null });
+        }}
       >
         <div
           className="slide-scaled"
@@ -390,6 +423,15 @@ export function EditorStage() {
                 ev.stopPropagation();
                 if (el.type === "text") setEditingId(el.id);
                 else if (el.type === "table") openCellEditor(el.id, ev);
+              }}
+              onContextMenu={(ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                // Select the right-clicked element if not already selected.
+                if (!selRef.current.includes(el.id)) {
+                  select(expandToGroups(slideRef.current, [el.id]));
+                }
+                setCtxMenu({ x: ev.clientX, y: ev.clientY, elId: el.id });
               }}
               style={{
                 position: "absolute",
@@ -485,6 +527,61 @@ export function EditorStage() {
           )}
         </div>
       </div>
+
+      {/* Right-click context menu */}
+      {ctxMenu && (() => {
+        const sel = selRef.current;
+        const count = sel.length;
+        const items: CtxItemDef[] = [];
+
+        if (count > 0) {
+          items.push(
+            { kind: "item", label: "Duplicar", shortcut: "Ctrl+D", onClick: () => duplicateElements(sel) },
+            { kind: "item", label: "Copiar", shortcut: "Ctrl+C", onClick: copySelection },
+            { kind: "item", label: "Recortar", shortcut: "Ctrl+X", onClick: cutSelection },
+          );
+        }
+        items.push({
+          kind: "item",
+          label: "Colar",
+          shortcut: "Ctrl+V",
+          disabled: clipboardSize === 0,
+          onClick: pasteFromClipboard,
+        });
+
+        if (count === 1 && ctxMenu.elId) {
+          const elId = ctxMenu.elId;
+          const el = slideRef.current?.elements.find((x) => x.id === elId);
+          items.push(
+            { kind: "sep" },
+            { kind: "item", label: "Trazer para frente", onClick: () => reorder(elId, "front") },
+            { kind: "item", label: "Enviar para trás", onClick: () => reorder(elId, "back") },
+          );
+          if (el) {
+            items.push(
+              { kind: "sep" },
+              { kind: "item", label: el.locked ? "Desbloquear" : "Bloquear", onClick: () => updateElement(elId, (x) => { x.locked = !x.locked; }) },
+              { kind: "item", label: el.hidden ? "Mostrar" : "Ocultar", onClick: () => updateElement(elId, (x) => { x.hidden = !x.hidden; }) },
+            );
+          }
+        }
+
+        if (count > 0) {
+          items.push(
+            { kind: "sep" },
+            { kind: "item", label: count === 1 ? "Excluir" : `Excluir (${count})`, danger: true, onClick: () => deleteElements(sel) },
+          );
+        }
+
+        return (
+          <ContextMenu
+            x={ctxMenu.x}
+            y={ctxMenu.y}
+            items={items}
+            onClose={() => setCtxMenu(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

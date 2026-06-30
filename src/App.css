@@ -1219,3 +1219,288 @@ body {
 .comment-pop-actions button:hover {
   background: var(--border);
 }
+
+/* ======================================================
+   Menu dropdown (Menu.tsx)
+   ====================================================== */
+.menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu-trigger {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.menu-trigger:hover,
+.menu-trigger.open {
+  background: var(--border);
+}
+
+.menu-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.menu-popover.align-right {
+  left: auto;
+  right: 0;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+.menu-item:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.menu-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.menu-item-danger {
+  color: #ef4444;
+}
+
+.menu-icon {
+  width: 18px;
+  text-align: center;
+  flex: 0 0 18px;
+  font-size: 14px;
+}
+.menu-label {
+  flex: 1;
+}
+.menu-shortcut {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 12px;
+}
+.menu-arrow {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* Submenu */
+.menu-sub {
+  position: relative;
+}
+.menu-sub-popover {
+  position: absolute;
+  top: -4px;
+  left: calc(100% + 2px);
+  z-index: 201;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.menu-sub-trigger .menu-arrow {
+  margin-left: auto;
+}
+
+/* ======================================================
+   Tool segmented group
+   ====================================================== */
+.tool-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.tool-btn {
+  font: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 5px 9px;
+  cursor: pointer;
+  line-height: 1;
+}
+.tool-btn:last-child {
+  border-right: none;
+}
+.tool-btn:hover {
+  background: var(--border);
+}
+.tool-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Plain icon button in toolbar */
+.tb-icon {
+  font-size: 16px;
+  padding: 4px 8px !important;
+}
+
+/* ======================================================
+   Context bar (ContextBar.tsx) — below the topbar
+   ====================================================== */
+.context-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+  min-height: 34px;
+}
+
+.ctx-btn {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.ctx-btn:hover:not(:disabled) {
+  background: var(--panel-2);
+  border-color: var(--border);
+}
+.ctx-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ctx-btn.ctx-icon {
+  padding: 3px 6px;
+  font-size: 13px;
+}
+.ctx-btn.ctx-danger {
+  color: #ef4444;
+}
+
+.ctx-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 4px;
+  flex: 0 0 1px;
+}
+
+.ctx-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-right: 2px;
+  white-space: nowrap;
+}
+
+.ctx-color {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px;
+  cursor: pointer;
+  background: none;
+}
+
+.ctx-select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+/* ======================================================
+   Context menu / right-click (ContextMenu.tsx)
+   ====================================================== */
+.ctx-menu {
+  position: fixed;
+  z-index: 500;
+  min-width: 190px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+/* ======================================================
+   Inspector — position/size grid (Wave 1C)
+   ====================================================== */
+.insp-geom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px 0;
+}
+.insp-geom-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.insp-geom-rot {
+  grid-column: 1 / -1;
+}
+.insp-geom-label {
+  font-size: 11px;
+  color: var(--muted);
+  width: 14px;
+  text-align: center;
+  flex: 0 0 14px;
+  font-weight: 600;
+}
+.insp-geom-input {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  width: 100%;
+  min-width: 0;
+}
+.insp-geom-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.insp-geom-input:disabled {
+  opacity: 0.4;
+}

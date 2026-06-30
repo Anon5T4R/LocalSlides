@@ -7,7 +7,7 @@ import { EditorStage } from "./editor/EditorStage";
 import { SlidesPanel } from "./panels/SlidesPanel";
 import { Inspector } from "./panels/Inspector";
 import { PresentMode } from "./present/PresentMode";
-import { newFreeTextBox, newImage, newShape, newTable, newVideo, type ShapeKind, type StrokeStyle } from "./model/deck";
+import { newFreeTextBox, newImage, newShape, newTable, newVideo, type ShapeKind } from "./model/deck";
 import { pickImageDataUri, pickVideoDataUri, imageDataUrlFromPath } from "./lib/media";
 import {
   DeckFile,
@@ -29,6 +29,8 @@ import { exportDeckPptx } from "./export/pptx";
 import { importPptx } from "./lib/pptx-io";
 import { saveRecovery, loadRecovery, clearRecovery } from "./lib/recovery";
 import { findSlide } from "./model/deck";
+import { Menu, type MenuItemDef } from "./ui/Menu";
+import { ContextBar } from "./ui/ContextBar";
 import "./App.css";
 
 const SHAPE_PICKER: { kind: ShapeKind; label: string; glyph: string }[] = [
@@ -68,15 +70,15 @@ function App() {
   const ungroup = useStore((s) => s.ungroup);
   const drawing = useStore((s) => s.drawing);
   const setDrawing = useStore((s) => s.setDrawing);
-  const inkColor = useStore((s) => s.inkColor);
   const setInkColor = useStore((s) => s.setInkColor);
-  const inkWidth = useStore((s) => s.inkWidth);
   const setInkWidth = useStore((s) => s.setInkWidth);
-  const inkStyle = useStore((s) => s.inkStyle);
   const setInkStyle = useStore((s) => s.setInkStyle);
   const commenting = useStore((s) => s.commenting);
   const setCommenting = useStore((s) => s.setCommenting);
-  const selectionCount = useStore((s) => s.selection.length);
+  const copySelection = useStore((s) => s.copySelection);
+  const cutSelection = useStore((s) => s.cutSelection);
+  const pasteFromClipboard = useStore((s) => s.pasteFromClipboard);
+  const duplicateElements = useStore((s) => s.duplicateElements);
 
   const [busy, setBusy] = useState<string>("");
   const [presenting, setPresenting] = useState(false);
@@ -84,7 +86,6 @@ function App() {
   const [showAi, setShowAi] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
-  const [showShapes, setShowShapes] = useState(false);
   const [rightWidth, setRightWidth] = useState(300);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
@@ -188,7 +189,6 @@ function App() {
   const insertShape = useCallback(
     (kind: ShapeKind = "rect") => {
       addElement(newShape(useStore.getState().deck, kind));
-      setShowShapes(false);
     },
     [addElement]
   );
@@ -386,21 +386,31 @@ function App() {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       const k = e.key.toLowerCase();
-      // When typing in a text field/editor, editing shortcuts (select-all, undo,
-      // redo) belong to that field — don't hijack them for the deck.
       const t = e.target as HTMLElement | null;
+      // When typing in a text field/editor, let the field handle editing shortcuts.
       const inField =
         !!t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA");
-      if (inField && (k === "a" || k === "z" || k === "y")) return;
+      if (inField && (k === "a" || k === "z" || k === "y" || k === "c" || k === "x" || k === "v")) return;
+
       if (k === "a") {
-        // Select all objects on the current slide.
         e.preventDefault();
         const st = useStore.getState();
         const slide = findSlide(st.deck, st.currentSlideId);
         if (slide) st.select(slide.elements.filter((el) => !el.hidden && !el.locked).map((el) => el.id));
-        return;
-      }
-      if (k === "s") {
+      } else if (k === "c") {
+        e.preventDefault();
+        useStore.getState().copySelection();
+      } else if (k === "x") {
+        e.preventDefault();
+        useStore.getState().cutSelection();
+      } else if (k === "v") {
+        e.preventDefault();
+        useStore.getState().pasteFromClipboard();
+      } else if (k === "d") {
+        e.preventDefault();
+        const { selection } = useStore.getState();
+        if (selection.length) useStore.getState().duplicateElements(selection);
+      } else if (k === "s") {
         e.preventDefault();
         e.shiftKey ? handleSaveAs() : handleSave();
       } else if (k === "o") {
@@ -425,7 +435,8 @@ function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleSave, handleSaveAs, handleOpen, handleNew, undo, redo, addSlide, group, ungroup]);
+  }, [handleSave, handleSaveAs, handleOpen, handleNew, undo, redo, addSlide, group, ungroup,
+      copySelection, cutSelection, pasteFromClipboard, duplicateElements]);
 
   // ---- OS drag-and-drop of image files onto the canvas ----
   const dropImageAt = useCallback(
@@ -508,144 +519,121 @@ function App() {
   const title = (filePath ? baseName(filePath) : "Sem título") + (dirty ? " •" : "");
   const zoomPct = zoom > 0 ? Math.round(zoom * 100) : 0;
 
+  const arquivoItems: MenuItemDef[] = [
+    { kind: "item", label: "Nova apresentação", shortcut: "Ctrl+N", onClick: handleNew },
+    { kind: "item", label: "Abrir…", shortcut: "Ctrl+O", onClick: handleOpen },
+    { kind: "sep" },
+    { kind: "item", label: "Salvar", shortcut: "Ctrl+S", onClick: handleSave },
+    { kind: "item", label: "Salvar como…", shortcut: "Ctrl+Shift+S", onClick: handleSaveAs },
+    { kind: "sep" },
+    { kind: "item", label: "Importar PPTX…", onClick: handleImportPptx },
+    { kind: "sep" },
+    {
+      kind: "sub",
+      label: "Exportar",
+      items: [
+        { kind: "item", label: "PDF (todos os slides)", onClick: handleExportPdf },
+        { kind: "item", label: "PNG (slide atual)", onClick: handleExportPng },
+        { kind: "item", label: "PPTX (PowerPoint)", onClick: handleExportPptx },
+      ],
+    },
+  ];
+
+  const inserirItems: MenuItemDef[] = [
+    { kind: "item", label: "Caixa de texto", icon: "T", onClick: insertText },
+    { kind: "item", label: "Imagem…", icon: "🖼", onClick: insertImage },
+    { kind: "item", label: "Vídeo…", icon: "▶", onClick: insertVideo },
+    { kind: "sep" },
+    {
+      kind: "sub",
+      label: "Forma",
+      icon: "◻",
+      items: SHAPE_PICKER.map((s) => ({
+        kind: "item" as const,
+        label: s.label,
+        icon: s.glyph,
+        onClick: () => insertShape(s.kind),
+      })),
+    },
+    { kind: "item", label: "Tabela", icon: "⊞", onClick: insertTable },
+  ];
+
+  const togglePanel = (which: "layers" | "media" | "ai") => {
+    const wasLayers = showLayers, wasMedia = showMedia, wasAi = showAi;
+    setShowLayers(which === "layers" ? !wasLayers : false);
+    setShowMedia(which === "media" ? !wasMedia : false);
+    setShowAi(which === "ai" ? !wasAi : false);
+    setRightCollapsed(false);
+  };
+
   return (
     <div className="app">
       <div className="topbar">
         <div className="brand">LocalSlides</div>
         <div className="toolbar">
-          <button onClick={handleNew} title="Nova (Ctrl+N)">Nova</button>
-          <button onClick={handleOpen} title="Abrir (Ctrl+O)">Abrir</button>
-          <button onClick={handleSave} title="Salvar (Ctrl+S)">Salvar</button>
-          <button onClick={handleSaveAs} title="Salvar como (Ctrl+Shift+S)">Salvar como</button>
+          {/* Arquivo */}
+          <Menu trigger="Arquivo ▾" items={arquivoItems} />
+
           <span className="sep" />
-          <button onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)">↶</button>
-          <button onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)">↷</button>
+
+          {/* Histórico */}
+          <button onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" className="tb-icon">↶</button>
+          <button onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)" className="tb-icon">↷</button>
+
           <span className="sep" />
+
+          {/* Novo slide */}
           <button onClick={() => addSlide()} title="Novo slide (Ctrl+M)">＋ Slide</button>
+
           <span className="sep" />
-          <button onClick={insertText} title="Caixa de texto">Texto</button>
-          <button onClick={insertImage} title="Inserir imagem">Imagem</button>
-          <button onClick={insertVideo} title="Inserir vídeo">Vídeo</button>
-          <div className="shape-picker-wrap">
-            <button onClick={() => setShowShapes((v) => !v)} title="Inserir forma">Forma ▾</button>
-            {showShapes && (
-              <>
-                <div className="shape-picker-backdrop" onClick={() => setShowShapes(false)} />
-                <div className="shape-picker">
-                  {SHAPE_PICKER.map((s) => (
-                    <button key={s.kind} title={s.label} onClick={() => insertShape(s.kind)}>
-                      <span className="shape-glyph">{s.glyph}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+
+          {/* Inserir */}
+          <Menu trigger="Inserir ▾" items={inserirItems} />
+
+          <span className="sep" />
+
+          {/* Ferramentas — segmentado */}
+          <div className="tool-group">
+            <button
+              className={"tool-btn" + (!drawing && !commenting ? " active" : "")}
+              onClick={() => { setDrawing(false); setCommenting(false); }}
+              title="Selecionar / mover"
+            >↖</button>
+            <button
+              className={"tool-btn" + (drawing ? " active" : "")}
+              onClick={() => setDrawing(!drawing)}
+              title="Desenhar à mão livre"
+            >✏</button>
+            <button
+              className={"tool-btn" + (commenting ? " active" : "")}
+              onClick={() => setCommenting(!commenting)}
+              title="Adicionar comentário"
+            >💬</button>
           </div>
-          <button onClick={insertTable} title="Inserir tabela">Tabela</button>
+
           <span className="sep" />
-          <button
-            className={"ai-toggle" + (!drawing && !commenting ? " active" : "")}
-            onClick={() => {
-              setDrawing(false);
-              setCommenting(false);
-            }}
-            title="Selecionar / mover (cursor)"
-          >
-            ↖ Selecionar
-          </button>
-          {selectionCount >= 2 && (
-            <>
-              <button onClick={group} title="Agrupar (Ctrl+G)">⧉ Agrupar</button>
-              <button onClick={ungroup} title="Desagrupar (Ctrl+Shift+G)">Desagrupar</button>
-            </>
-          )}
-          <button
-            className={"ai-toggle" + (drawing ? " active" : "")}
-            onClick={() => setDrawing(!drawing)}
-            title="Desenhar à mão livre"
-          >
-            ✏ Desenhar
-          </button>
-          {drawing && (
-            <>
-              <input
-                type="color"
-                className="ink-color"
-                value={inkColor}
-                onChange={(e) => setInkColor(e.target.value)}
-                title="Cor do traço"
-              />
-              <input
-                type="range"
-                min={1}
-                max={24}
-                value={inkWidth}
-                onChange={(e) => setInkWidth(Number(e.target.value))}
-                title={`Espessura: ${inkWidth}px`}
-                style={{ width: 70 }}
-              />
-              <select
-                value={inkStyle}
-                onChange={(e) => setInkStyle(e.target.value as StrokeStyle)}
-                title="Estilo do traço"
-              >
-                <option value="solid">Normal</option>
-                <option value="dash">Tracejado</option>
-                <option value="dot">Pontilhado</option>
-                <option value="chalk">Giz</option>
-                <option value="smudge">Esfumaçado</option>
-              </select>
-            </>
-          )}
-          <button
-            className={"ai-toggle" + (commenting ? " active" : "")}
-            onClick={() => setCommenting(!commenting)}
-            title="Adicionar comentário (clique no slide)"
-          >
-            💬 Comentar
-          </button>
+
+          {/* Painéis — segmentado */}
+          <div className="tool-group">
+            <button
+              className={"tool-btn" + (showLayers ? " active" : "")}
+              onClick={() => togglePanel("layers")}
+              title="Camadas"
+            >▤</button>
+            <button
+              className={"tool-btn" + (showMedia ? " active" : "")}
+              onClick={() => togglePanel("media")}
+              title="Biblioteca de mídia"
+            >⬚</button>
+            <button
+              className={"tool-btn" + (showAi ? " active" : "")}
+              onClick={() => togglePanel("ai")}
+              title="IA local"
+            >✦</button>
+          </div>
+
           <span className="sep" />
-          <button onClick={handleExportPdf} title="Exportar PDF (todos os slides)">PDF</button>
-          <button onClick={handleExportPng} title="Exportar PNG (slide atual)">PNG</button>
-          <button onClick={handleExportPptx} title="Exportar PPTX (PowerPoint)">PPTX</button>
-          <button onClick={handleImportPptx} title="Importar PPTX (PowerPoint)">Importar PPTX</button>
-          <span className="sep" />
-          <button
-            className={"ai-toggle" + (showLayers ? " active" : "")}
-            onClick={() => {
-              setShowLayers((v) => !v);
-              setShowMedia(false);
-              setShowAi(false);
-              setRightCollapsed(false);
-            }}
-            title="Camadas do slide"
-          >
-            ▤ Camadas
-          </button>
-          <button
-            className={"ai-toggle" + (showMedia ? " active" : "")}
-            onClick={() => {
-              setShowMedia((v) => !v);
-              setShowLayers(false);
-              setShowAi(false);
-              setRightCollapsed(false);
-            }}
-            title="Biblioteca de mídia"
-          >
-            ⬚ Mídia
-          </button>
-          <button
-            className={"ai-toggle" + (showAi ? " active" : "")}
-            onClick={() => {
-              setShowAi((v) => !v);
-              setShowMedia(false);
-              setShowLayers(false);
-              setRightCollapsed(false);
-            }}
-            title="IA local (gerar/conversar)"
-          >
-            ✦ IA
-          </button>
+
           <button className="present-btn" onClick={() => setPresenting(true)} title="Apresentar (F5)">
             ▶ Apresentar
           </button>
@@ -657,6 +645,11 @@ function App() {
           <button onClick={() => setZoom((zoom || 0.5) + 0.1)} title="Ampliar">+</button>
         </div>
       </div>
+      <ContextBar
+        onInkColor={setInkColor}
+        onInkWidth={setInkWidth}
+        onInkStyle={setInkStyle}
+      />
       <div className="workspace">
         <SlidesPanel />
         <EditorStage />

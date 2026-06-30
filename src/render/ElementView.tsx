@@ -4,6 +4,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import type { Element, Geom, InkEl, ShapeEl, Stroke, TableEl, Theme } from "../model/deck";
+import { pmHasExplicitFontSize } from "../model/deck";
 import { RenderPM } from "./renderPM";
 import { AutoFitText } from "./AutoFitText";
 import {
@@ -353,7 +354,9 @@ export function ElementView({
       >
         <AutoFitText
           vAlign={el.vAlign ?? "top"}
-          enabled={el.autoFit !== false}
+          // An explicit font size wins over shrink-to-fit: stop auto-shrinking
+          // so the chosen size is respected (clear it back to "Auto" to re-enable).
+          enabled={el.autoFit !== false && !pmHasExplicitFontSize(el.content)}
           contentKey={JSON.stringify(el.content)}
         >
           <RenderPM doc={el.content} />

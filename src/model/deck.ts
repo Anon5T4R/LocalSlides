@@ -296,6 +296,20 @@ export function pmToPlainText(doc: ProseMirrorJSON | undefined): string {
   return out.join("");
 }
 
+/**
+ * True when any run in the doc carries an explicit fontSize (textStyle mark).
+ * Used to let an explicit size win over shrink-to-fit: once the user has picked
+ * a size, the box stops auto-shrinking and respects it.
+ */
+export function pmHasExplicitFontSize(doc: ProseMirrorJSON | undefined): boolean {
+  if (!doc) return false;
+  const walk = (node: ProseMirrorJSON): boolean => {
+    if (node.marks?.some((m) => m.type === "textStyle" && m.attrs?.fontSize)) return true;
+    return (node.content ?? []).some(walk);
+  };
+  return walk(doc);
+}
+
 // --- Factories ---------------------------------------------------------------
 
 let idCounter = 0;
