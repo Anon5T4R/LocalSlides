@@ -95,6 +95,8 @@ export interface TextBox extends Base {
   vAlign?: "top" | "middle" | "bottom";
   /** placeholder kind, when this box came from a layout (drives AI fill & theme). */
   placeholder?: "title" | "body";
+  /** Shrink the text to never overflow the box. Undefined = on (only shrinks on overflow). */
+  autoFit?: boolean;
 }
 
 /** Crop rectangle as fractions (0..1) of the natural image. Undefined = full. */

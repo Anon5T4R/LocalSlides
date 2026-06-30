@@ -5,6 +5,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Element, Geom, InkEl, ShapeEl, Stroke, TableEl, Theme } from "../model/deck";
 import { RenderPM } from "./renderPM";
+import { AutoFitText } from "./AutoFitText";
 import {
   StrokeDefs,
   dashArrayFor,
@@ -337,18 +338,11 @@ export function ElementView({
 
   const body: ReactNode = (() => {
   if (el.type === "text") {
-    const justify =
-      el.vAlign === "middle" ? "center" : el.vAlign === "bottom" ? "flex-end" : "flex-start";
     const isTitle = el.placeholder === "title";
     return (
       <div
         style={{
           ...base,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: justify,
-          padding: "8px 12px",
-          boxSizing: "border-box",
           overflow: "hidden",
           fontFamily: isTitle ? theme.fonts.heading : theme.fonts.body,
           fontSize: isTitle ? 40 : 24,
@@ -357,7 +351,13 @@ export function ElementView({
           color: theme.colors.text,
         }}
       >
-        <RenderPM doc={el.content} />
+        <AutoFitText
+          vAlign={el.vAlign ?? "top"}
+          enabled={el.autoFit !== false}
+          contentKey={JSON.stringify(el.content)}
+        >
+          <RenderPM doc={el.content} />
+        </AutoFitText>
       </div>
     );
   }

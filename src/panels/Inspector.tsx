@@ -199,18 +199,27 @@ function ElementInspector({ el }: { el: Element }) {
 
       {/* Per-type options */}
       {el.type === "text" && (
-        <Row label="Alinhar vert.">
-          <select
-            value={el.vAlign ?? "top"}
-            onChange={(e) =>
-              set((x) => x.type === "text" && (x.vAlign = e.target.value as "top" | "middle" | "bottom"))
-            }
-          >
-            <option value="top">Topo</option>
-            <option value="middle">Meio</option>
-            <option value="bottom">Base</option>
-          </select>
-        </Row>
+        <>
+          <Row label="Alinhar vert.">
+            <select
+              value={el.vAlign ?? "top"}
+              onChange={(e) =>
+                set((x) => x.type === "text" && (x.vAlign = e.target.value as "top" | "middle" | "bottom"))
+              }
+            >
+              <option value="top">Topo</option>
+              <option value="middle">Meio</option>
+              <option value="bottom">Base</option>
+            </select>
+          </Row>
+          <Row label="Ajustar à caixa">
+            <input
+              type="checkbox"
+              checked={el.autoFit !== false}
+              onChange={(e) => set((x) => x.type === "text" && (x.autoFit = e.target.checked))}
+            />
+          </Row>
+        </>
       )}
 
       {(el.type === "image" || el.type === "video") && (
