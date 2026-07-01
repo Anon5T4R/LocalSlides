@@ -8,6 +8,10 @@ import { useStore } from "../state/store";
 import { newImage, newVideo } from "../model/deck";
 import { pickImageDataUri, pickVideoDataUri } from "../lib/media";
 import { INSERT_CATALOG, INSERT_MIME, type InsertItem, type InsertTab } from "../insert/catalog";
+import { TEMPLATES } from "../templates";
+import { SlideView } from "../render/SlideView";
+
+const TEMPLATE_THUMB_W = 220;
 
 const TABS: { id: InsertTab | "photos" | "templates"; label: string }[] = [
   { id: "elements", label: "Elementos" },
@@ -118,6 +122,46 @@ function PhotosTab() {
   );
 }
 
+function TemplatesTab() {
+  const deck = useStore((s) => s.deck);
+  const addTemplateSlide = useStore((s) => s.addTemplateSlide);
+  const scale = TEMPLATE_THUMB_W / deck.size.w;
+
+  return (
+    <div className="insert-templates">
+      {TEMPLATES.map((tpl) => {
+        const { elements, background } = tpl.build(deck);
+        return (
+          <button
+            key={tpl.id}
+            className="template-item"
+            title={`Inserir slide "${tpl.name}"`}
+            onClick={() => addTemplateSlide(tpl.id)}
+          >
+            <div
+              className="template-thumb"
+              style={{ width: TEMPLATE_THUMB_W, height: deck.size.h * scale }}
+            >
+              <div
+                style={{
+                  width: deck.size.w,
+                  height: deck.size.h,
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top left",
+                  pointerEvents: "none",
+                }}
+              >
+                <SlideView slide={{ id: "tpl-preview", elements, background }} deck={deck} />
+              </div>
+            </div>
+            <span className="template-label">{tpl.name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function InsertPanel({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("elements");
   const [query, setQuery] = useState("");
@@ -167,7 +211,7 @@ export function InsertPanel({ onClose }: { onClose: () => void }) {
         {tab === "photos" ? (
           <PhotosTab />
         ) : tab === "templates" ? (
-          <p className="insert-empty">Templates prontos chegam em breve.</p>
+          <TemplatesTab />
         ) : (
           <CatalogGrid items={filtered} onInsert={insert} />
         )}

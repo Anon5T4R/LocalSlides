@@ -33,6 +33,7 @@ import { applyStyle } from "../lib/styleClipboard";
 import { registerEmbeddedFont } from "../lib/fonts";
 import type { EmbeddedFont } from "../model/deck";
 import { buildLayout } from "../model/layouts";
+import { findTemplate } from "../templates";
 
 const HISTORY_LIMIT = 100;
 
@@ -121,6 +122,7 @@ export interface SlidesState {
   // slide ops (undoable)
   addSlide: (layoutId?: string) => void;
   applyLayout: (layoutId: string) => void;
+  addTemplateSlide: (templateId: string) => void;
   duplicateSlide: (id: string) => void;
   deleteSlide: (id: string) => void;
   moveSlide: (id: string, toIndex: number) => void;
@@ -430,6 +432,19 @@ export const useStore = create<SlidesState>((set, get) => ({
       if (slide) slide.elements = buildLayout(layoutId, d);
     });
     set({ selection: [] });
+  },
+
+  addTemplateSlide: (templateId) => {
+    const tpl = findTemplate(templateId);
+    if (!tpl) return;
+    const { currentSlideId, deck } = get();
+    const idx = deck.slides.findIndex((s) => s.id === currentSlideId);
+    const { elements, background } = tpl.build(deck);
+    const slide: Slide = { id: makeId("slide"), elements, background };
+    get().apply((d) => {
+      d.slides.splice(idx < 0 ? d.slides.length : idx + 1, 0, slide);
+    });
+    set({ currentSlideId: slide.id, selection: [] });
   },
 
   duplicateSlide: (id) => {
