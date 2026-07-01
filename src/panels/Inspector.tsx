@@ -30,6 +30,16 @@ const ANIMS: { value: AnimKind; label: string }[] = [
   { value: "slideUp", label: "Subir" },
   { value: "slideLeft", label: "Entrar da direita" },
   { value: "zoomIn", label: "Zoom" },
+  { value: "bounceIn", label: "Saltar" },
+  { value: "flipIn", label: "Girar" },
+];
+
+/** Onda 12 — "Animar página": apply one preset to every element on the slide
+ * at once, with an automatic stagger so they cascade in during Present mode. */
+const PAGE_ANIM_PRESETS: { id: string; label: string; kind: AnimKind; duration: number; stagger: number }[] = [
+  { id: "dissolve", label: "Dissolver", kind: "fadeIn", duration: 0.6, stagger: 0.08 },
+  { id: "slide", label: "Deslizar", kind: "slideLeft", duration: 0.5, stagger: 0.1 },
+  { id: "cascade", label: "Subir em cascata", kind: "slideUp", duration: 0.5, stagger: 0.15 },
 ];
 
 const TRANSITIONS: { value: TransitionKind; label: string }[] = [
@@ -1156,6 +1166,37 @@ function SlideInspector() {
           />
         </Row>
       )}
+
+      <div className="insp-head">Animar página</div>
+      <div className="insp-zorder">
+        {PAGE_ANIM_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            className="insp-mini"
+            title={`Aplicar "${p.label}" a todos os elementos, em cascata`}
+            onClick={() =>
+              updateCurrentSlide((s) => {
+                s.elements.forEach((el, i) => {
+                  el.anim = { kind: p.kind, duration: p.duration, delay: i * p.stagger };
+                });
+              })
+            }
+          >
+            {p.label}
+          </button>
+        ))}
+        <button
+          className="insp-mini"
+          title="Remover animação de todos os elementos"
+          onClick={() =>
+            updateCurrentSlide((s) => {
+              s.elements.forEach((el) => (el.anim = undefined));
+            })
+          }
+        >
+          Limpar
+        </button>
+      </div>
 
       <div className="insp-head">Notas do apresentador</div>
       <textarea

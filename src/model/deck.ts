@@ -79,7 +79,7 @@ export interface Geom {
 }
 
 /** Entrance animation played in present mode when a slide reveals an element. */
-export type AnimKind = "none" | "fadeIn" | "slideUp" | "slideLeft" | "zoomIn";
+export type AnimKind = "none" | "fadeIn" | "slideUp" | "slideLeft" | "zoomIn" | "bounceIn" | "flipIn";
 
 export interface Anim {
   kind: AnimKind;
