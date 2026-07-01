@@ -9,6 +9,8 @@ import { Inspector } from "./panels/Inspector";
 import { PresentMode } from "./present/PresentMode";
 import { newChart, newFreeTextBox, newIcon, newImage, newShape, newTable, newVideo, type ChartKind, type ShapeKind } from "./model/deck";
 import { ICONS } from "./model/icons";
+import { SHAPE_PICKER, CHART_PICKER } from "./insert/catalog";
+import { InsertPanel } from "./panels/InsertPanel";
 import { pickImageDataUri, pickVideoDataUri, imageDataUrlFromPath } from "./lib/media";
 import {
   DeckFile,
@@ -33,23 +35,6 @@ import { findSlide } from "./model/deck";
 import { Menu, type MenuItemDef } from "./ui/Menu";
 import { ContextBar } from "./ui/ContextBar";
 import "./App.css";
-
-const SHAPE_PICKER: { kind: ShapeKind; label: string; glyph: string }[] = [
-  { kind: "rect", label: "Retângulo", glyph: "▭" },
-  { kind: "roundRect", label: "Arredondado", glyph: "▢" },
-  { kind: "ellipse", label: "Elipse", glyph: "◯" },
-  { kind: "triangle", label: "Triângulo", glyph: "△" },
-  { kind: "diamond", label: "Losango", glyph: "◇" },
-  { kind: "pentagon", label: "Pentágono", glyph: "⬠" },
-  { kind: "hexagon", label: "Hexágono", glyph: "⬡" },
-  { kind: "star", label: "Estrela", glyph: "☆" },
-  { kind: "arrow", label: "Seta", glyph: "➜" },
-  { kind: "doubleArrow", label: "Seta dupla", glyph: "↔" },
-  { kind: "chevron", label: "Chevron", glyph: "❯" },
-  { kind: "line", label: "Linha", glyph: "—" },
-  { kind: "speech", label: "Balão de fala", glyph: "💬" },
-  { kind: "thought", label: "Balão de pensamento", glyph: "💭" },
-];
 
 function App() {
   const deck = useStore((s) => s.deck);
@@ -87,6 +72,7 @@ function App() {
   const [showAi, setShowAi] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
+  const [showInsert, setShowInsert] = useState(false);
   const [rightWidth, setRightWidth] = useState(300);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
@@ -602,11 +588,12 @@ function App() {
       kind: "sub",
       label: "Gráfico",
       icon: "📊",
-      items: [
-        { kind: "item", label: "Barras", icon: "📊", onClick: () => insertChart("bar") },
-        { kind: "item", label: "Linhas", icon: "📈", onClick: () => insertChart("line") },
-        { kind: "item", label: "Pizza", icon: "🥧", onClick: () => insertChart("pie") },
-      ],
+      items: CHART_PICKER.map((c) => ({
+        kind: "item" as const,
+        label: c.label,
+        icon: c.glyph,
+        onClick: () => insertChart(c.kind),
+      })),
     },
     {
       kind: "sub",
@@ -650,6 +637,15 @@ function App() {
           <span className="sep" />
 
           {/* Inserir */}
+          <div className="tool-group">
+            <button
+              className={"tool-btn" + (showInsert ? " active" : "")}
+              onClick={() => setShowInsert((v) => !v)}
+              title="Painel Inserir (formas, ícones, gráficos, tabelas)"
+            >
+              🧩
+            </button>
+          </div>
           <Menu trigger="Inserir ▾" items={inserirItems} />
 
           <span className="sep" />
@@ -714,6 +710,7 @@ function App() {
       />
       <div className="workspace">
         <SlidesPanel />
+        {showInsert && <InsertPanel onClose={() => setShowInsert(false)} />}
         <EditorStage />
         {rightCollapsed ? (
           <button

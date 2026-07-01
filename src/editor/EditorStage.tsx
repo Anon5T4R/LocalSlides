@@ -16,7 +16,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useStore, expandToGroups } from "../state/store";
-import { findSlide, makeId, type Element, type Geom } from "../model/deck";
+import { findSlide, makeId, newImage, newVideo, type Element, type Geom } from "../model/deck";
+import { INSERT_CATALOG, INSERT_MIME, type InsertDragPayload } from "../insert/catalog";
 import { ContextMenu, type CtxItemDef } from "../ui/ContextMenu";
 import { SlideView } from "../render/SlideView";
 import { SelectionLayer } from "../render/SelectionLayer";
@@ -413,6 +414,35 @@ export function EditorStage() {
     [editingId, editingCell, toLogical]
   );
 
+  // Drop of an item dragged from the InsertPanel (catalog item or library asset).
+  const onPanelDrop = useCallback(
+    (e: React.DragEvent) => {
+      const raw = e.dataTransfer.getData(INSERT_MIME);
+      if (!raw) return;
+      e.preventDefault();
+      let payload: InsertDragPayload;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      const d = useStore.getState().deck;
+      const el: Element | null =
+        payload.kind === "catalog"
+          ? INSERT_CATALOG.find((it) => it.id === payload.id)?.make(d) ?? null
+          : payload.assetKind === "video"
+          ? newVideo(d, payload.src)
+          : newImage(d, payload.src);
+      if (!el) return;
+      const p = toLogical(e.clientX, e.clientY);
+      el.geom.x = Math.round(p.x - el.geom.w / 2);
+      el.geom.y = Math.round(p.y - el.geom.h / 2);
+      addElements([el]);
+      select([el.id]);
+    },
+    [toLogical, addElements, select]
+  );
+
   const openCellEditor = useCallback((elId: string, e: React.MouseEvent<HTMLElement>) => {
     const el = slideRef.current?.elements.find((x) => x.id === elId);
     if (el?.type !== "table") return;
@@ -480,6 +510,10 @@ export function EditorStage() {
       ref={stageRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes(INSERT_MIME)) e.preventDefault();
+      }}
+      onDrop={onPanelDrop}
       onPointerDown={(e) => {
         if (spaceDown.current) {
           e.preventDefault();
