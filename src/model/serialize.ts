@@ -29,6 +29,12 @@ const MIME_EXT: Record<string, string> = {
   "font/woff": "woff",
   "font/woff2": "woff2",
   "font/collection": "ttc",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/ogg": "ogg",
+  "audio/mp4": "m4a",
+  "audio/aac": "aac",
 };
 const EXT_MIME: Record<string, string> = {
   png: "image/png",
@@ -46,6 +52,11 @@ const EXT_MIME: Record<string, string> = {
   woff: "font/woff",
   woff2: "font/woff2",
   ttc: "font/collection",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
 };
 
 function dataUrlToParts(dataUrl: string): { mime: string; bytes: Uint8Array } | null {
@@ -78,14 +89,15 @@ export async function packDeck(deck: Deck): Promise<Uint8Array> {
   // Dedup identical data URLs (e.g. an asset inserted on many slides) → one file.
   const seen = new Map<string, string>();
 
-  const externalize = (src: string, kind: "image" | "video"): string => {
+  const externalize = (src: string, kind: "image" | "video" | "audio"): string => {
     if (!src.startsWith("data:")) return src;
     const hit = seen.get(src);
     if (hit) return hit;
     const parts = dataUrlToParts(src);
     if (!parts) return src;
     const ext = MIME_EXT[parts.mime] ?? "bin";
-    const name = `${kind === "video" ? "vid" : "img"}${++mediaCount}.${ext}`;
+    const prefix = kind === "video" ? "vid" : kind === "audio" ? "aud" : "img";
+    const name = `${prefix}${++mediaCount}.${ext}`;
     zip.file(MEDIA_DIR + name, parts.bytes);
     const path = MEDIA_DIR + name;
     seen.set(src, path);
@@ -116,6 +128,7 @@ export async function packDeck(deck: Deck): Promise<Uint8Array> {
   }
   for (const asset of out.assets ?? []) asset.src = externalize(asset.src, asset.kind);
   for (const font of out.fonts ?? []) font.src = externalizeFont(font.src, font.family);
+  if (out.audio) out.audio.src = externalize(out.audio.src, "audio");
 
   zip.file(DECK_ENTRY, JSON.stringify(out));
   return zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
@@ -152,5 +165,6 @@ export async function unpackDeck(bytes: Uint8Array): Promise<Deck> {
   }
   for (const asset of deck.assets ?? []) asset.src = await resolve(asset.src);
   for (const font of deck.fonts ?? []) font.src = await resolve(font.src);
+  if (deck.audio) deck.audio.src = await resolve(deck.audio.src);
   return deck;
 }

@@ -1,0 +1,64 @@
+// Onda 16 — named version history: manual snapshots of the whole deck, kept
+// alongside undo/autosave and persisted inside the .tslides file itself.
+
+import { useStore } from "../state/store";
+
+function fmt(ts: number): string {
+  return new Date(ts).toLocaleString();
+}
+
+export function VersionsModal({ onClose }: { onClose: () => void }) {
+  const versions = useStore((s) => s.deck.versions ?? []);
+  const saveVersion = useStore((s) => s.saveVersion);
+  const restoreVersion = useStore((s) => s.restoreVersion);
+  const deleteVersion = useStore((s) => s.deleteVersion);
+
+  const onSave = () => {
+    const name = window.prompt("Nome da versão:", `Versão ${new Date().toLocaleDateString()}`);
+    if (name) saveVersion(name);
+  };
+
+  return (
+    <div className="shortcuts-backdrop" onClick={onClose}>
+      <div className="shortcuts-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="shortcuts-head">
+          <span>Histórico de versões</span>
+          <button className="insp-mini" onClick={onClose} title="Fechar (Esc)">✕</button>
+        </div>
+        <div className="versions-body">
+          <button className="insp-mini" onClick={onSave}>＋ Salvar versão atual</button>
+          {versions.length === 0 ? (
+            <p className="insp-empty-hint">Nenhuma versão salva ainda. Salve uma agora para poder voltar a ela depois.</p>
+          ) : (
+            <div className="versions-list">
+              {[...versions].reverse().map((v) => (
+                <div key={v.id} className="versions-row">
+                  <div className="versions-row-info">
+                    <span className="versions-row-name">{v.name}</span>
+                    <span className="versions-row-ts">{fmt(v.ts)}</span>
+                  </div>
+                  <div className="insp-zorder">
+                    <button
+                      className="insp-mini"
+                      onClick={() => {
+                        if (window.confirm(`Restaurar "${v.name}"? As mudanças atuais não salvas nesta versão serão substituídas (mas continuam no histórico de desfazer).`)) {
+                          restoreVersion(v.id);
+                          onClose();
+                        }
+                      }}
+                    >
+                      Restaurar
+                    </button>
+                    <button className="insp-mini" onClick={() => deleteVersion(v.id)} title="Excluir versão">
+                      🗑
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -216,13 +216,28 @@ export interface ShapeEl extends Base {
   text?: ProseMirrorJSON;
 }
 
+/** Per-cell visual style overrides (Onda 13.2). */
+export interface TableCellStyle {
+  fill?: string;
+  color?: string;
+  bold?: boolean;
+  align?: "left" | "center" | "right";
+}
+
 export interface TableCell {
   content: ProseMirrorJSON;
+  /** Columns this cell spans to the right (merge). 1 = no merge. */
+  colSpan?: number;
+  /** Rows this cell spans downward (merge). 1 = no merge. */
+  rowSpan?: number;
+  /** True when covered by a merge from a master cell above/left (not rendered). */
+  covered?: boolean;
+  style?: TableCellStyle;
 }
 
 export interface TableEl extends Base {
   type: "table";
-  /** rows[r][c] — rectangular grid. */
+  /** rows[r][c] — rectangular grid (merged cells set colSpan/rowSpan + covered siblings). */
   rows: TableCell[][];
   /** Cell border. */
   border?: Stroke;
@@ -230,6 +245,8 @@ export interface TableEl extends Base {
   headerFill?: string;
   /** Alternate a light tint on odd body rows (Onda 13.2). */
   zebra?: boolean;
+  /** Column widths as fractions of total width (length = nCols). Undefined = equal. */
+  colWidths?: number[];
 }
 
 /** A single freehand stroke: flat [x0,y0,x1,y1,…] points in the ink base coords. */
@@ -319,6 +336,24 @@ export interface SlideGuides {
   y: number[];
 }
 
+/** Background music track for video export (Onda 14). */
+export interface DeckAudio {
+  /** Data URL or "media/audio1.mp3" inside the zip. */
+  src: string;
+  name: string;
+  /** 0..1, default 1. */
+  volume?: number;
+}
+
+/** A named manual snapshot of the whole deck, beyond undo/autosave (Onda 16). */
+export interface DeckVersion {
+  id: string;
+  name: string;
+  /** epoch ms. */
+  ts: number;
+  snapshot: Omit<Deck, "versions">;
+}
+
 export interface Slide {
   id: string;
   /** Overrides the theme/layout background for this slide. */
@@ -363,6 +398,12 @@ export interface Deck {
   assets?: Asset[];
   /** Fonts imported from disk and embedded so the deck renders anywhere. */
   fonts?: EmbeddedFont[];
+  /** Guides applied to every slide, in addition to each slide's own (Onda 16). */
+  guides?: SlideGuides;
+  /** Background music track mixed into video export (Onda 14). */
+  audio?: DeckAudio;
+  /** Named manual snapshots (Onda 16), independent from undo/autosave. */
+  versions?: DeckVersion[];
 }
 
 export const DEFAULT_THEME: Theme = {

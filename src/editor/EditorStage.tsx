@@ -26,6 +26,7 @@ import { resizeGeom, rotationFromPointer, type Handle } from "../interactions/ge
 import { computeSnap, type GapGuide } from "../interactions/snapping";
 import { TextBoxEditor } from "./TextBoxEditor";
 import { TableCellEditor } from "./TableCellEditor";
+import { TableColResizer } from "./TableColResizer";
 import { CropOverlay } from "./CropOverlay";
 import { DrawLayer } from "./DrawLayer";
 import { CommentsLayer } from "./CommentsLayer";
@@ -80,6 +81,9 @@ export function EditorStage() {
   const addGuide = useStore((s) => s.addGuide);
   const moveGuide = useStore((s) => s.moveGuide);
   const removeGuide = useStore((s) => s.removeGuide);
+  const addDeckGuide = useStore((s) => s.addDeckGuide);
+  const moveDeckGuide = useStore((s) => s.moveDeckGuide);
+  const removeDeckGuide = useStore((s) => s.removeDeckGuide);
 
   const slide = findSlide(deck, currentSlideId);
 
@@ -159,7 +163,10 @@ export function EditorStage() {
         const others =
           slideRef.current?.elements.filter((el) => !movingIds.has(el.id)).map((el) => el.geom) ?? [];
         const proposed: Geom = { ...primaryStart, x: primaryStart.x + dx, y: primaryStart.y + dy };
-        const manual = { x: slideRef.current?.guides?.x ?? [], y: slideRef.current?.guides?.y ?? [] };
+        const manual = {
+          x: [...(slideRef.current?.guides?.x ?? []), ...(deck.guides?.x ?? [])],
+          y: [...(slideRef.current?.guides?.y ?? []), ...(deck.guides?.y ?? [])],
+        };
         const snap = computeSnap(proposed, others, deck.size, undefined, manual);
         const adjDx = snap.x - primaryStart.x;
         const adjDy = snap.y - primaryStart.y;
@@ -449,8 +456,27 @@ export function EditorStage() {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const nCols = el.rows[0]?.length ?? 1;
     const nRows = el.rows.length;
-    const col = Math.min(nCols - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * nCols)));
-    const row = Math.min(nRows - 1, Math.max(0, Math.floor(((e.clientY - rect.top) / rect.height) * nRows)));
+    const colWidths =
+      el.colWidths && el.colWidths.length === nCols ? el.colWidths : Array.from({ length: nCols }, () => 1 / nCols);
+    const fracX = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    let acc = 0;
+    let col = nCols - 1;
+    for (let c = 0; c < nCols; c++) {
+      acc += colWidths[c];
+      if (fracX < acc) { col = c; break; }
+    }
+    const clickedRow = Math.min(nRows - 1, Math.max(0, Math.floor(((e.clientY - rect.top) / rect.height) * nRows)));
+    // A covered cell belongs to a merge; jump to its master (top-left of the span).
+    let row = clickedRow;
+    for (let r = clickedRow; r >= 0; r--) {
+      for (let c = col; c >= 0; c--) {
+        const cell = el.rows[r]?.[c];
+        if (!cell || cell.covered) continue;
+        const cs = cell.colSpan ?? 1;
+        const rs = cell.rowSpan ?? 1;
+        if (r + rs > clickedRow && c + cs > col) { row = r; col = c; }
+      }
+    }
     setEditingCell({ elId, row, col });
   }, []);
 
@@ -640,6 +666,11 @@ export function EditorStage() {
             />
           )}
 
+          {/* draggable column-width handles for a selected table */}
+          {selectedEl?.type === "table" && !editingId && !editingCell && !croppingId && !drawing && !commenting && (
+            <TableColResizer el={selectedEl} scale={scale} />
+          )}
+
           {/* marquee rectangle */}
           {marquee && (
             <div
@@ -681,6 +712,10 @@ export function EditorStage() {
             addGuide={addGuide}
             moveGuide={moveGuide}
             removeGuide={removeGuide}
+            deckGuides={deck.guides}
+            addDeckGuide={addDeckGuide}
+            moveDeckGuide={moveDeckGuide}
+            removeDeckGuide={removeDeckGuide}
             beginTx={beginTx}
             endTx={endTx}
           />

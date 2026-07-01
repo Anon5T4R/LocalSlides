@@ -9,6 +9,8 @@ export interface Settings {
   lastModelPath: string;
   ngl: number;
   ctx: number;
+  /** Onda 16 — dismissed the first-run onboarding tip. */
+  onboardingSeen: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -17,6 +19,7 @@ const DEFAULTS: Settings = {
   lastModelPath: "",
   ngl: 0,
   ctx: 4096,
+  onboardingSeen: false,
 };
 
 const SETTINGS_KEY = "localslides.settings";

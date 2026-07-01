@@ -36,6 +36,7 @@ import { findSlide } from "./model/deck";
 import { Menu, type MenuItemDef } from "./ui/Menu";
 import { ContextBar } from "./ui/ContextBar";
 import { ShortcutsModal } from "./ui/ShortcutsModal";
+import { VersionsModal } from "./ui/VersionsModal";
 import "./App.css";
 
 const ASPECT_PICKER: { kind: AspectRatio; label: string; size: { w: number; h: number } }[] = [
@@ -84,11 +85,17 @@ function App() {
   const [showLayers, setShowLayers] = useState(false);
   const [showInsert, setShowInsert] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
   const [rightWidth, setRightWidth] = useState(300);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
   const [settings] = useState<Settings>(() => loadSettings());
   const ai = useLocalAi(settings, (patch) => saveSettings(patch));
+  const [showOnboarding, setShowOnboarding] = useState(!settings.onboardingSeen);
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    saveSettings({ onboardingSeen: true });
+  };
 
   useEffect(() => {
     applyTheme(loadSettings().theme);
@@ -635,11 +642,13 @@ function App() {
         setShowShortcuts((v) => !v);
       } else if (e.key === "Escape" && showShortcuts) {
         setShowShortcuts(false);
+      } else if (e.key === "Escape" && showVersions) {
+        setShowVersions(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [showShortcuts]);
+  }, [showShortcuts, showVersions]);
 
   const title = (filePath ? baseName(filePath) : "Sem título") + (dirty ? " •" : "");
   const zoomPct = zoom > 0 ? Math.round(zoom * 100) : 0;
@@ -818,8 +827,18 @@ function App() {
           <button onClick={() => setZoom(0)} title="Ajustar à tela">{zoomPct ? `${zoomPct}%` : "Ajustar"}</button>
           <button onClick={() => setZoom((zoom || 0.5) + 0.1)} title="Ampliar">+</button>
           <button onClick={() => setShowShortcuts(true)} title="Atalhos de teclado (?)">?</button>
+          <button onClick={() => setShowVersions(true)} title="Histórico de versões">🕘</button>
         </div>
       </div>
+      {showOnboarding && (
+        <div className="onboarding-banner">
+          <span>
+            👋 Bem-vindo(a)! Clique em <strong>Inserir</strong> para adicionar elementos, ou pressione{" "}
+            <kbd>?</kbd> para ver todos os atalhos.
+          </span>
+          <button className="insp-mini" onClick={dismissOnboarding}>Entendi</button>
+        </div>
+      )}
       <ContextBar
         onInkColor={setInkColor}
         onInkWidth={setInkWidth}
@@ -844,7 +863,7 @@ function App() {
               ⟩
             </button>
             {showLayers ? (
-              <LayersPanel onClose={() => setShowLayers(false)} />
+              <LayersPanel onClose={() => setShowLayers(false)} onInsert={() => { setShowLayers(false); setShowInsert(true); }} />
             ) : showMedia ? (
               <MediaPanel onClose={() => setShowMedia(false)} />
             ) : showAi ? (
@@ -859,6 +878,7 @@ function App() {
       {presenting && <PresentMode onExit={() => setPresenting(false)} />}
       {printing && <PrintView deck={deck} />}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+      {showVersions && <VersionsModal onClose={() => setShowVersions(false)} />}
     </div>
   );
 }

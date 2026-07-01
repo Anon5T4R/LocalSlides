@@ -9,6 +9,9 @@ import type { Size, SlideGuides } from "../model/deck";
 
 const RULER = 18;
 
+/** Fixed inset margin markers drawn on the rulers (Onda 16), not draggable. */
+const MARGIN_FRAC = 0.05;
+
 export function GuidesOverlay({
   size,
   scale,
@@ -16,6 +19,10 @@ export function GuidesOverlay({
   addGuide,
   moveGuide,
   removeGuide,
+  deckGuides,
+  addDeckGuide,
+  moveDeckGuide,
+  removeDeckGuide,
   beginTx,
   endTx,
 }: {
@@ -25,11 +32,15 @@ export function GuidesOverlay({
   addGuide: (axis: "x" | "y", pos: number) => void;
   moveGuide: (axis: "x" | "y", index: number, pos: number) => void;
   removeGuide: (axis: "x" | "y", index: number) => void;
+  deckGuides?: SlideGuides;
+  addDeckGuide?: (axis: "x" | "y", pos: number) => void;
+  moveDeckGuide?: (axis: "x" | "y", index: number, pos: number) => void;
+  removeDeckGuide?: (axis: "x" | "y", index: number) => void;
   beginTx: () => void;
   endTx: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ axis: "x" | "y"; index: number } | null>(null);
+  const drag = useRef<{ axis: "x" | "y"; index: number; deck: boolean } | null>(null);
 
   const toLogical = (axis: "x" | "y", clientX: number, clientY: number) => {
     const rect = ref.current?.getBoundingClientRect();
@@ -41,7 +52,9 @@ export function GuidesOverlay({
     const onMove = (e: PointerEvent) => {
       const d = drag.current;
       if (!d) return;
-      moveGuide(d.axis, d.index, toLogical(d.axis, e.clientX, e.clientY));
+      const pos = toLogical(d.axis, e.clientX, e.clientY);
+      if (d.deck) moveDeckGuide?.(d.axis, d.index, pos);
+      else moveGuide(d.axis, d.index, pos);
     };
     const onUp = (e: PointerEvent) => {
       const d = drag.current;
@@ -49,7 +62,10 @@ export function GuidesOverlay({
       drag.current = null;
       const pos = toLogical(d.axis, e.clientX, e.clientY);
       const max = d.axis === "x" ? size.w : size.h;
-      if (pos < -4 || pos > max + 4) removeGuide(d.axis, d.index);
+      if (pos < -4 || pos > max + 4) {
+        if (d.deck) removeDeckGuide?.(d.axis, d.index);
+        else removeGuide(d.axis, d.index);
+      }
       endTx();
     };
     window.addEventListener("pointermove", onMove);
@@ -64,17 +80,21 @@ export function GuidesOverlay({
   const startCreate = (axis: "x" | "y", e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const index = (axis === "x" ? guides?.x.length : guides?.y.length) ?? 0;
+    const deck = e.altKey && !!addDeckGuide;
+    const index = deck
+      ? ((axis === "x" ? deckGuides?.x.length : deckGuides?.y.length) ?? 0)
+      : ((axis === "x" ? guides?.x.length : guides?.y.length) ?? 0);
     beginTx();
-    addGuide(axis, toLogical(axis, e.clientX, e.clientY));
-    drag.current = { axis, index };
+    if (deck) addDeckGuide?.(axis, toLogical(axis, e.clientX, e.clientY));
+    else addGuide(axis, toLogical(axis, e.clientX, e.clientY));
+    drag.current = { axis, index, deck };
   };
 
-  const startMove = (axis: "x" | "y", index: number, e: React.PointerEvent) => {
+  const startMove = (axis: "x" | "y", index: number, deck: boolean, e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     beginTx();
-    drag.current = { axis, index };
+    drag.current = { axis, index, deck };
   };
 
   const W = size.w * scale;
@@ -88,22 +108,28 @@ export function GuidesOverlay({
         className="ruler ruler-top"
         style={{ left: 0, top: -RULER, width: W, height: RULER, pointerEvents: "auto", cursor: "ew-resize" }}
         onPointerDown={(e) => startCreate("x", e)}
-        title="Arraste para criar uma guia vertical"
-      />
+        title="Arraste para criar uma guia vertical (Alt = guia do deck inteiro)"
+      >
+        <div className="ruler-margin-mark" style={{ left: size.w * MARGIN_FRAC * scale }} />
+        <div className="ruler-margin-mark" style={{ left: size.w * (1 - MARGIN_FRAC) * scale }} />
+      </div>
       <div
         className="ruler ruler-left"
         style={{ left: -RULER, top: 0, width: RULER, height: H, pointerEvents: "auto", cursor: "ns-resize" }}
         onPointerDown={(e) => startCreate("y", e)}
-        title="Arraste para criar uma guia horizontal"
-      />
+        title="Arraste para criar uma guia horizontal (Alt = guia do deck inteiro)"
+      >
+        <div className="ruler-margin-mark ruler-margin-mark-h" style={{ top: size.h * MARGIN_FRAC * scale }} />
+        <div className="ruler-margin-mark ruler-margin-mark-h" style={{ top: size.h * (1 - MARGIN_FRAC) * scale }} />
+      </div>
 
-      {/* Vertical guides (x positions). */}
+      {/* Vertical guides (x positions) — per-slide. */}
       {(guides?.x ?? []).map((x, i) => (
         <div
           key={`vx-${i}`}
           className="guide-hit guide-hit-v"
           style={{ left: x * scale - 4, top: 0, width: 9, height: H, pointerEvents: "auto", cursor: "ew-resize" }}
-          onPointerDown={(e) => startMove("x", i, e)}
+          onPointerDown={(e) => startMove("x", i, false, e)}
           onDoubleClick={() => removeGuide("x", i)}
           title="Arraste para mover · duplo-clique para remover"
         >
@@ -111,17 +137,45 @@ export function GuidesOverlay({
         </div>
       ))}
 
-      {/* Horizontal guides (y positions). */}
+      {/* Horizontal guides (y positions) — per-slide. */}
       {(guides?.y ?? []).map((y, i) => (
         <div
           key={`hy-${i}`}
           className="guide-hit guide-hit-h"
           style={{ left: 0, top: y * scale - 4, width: W, height: 9, pointerEvents: "auto", cursor: "ns-resize" }}
-          onPointerDown={(e) => startMove("y", i, e)}
+          onPointerDown={(e) => startMove("y", i, false, e)}
           onDoubleClick={() => removeGuide("y", i)}
           title="Arraste para mover · duplo-clique para remover"
         >
           <div className="guide-line guide-line-h" />
+        </div>
+      ))}
+
+      {/* Vertical deck-wide guides (Onda 16) — shown on every slide. */}
+      {(deckGuides?.x ?? []).map((x, i) => (
+        <div
+          key={`dvx-${i}`}
+          className="guide-hit guide-hit-v"
+          style={{ left: x * scale - 4, top: 0, width: 9, height: H, pointerEvents: "auto", cursor: "ew-resize" }}
+          onPointerDown={(e) => startMove("x", i, true, e)}
+          onDoubleClick={() => removeDeckGuide?.("x", i)}
+          title="Guia do deck inteiro · arraste para mover · duplo-clique para remover"
+        >
+          <div className="guide-line guide-line-v guide-line-deck" />
+        </div>
+      ))}
+
+      {/* Horizontal deck-wide guides (Onda 16) — shown on every slide. */}
+      {(deckGuides?.y ?? []).map((y, i) => (
+        <div
+          key={`dhy-${i}`}
+          className="guide-hit guide-hit-h"
+          style={{ left: 0, top: y * scale - 4, width: W, height: 9, pointerEvents: "auto", cursor: "ns-resize" }}
+          onPointerDown={(e) => startMove("y", i, true, e)}
+          onDoubleClick={() => removeDeckGuide?.("y", i)}
+          title="Guia do deck inteiro · arraste para mover · duplo-clique para remover"
+        >
+          <div className="guide-line guide-line-h guide-line-deck" />
         </div>
       ))}
     </div>

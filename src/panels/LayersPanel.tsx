@@ -47,7 +47,7 @@ function iconFor(el: Element): string {
     : "◆";
 }
 
-export function LayersPanel({ onClose }: { onClose: () => void }) {
+export function LayersPanel({ onClose, onInsert }: { onClose: () => void; onInsert?: () => void }) {
   const deck = useStore((s) => s.deck);
   const currentSlideId = useStore((s) => s.currentSlideId);
   const selection = useStore((s) => s.selection);
@@ -68,7 +68,12 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       {rows.length === 0 ? (
-        <p className="media-empty">Nada neste slide ainda.</p>
+        <div className="insp-empty-state">
+          <p className="media-empty">Nada neste slide ainda.</p>
+          {onInsert && (
+            <button className="insp-mini" onClick={onInsert}>＋ Inserir um elemento</button>
+          )}
+        </div>
       ) : (
         <div className="layers-list">
           {rows.map((el, i) => {

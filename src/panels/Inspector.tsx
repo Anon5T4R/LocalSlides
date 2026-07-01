@@ -18,6 +18,8 @@ import {
   type ImageEl,
   type ShapeKind,
   type StrokeStyle,
+  type TableCellStyle,
+  type TableEl,
   type TransitionKind,
 } from "../model/deck";
 import { THEME_PRESETS, findThemePreset } from "../model/themes";
@@ -26,6 +28,7 @@ import { ColorPicker } from "../ui/ColorPicker";
 import { TEXT_EFFECT_PRESETS } from "../render/textEffects";
 import { loadBrandKits, saveBrandKit, removeBrandKit, type BrandKit } from "../lib/brandKit";
 import { ensureModelLoaded, removeBackground } from "../lib/backgroundRemoval";
+import { expandRectToWholeCells, isMergedMaster, mergeCells, splitCell } from "../model/tableOps";
 
 const ANIMS: { value: AnimKind; label: string }[] = [
   { value: "none", label: "Nenhuma" },
@@ -379,6 +382,149 @@ function BackgroundRemoveRow({
       </div>
       {error && <p className="insp-bgremove-error">{error}</p>}
     </Row>
+  );
+}
+
+/**
+ * Mini grid mirroring the table structure: click a cell to select it, shift+click
+ * to extend a rectangle. "Mesclar"/"Dividir" operate on the (expanded) selection;
+ * fill/color/negrito/alinhar apply per-cell style to every master cell inside it.
+ */
+function TableStructureEditor({
+  el,
+  set,
+  accent,
+}: {
+  el: TableEl;
+  set: (recipe: (e: Element) => void) => void;
+  accent: string;
+}) {
+  const [sel, setSel] = useState<{ r0: number; c0: number; r1: number; c1: number } | null>(null);
+
+  const nRows = el.rows.length;
+  const nCols = el.rows[0]?.length ?? 1;
+
+  const masterOf = (r: number, c: number): [number, number] => {
+    for (let rr = r; rr >= 0; rr--) {
+      for (let cc = c; cc >= 0; cc--) {
+        const cell = el.rows[rr]?.[cc];
+        if (!cell || cell.covered) continue;
+        const cs = cell.colSpan ?? 1;
+        const rs = cell.rowSpan ?? 1;
+        if (rr + rs > r && cc + cs > c) return [rr, cc];
+      }
+    }
+    return [r, c];
+  };
+
+  const clickCell = (r: number, c: number, shift: boolean) => {
+    const [mr, mc] = masterOf(r, c);
+    setSel((prev) => (shift && prev ? { r0: prev.r0, c0: prev.c0, r1: mr, c1: mc } : { r0: mr, c0: mc, r1: mr, c1: mc }));
+  };
+
+  const rect = sel ? expandRectToWholeCells(el, sel.r0, sel.c0, sel.r1, sel.c1) : null;
+  const [minR, minC, maxR, maxC] = rect ?? [0, 0, 0, 0];
+  const canMerge = !!rect && (minR !== maxR || minC !== maxC);
+  const canSplit = !!rect && isMergedMaster(el, minR, minC);
+
+  const applyCellStyle = (patch: Partial<TableCellStyle>) => {
+    if (!rect) return;
+    set((e) => {
+      if (e.type !== "table") return;
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          const cell = e.rows[r]?.[c];
+          if (!cell || cell.covered) continue;
+          cell.style = { ...cell.style, ...patch };
+        }
+      }
+    });
+  };
+
+  const selCell = rect ? el.rows[minR]?.[minC] : undefined;
+
+  return (
+    <>
+      <Row label="Células">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${nCols}, 20px)`,
+            gridTemplateRows: `repeat(${nRows}, 20px)`,
+            gap: 2,
+          }}
+        >
+          {el.rows.map((row, r) =>
+            row.map((cell, c) => {
+              if (cell.covered) return null;
+              const cs = cell.colSpan ?? 1;
+              const rs = cell.rowSpan ?? 1;
+              const inSel = !!rect && r >= minR && r <= maxR && c >= minC && c <= maxC;
+              return (
+                <div
+                  key={`${r}-${c}`}
+                  onClick={(e) => clickCell(r, c, e.shiftKey)}
+                  title={`Linha ${r + 1}, coluna ${c + 1}`}
+                  style={{
+                    gridColumn: `${c + 1} / span ${cs}`,
+                    gridRow: `${r + 1} / span ${rs}`,
+                    border: `1px solid ${inSel ? accent : "#cbd5e1"}`,
+                    background: inSel ? `${accent}33` : "#f1f5f9",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                />
+              );
+            })
+          )}
+        </div>
+      </Row>
+      <Row label="Mesclar/dividir">
+        <div className="insp-zorder">
+          <button className="insp-mini" disabled={!canMerge} onClick={() => set((e) => e.type === "table" && mergeCells(e, minR, minC, maxR, maxC))}>
+            Mesclar
+          </button>
+          <button className="insp-mini" disabled={!canSplit} onClick={() => set((e) => e.type === "table" && splitCell(e, minR, minC))}>
+            Dividir
+          </button>
+        </div>
+      </Row>
+      {rect && (
+        <>
+          <Row label="Preenchimento da célula">
+            <ColorPicker
+              value={selCell?.style?.fill ?? "#ffffff"}
+              themeColors={[]}
+              onChange={(c) => applyCellStyle({ fill: c })}
+            />
+          </Row>
+          <Row label="Cor do texto">
+            <ColorPicker
+              value={selCell?.style?.color ?? "#000000"}
+              themeColors={[]}
+              onChange={(c) => applyCellStyle({ color: c })}
+            />
+          </Row>
+          <Row label="Negrito">
+            <input
+              type="checkbox"
+              checked={!!selCell?.style?.bold}
+              onChange={(e) => applyCellStyle({ bold: e.target.checked })}
+            />
+          </Row>
+          <Row label="Alinhar">
+            <select
+              value={selCell?.style?.align ?? "left"}
+              onChange={(e) => applyCellStyle({ align: e.target.value as TableCellStyle["align"] })}
+            >
+              <option value="left">Esquerda</option>
+              <option value="center">Centro</option>
+              <option value="right">Direita</option>
+            </select>
+          </Row>
+        </>
+      )}
+    </>
   );
 }
 
@@ -936,6 +1082,7 @@ function ElementInspector({ el }: { el: Element }) {
               onChange={(e) => set((x) => x.type === "table" && (x.zebra = e.target.checked))}
             />
           </Row>
+          <TableStructureEditor el={el} set={set} accent={theme.colors.accent1} />
         </>
       )}
 
@@ -1159,6 +1306,64 @@ function ElementInspector({ el }: { el: Element }) {
   );
 }
 
+function DeckAudioSection() {
+  const deckAudio = useStore((s) => s.deck.audio);
+  const apply = useStore((s) => s.apply);
+
+  const onPick = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = reader.result as string;
+      apply((d) => {
+        d.audio = { src, name: file.name, volume: 1 };
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <>
+      <div className="insp-head">Áudio de fundo (export de vídeo)</div>
+      {deckAudio ? (
+        <>
+          <Row label="Faixa">
+            <span className="insp-audio-name" title={deckAudio.name}>{deckAudio.name}</span>
+            <button className="insp-mini" onClick={() => apply((d) => (d.audio = undefined))}>
+              Remover
+            </button>
+          </Row>
+          <Row label="Volume">
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={deckAudio.volume ?? 1}
+              onChange={(e) =>
+                apply((d) => {
+                  if (d.audio) d.audio.volume = Number(e.target.value);
+                })
+              }
+            />
+          </Row>
+        </>
+      ) : (
+        <Row label="Faixa">
+          <label className="insp-mini insp-file-label">
+            Escolher arquivo…
+            <input
+              type="file"
+              accept="audio/*"
+              style={{ display: "none" }}
+              onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])}
+            />
+          </label>
+        </Row>
+      )}
+    </>
+  );
+}
+
 function SlideInspector() {
   const deck = useStore((s) => s.deck);
   const currentSlideId = useStore((s) => s.currentSlideId);
@@ -1322,6 +1527,8 @@ function SlideInspector() {
           Limpar
         </button>
       </div>
+
+      <DeckAudioSection />
 
       <div className="insp-head">Notas do apresentador</div>
       <textarea

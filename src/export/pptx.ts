@@ -214,24 +214,40 @@ function addTable(s: AnySlide, el: TableEl) {
   const border = el.border
     ? { type: "solid" as const, pt: Math.max(0.5, el.border.width * 0.75), color: hex(el.border.color) }
     : undefined;
+  const nCols = el.rows[0]?.length ?? 1;
   const rows = el.rows.map((row, r) =>
-    row.map((cell) => ({
-      text: pmToPlainText(cell.content),
-      options: {
-        ...(border ? { border } : {}),
-        ...(r === 0 && el.headerFill
-          ? { fill: { color: hex(el.headerFill) }, bold: true, color: "FFFFFF" }
-          : {}),
-        valign: "middle" as const,
-      },
-    }))
+    row
+      .map((cell) => {
+        if (cell.covered) return null;
+        const cs = cell.colSpan ?? 1;
+        const rs = cell.rowSpan ?? 1;
+        const st = cell.style;
+        const isHeaderTint = r === 0 && !!el.headerFill && !st?.fill;
+        return {
+          text: pmToPlainText(cell.content),
+          options: {
+            ...(border ? { border } : {}),
+            ...(cs > 1 ? { colspan: cs } : {}),
+            ...(rs > 1 ? { rowspan: rs } : {}),
+            ...(st?.fill ? { fill: { color: hex(st.fill) } } : isHeaderTint ? { fill: { color: hex(el.headerFill) } } : {}),
+            bold: !!st?.bold || (r === 0 && !!el.headerFill),
+            color: st?.color ? hex(st.color) : isHeaderTint ? "FFFFFF" : undefined,
+            ...(st?.align ? { align: st.align } : {}),
+            valign: "middle" as const,
+          },
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null)
   );
   const { x, y, w, h, rotation } = el.geom;
+  const colW =
+    el.colWidths && el.colWidths.length === nCols ? el.colWidths.map((frac) => px(w * frac)) : undefined;
   s.addTable(rows, {
     x: px(x),
     y: px(y),
     w: px(w),
     h: px(h),
+    ...(colW ? { colW } : {}),
     ...(rotation ? { rotate: rotation } : {}),
     fontSize: 14,
     autoPage: false,

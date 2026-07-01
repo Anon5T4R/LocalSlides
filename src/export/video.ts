@@ -29,8 +29,10 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function pickMimeType(): string {
-  const candidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+function pickMimeType(withAudio: boolean): string {
+  const candidates = withAudio
+    ? ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+    : ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
   for (const c of candidates) {
     if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c)) return c;
   }
@@ -51,8 +53,37 @@ export async function exportDeckVideo(deck: Deck, opts: VideoExportOptions = {})
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Não foi possível criar o contexto 2D do canvas.");
 
-  const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(fps);
-  const mimeType = pickMimeType();
+  const videoStream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(fps);
+  const tracks: MediaStreamTrack[] = [...videoStream.getVideoTracks()];
+
+  // Onda 14 — mix in the deck's background music track (if any) via Web Audio,
+  // so the exported WEBM carries an audio track alongside the rendered frames.
+  let audioEl: HTMLAudioElement | undefined;
+  let audioCtx: AudioContext | undefined;
+  if (deck.audio) {
+    try {
+      audioEl = new Audio(deck.audio.src);
+      audioEl.loop = true;
+      audioEl.crossOrigin = "anonymous";
+      audioCtx = new AudioContext();
+      const source = audioCtx.createMediaElementSource(audioEl);
+      const gain = audioCtx.createGain();
+      gain.gain.value = deck.audio.volume ?? 1;
+      const dest = audioCtx.createMediaStreamDestination();
+      source.connect(gain);
+      gain.connect(dest);
+      await audioEl.play();
+      tracks.push(...dest.stream.getAudioTracks());
+    } catch {
+      audioEl?.pause();
+      audioCtx?.close().catch(() => {});
+      audioEl = undefined;
+      audioCtx = undefined;
+    }
+  }
+
+  const stream = new MediaStream(tracks);
+  const mimeType = pickMimeType(!!audioEl);
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => {
@@ -77,6 +108,8 @@ export async function exportDeckVideo(deck: Deck, opts: VideoExportOptions = {})
     }
   } finally {
     recorder.stop();
+    audioEl?.pause();
+    audioCtx?.close().catch(() => {});
   }
 
   return stopped;

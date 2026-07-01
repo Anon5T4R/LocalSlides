@@ -73,12 +73,20 @@ export function TableCellEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
-  if (!table || !cell) return null;
+  if (!table || !cell || cell.covered) return null;
 
   const nRows = table.rows.length;
   const nCols = table.rows[0]?.length ?? 1;
-  const cw = table.geom.w / nCols;
+  const colWidths =
+    table.colWidths && table.colWidths.length === nCols
+      ? table.colWidths
+      : Array.from({ length: nCols }, () => 1 / nCols);
+  const colX = (c: number) => table.geom.w * colWidths.slice(0, c).reduce((a, b) => a + b, 0);
+  const colW = (c: number, span: number) =>
+    table.geom.w * colWidths.slice(c, c + span).reduce((a, b) => a + b, 0);
   const ch = table.geom.h / nRows;
+  const cs = cell.colSpan ?? 1;
+  const rs = cell.rowSpan ?? 1;
 
   return (
     <div
@@ -86,10 +94,10 @@ export function TableCellEditor({
       className="cell-editor"
       style={{
         position: "absolute",
-        left: table.geom.x + col * cw,
+        left: table.geom.x + colX(col),
         top: table.geom.y + row * ch,
-        width: cw,
-        height: ch,
+        width: colW(col, cs),
+        height: ch * rs,
         boxSizing: "border-box",
         padding: "4px 8px",
         background: "#fff",

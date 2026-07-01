@@ -160,10 +160,20 @@ export interface SlidesState {
   moveGuide: (axis: "x" | "y", index: number, pos: number) => void;
   removeGuide: (axis: "x" | "y", index: number) => void;
 
+  // deck-level ruler guides (Onda 16): apply to every slide, Alt+drag from the ruler
+  addDeckGuide: (axis: "x" | "y", pos: number) => void;
+  moveDeckGuide: (axis: "x" | "y", index: number, pos: number) => void;
+  removeDeckGuide: (axis: "x" | "y", index: number) => void;
+
   // comments (undoable)
   addComment: (x: number, y: number) => string;
   updateComment: (id: string, patch: { text?: string; resolved?: boolean }) => void;
   removeComment: (id: string) => void;
+
+  // named version history (undoable; Onda 16)
+  saveVersion: (name: string) => void;
+  restoreVersion: (id: string) => void;
+  deleteVersion: (id: string) => void;
 
   // grouping & arrangement (undoable)
   group: () => void;
@@ -321,6 +331,10 @@ export const useStore = create<SlidesState>((set, get) => ({
           s.guides.y = s.guides.y.map((v) => Math.round(v * sy));
         }
       });
+      if (d.guides) {
+        d.guides.x = d.guides.x.map((v) => Math.round(v * sx));
+        d.guides.y = d.guides.y.map((v) => Math.round(v * sy));
+      }
       d.size = { ...next };
     });
   },
@@ -679,6 +693,24 @@ export const useStore = create<SlidesState>((set, get) => ({
     });
   },
 
+  addDeckGuide: (axis, pos) => {
+    get().apply((d) => {
+      (d.guides ??= { x: [], y: [] })[axis].push(Math.round(pos));
+    });
+  },
+
+  moveDeckGuide: (axis, index, pos) => {
+    get().apply((d) => {
+      if (d.guides && d.guides[axis][index] != null) d.guides[axis][index] = Math.round(pos);
+    });
+  },
+
+  removeDeckGuide: (axis, index) => {
+    get().apply((d) => {
+      if (d.guides) d.guides[axis].splice(index, 1);
+    });
+  },
+
   addComment: (x, y) => {
     const { currentSlideId } = get();
     const id = makeId("cmt");
@@ -703,6 +735,31 @@ export const useStore = create<SlidesState>((set, get) => ({
     get().apply((d) => {
       const slide = findSlide(d, currentSlideId);
       if (slide?.comments) slide.comments = slide.comments.filter((c) => c.id !== id);
+    });
+  },
+
+  saveVersion: (name) => {
+    get().apply((d) => {
+      const snapshot = structuredClone(d) as Deck;
+      delete snapshot.versions;
+      (d.versions ??= []).push({ id: makeId("ver"), name, ts: Date.now(), snapshot });
+    });
+  },
+
+  restoreVersion: (id) => {
+    const v = get().deck.versions?.find((x) => x.id === id);
+    if (!v) return;
+    get().apply((d) => {
+      const versions = d.versions;
+      Object.assign(d, structuredClone(v.snapshot));
+      d.versions = versions;
+    });
+    set((state) => reconcile(state.deck, state.currentSlideId, state.selection));
+  },
+
+  deleteVersion: (id) => {
+    get().apply((d) => {
+      if (d.versions) d.versions = d.versions.filter((v) => v.id !== id);
     });
   },
 

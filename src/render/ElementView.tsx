@@ -373,14 +373,19 @@ function gradientDef(id: string, g: Extract<NonNullable<ShapeEl["fill"]>, { kind
 
 function TableView({ el, theme, style }: { el: TableEl; theme: Theme; style: CSSProperties }) {
   const nCols = el.rows[0]?.length ?? 1;
+  const nRows = el.rows.length;
   const border = el.border ? `${el.border.width}px solid ${el.border.color}` : "1px solid #94a3b8";
+  const gridTemplateColumns =
+    el.colWidths && el.colWidths.length === nCols
+      ? el.colWidths.map((w) => `${Math.max(0.05, w)}fr`).join(" ")
+      : `repeat(${nCols}, 1fr)`;
   return (
     <div
       style={{
         ...style,
         display: "grid",
-        gridTemplateColumns: `repeat(${nCols}, 1fr)`,
-        gridAutoRows: "1fr",
+        gridTemplateColumns,
+        gridTemplateRows: `repeat(${nRows}, 1fr)`,
         borderTop: border,
         borderLeft: border,
         boxSizing: "border-box",
@@ -390,28 +395,38 @@ function TableView({ el, theme, style }: { el: TableEl; theme: Theme; style: CSS
       }}
     >
       {el.rows.map((row, r) =>
-        row.map((cell, c) => (
-          <div
-            key={`${r}-${c}`}
-            style={{
-              borderRight: border,
-              borderBottom: border,
-              padding: "4px 8px",
-              overflow: "hidden",
-              boxSizing: "border-box",
-              background:
-                r === 0 && el.headerFill
-                  ? el.headerFill
-                  : el.zebra && r > 0 && r % 2 === 0
-                  ? "rgba(100,116,139,0.08)"
-                  : "transparent",
-              color: r === 0 && el.headerFill ? "#fff" : theme.colors.text,
-              fontWeight: r === 0 ? 600 : 400,
-            }}
-          >
-            <RenderPM doc={cell.content} />
-          </div>
-        ))
+        row.map((cell, c) => {
+          if (cell.covered) return null;
+          const cs = cell.colSpan ?? 1;
+          const rs = cell.rowSpan ?? 1;
+          const s = cell.style;
+          return (
+            <div
+              key={`${r}-${c}`}
+              style={{
+                gridColumn: `${c + 1} / span ${cs}`,
+                gridRow: `${r + 1} / span ${rs}`,
+                borderRight: border,
+                borderBottom: border,
+                padding: "4px 8px",
+                overflow: "hidden",
+                boxSizing: "border-box",
+                textAlign: s?.align ?? "left",
+                background:
+                  s?.fill ??
+                  (r === 0 && el.headerFill
+                    ? el.headerFill
+                    : el.zebra && r > 0 && r % 2 === 0
+                    ? "rgba(100,116,139,0.08)"
+                    : "transparent"),
+                color: s?.color ?? (r === 0 && el.headerFill ? "#fff" : theme.colors.text),
+                fontWeight: s?.bold ? 700 : r === 0 ? 600 : 400,
+              }}
+            >
+              <RenderPM doc={cell.content} />
+            </div>
+          );
+        })
       )}
     </div>
   );
