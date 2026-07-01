@@ -7,6 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { useStore } from "../state/store";
 import { pmToPlainText } from "../model/deck";
 import { SlideView } from "../render/SlideView";
+import { inTauri } from "../lib/env";
 
 export function PresentMode({ onExit }: { onExit: () => void }) {
   const deck = useStore((s) => s.deck);
@@ -63,6 +64,63 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
   );
 
   useEffect(() => () => window.clearTimeout(transTimer.current), []);
+
+  // Onda 11.1 — mirror this presentation onto a second Tauri window (for a
+  // projector/second-monitor setup): open it on mount, push the current
+  // slide whenever it changes, and let its ‹/› buttons drive navigation here.
+  const indexRef = useRef(index);
+  indexRef.current = index;
+  const goRef = useRef(go);
+  goRef.current = go;
+  const syncRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!inTauri()) return;
+    let unReady: (() => void) | undefined;
+    let unNav: (() => void) | undefined;
+    let cancelled = false;
+
+    (async () => {
+      const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+      const { listen, emit } = await import("@tauri-apps/api/event");
+
+      const sync = () => emit("presenter-sync", { deck: useStore.getState().deck, index: indexRef.current });
+      syncRef.current = sync;
+
+      let win = await WebviewWindow.getByLabel("presenter").catch(() => null);
+      if (!win) {
+        win = new WebviewWindow("presenter", {
+          url: "index.html",
+          title: "Apresentador — LocalSlides",
+          width: 900,
+          height: 650,
+        });
+      } else {
+        win.setFocus().catch(() => {});
+      }
+      if (cancelled) return;
+
+      unReady = await listen("presenter-ready", sync);
+      unNav = await listen<{ delta: number }>("presenter-nav", (e) => goRef.current(e.payload.delta));
+      sync();
+    })();
+
+    return () => {
+      cancelled = true;
+      unReady?.();
+      unNav?.();
+      syncRef.current = null;
+      import("@tauri-apps/api/webviewWindow").then(({ WebviewWindow }) =>
+        WebviewWindow.getByLabel("presenter").then((w) => w?.close())
+      ).catch(() => {});
+    };
+    // Opened once per presentation session; closes with it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    syncRef.current?.();
+  }, [index]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

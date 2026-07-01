@@ -27,7 +27,8 @@ import { MediaPanel } from "./panels/MediaPanel";
 import { LayersPanel } from "./panels/LayersPanel";
 import { inTauri } from "./lib/env";
 import { PrintView } from "./export/PrintView";
-import { exportSlidePng } from "./export/png";
+import { exportSlidePng, exportSlideJpeg, exportSlideSvg } from "./export/png";
+import { exportDeckVideo, saveVideoBlob } from "./export/video";
 import { exportDeckPptx } from "./export/pptx";
 import { importPptx } from "./lib/pptx-io";
 import { saveRecovery, loadRecovery, clearRecovery } from "./lib/recovery";
@@ -252,16 +253,62 @@ function App() {
     };
   }, [printing]);
 
-  const handleExportPng = useCallback(async () => {
+  const handleExportPng = useCallback(async (transparentBg = false) => {
     const st = useStore.getState();
     const slide = findSlide(st.deck, st.currentSlideId);
     if (!slide) return;
     const idx = st.deck.slides.findIndex((s) => s.id === slide.id);
     try {
       setBusy("Exportando PNG…");
-      await exportSlidePng(slide, st.deck, idx);
+      await exportSlidePng(slide, st.deck, idx, transparentBg);
     } catch (e) {
       window.alert(`Não foi possível exportar PNG:\n${e}`);
+    } finally {
+      setBusy("");
+    }
+  }, []);
+
+  const handleExportJpg = useCallback(async () => {
+    const st = useStore.getState();
+    const slide = findSlide(st.deck, st.currentSlideId);
+    if (!slide) return;
+    const idx = st.deck.slides.findIndex((s) => s.id === slide.id);
+    try {
+      setBusy("Exportando JPG…");
+      await exportSlideJpeg(slide, st.deck, idx);
+    } catch (e) {
+      window.alert(`Não foi possível exportar JPG:\n${e}`);
+    } finally {
+      setBusy("");
+    }
+  }, []);
+
+  const handleExportSvg = useCallback(async () => {
+    const st = useStore.getState();
+    const slide = findSlide(st.deck, st.currentSlideId);
+    if (!slide) return;
+    const idx = st.deck.slides.findIndex((s) => s.id === slide.id);
+    try {
+      setBusy("Exportando SVG…");
+      await exportSlideSvg(slide, st.deck, idx);
+    } catch (e) {
+      window.alert(`Não foi possível exportar SVG:\n${e}`);
+    } finally {
+      setBusy("");
+    }
+  }, []);
+
+  const handleExportVideo = useCallback(async () => {
+    const st = useStore.getState();
+    try {
+      const blob = await exportDeckVideo(st.deck, {
+        secondsPerSlide: 3,
+        onProgress: (done, total) => setBusy(`Exportando vídeo… ${done}/${total} slides`),
+      });
+      setBusy("Salvando vídeo…");
+      await saveVideoBlob(blob, "apresentacao.webm");
+    } catch (e) {
+      window.alert(`Não foi possível exportar o vídeo:\n${e}`);
     } finally {
       setBusy("");
     }
@@ -561,8 +608,12 @@ function App() {
       label: "Exportar",
       items: [
         { kind: "item", label: "PDF (todos os slides)", onClick: handleExportPdf },
-        { kind: "item", label: "PNG (slide atual)", onClick: handleExportPng },
+        { kind: "item", label: "PNG (slide atual)", onClick: () => handleExportPng(false) },
+        { kind: "item", label: "PNG transparente (slide atual)", onClick: () => handleExportPng(true) },
+        { kind: "item", label: "JPG (slide atual)", onClick: handleExportJpg },
+        { kind: "item", label: "SVG (slide atual)", onClick: handleExportSvg },
         { kind: "item", label: "PPTX (PowerPoint)", onClick: handleExportPptx },
+        { kind: "item", label: "Vídeo (WEBM)…", onClick: handleExportVideo },
       ],
     },
   ];

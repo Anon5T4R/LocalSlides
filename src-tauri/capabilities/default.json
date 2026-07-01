@@ -1,12 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
+  "description": "Capability for the main window and the presenter window it can open",
+  "windows": ["main", "presenter"],
   "permissions": [
     "core:default",
     "opener:default",
     "dialog:default",
-    "dialog:allow-ask"
+    "dialog:allow-ask",
+    "core:webview:allow-create-webview-window"
   ]
 }

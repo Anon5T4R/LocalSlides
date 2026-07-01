@@ -828,6 +828,116 @@ body {
   font-style: italic;
 }
 
+/* ---- Presenter window (Onda 11.1, second Tauri window) ---- */
+.presenter-root {
+  min-height: 100vh;
+  background: #0f172a;
+  color: #f1f5f9;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+  font: inherit;
+}
+.presenter-waiting {
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+.presenter-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 600;
+}
+.presenter-timer {
+  font-variant-numeric: tabular-nums;
+}
+.presenter-count {
+  color: #94a3b8;
+}
+.presenter-slides {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.presenter-slide-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.presenter-slide-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+.presenter-slide-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #000;
+}
+.presenter-slide-empty {
+  width: 260px;
+  height: 146px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 13px;
+}
+.presenter-notes {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background: #1e293b;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.presenter-notes-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+.presenter-notes-body {
+  font-size: 18px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.presenter-notes-empty {
+  color: #64748b;
+  font-style: italic;
+}
+.presenter-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.presenter-controls button {
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #f1f5f9;
+  cursor: pointer;
+}
+.presenter-controls button:hover:not(:disabled) {
+  border-color: #3b82f6;
+}
+.presenter-controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* Presenter-notes textarea in the slide inspector */
 .insp-notes {
   width: 100%;
