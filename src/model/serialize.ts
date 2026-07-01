@@ -110,6 +110,8 @@ export async function packDeck(deck: Deck): Promise<Uint8Array> {
     if (slide.background?.kind === "image") slide.background.src = externalize(slide.background.src, "image");
     for (const el of slide.elements) {
       if (el.type === "image" || el.type === "video") el.src = externalize(el.src, el.type);
+      if ((el.type === "shape" || el.type === "text") && el.fill?.kind === "image")
+        el.fill.src = externalize(el.fill.src, "image");
     }
   }
   for (const asset of out.assets ?? []) asset.src = externalize(asset.src, asset.kind);
@@ -144,6 +146,8 @@ export async function unpackDeck(bytes: Uint8Array): Promise<Deck> {
     if (slide.background?.kind === "image") slide.background.src = await resolve(slide.background.src);
     for (const el of slide.elements as Element[]) {
       if (el.type === "image" || el.type === "video") el.src = await resolve(el.src);
+      if ((el.type === "shape" || el.type === "text") && el.fill?.kind === "image")
+        el.fill.src = await resolve(el.fill.src);
     }
   }
   for (const asset of deck.assets ?? []) asset.src = await resolve(asset.src);

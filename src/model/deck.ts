@@ -249,7 +249,14 @@ export interface ChartEl extends Base {
   title?: string;
 }
 
-export type Element = TextBox | ImageEl | VideoEl | ShapeEl | TableEl | InkEl | ChartEl;
+/** A vector icon from the built-in pack: an SVG path on a 0 0 24 24 viewBox. */
+export interface IconEl extends Base {
+  type: "icon";
+  path: string;
+  color?: string;
+}
+
+export type Element = TextBox | ImageEl | VideoEl | ShapeEl | TableEl | InkEl | ChartEl | IconEl;
 
 /** Element types that reference a media file (image/video) in the zip. */
 export type MediaEl = ImageEl | VideoEl;
@@ -520,6 +527,17 @@ export function newChart(deck: Deck, kind: ChartKind = "bar"): ChartEl {
     showLegend: true,
     showValues: false,
     title: "",
+  };
+}
+
+export function newIcon(deck: Deck, path: string, color?: string): IconEl {
+  const s = 120;
+  return {
+    id: makeId("icon"),
+    type: "icon",
+    geom: { x: (deck.size.w - s) / 2, y: (deck.size.h - s) / 2, w: s, h: s, rotation: 0 },
+    path,
+    color: color ?? deck.theme.colors.accent1,
   };
 }
 

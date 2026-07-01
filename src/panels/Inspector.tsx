@@ -314,6 +314,8 @@ function typeLabel(el: Element): string {
     ? "Desenho"
     : el.type === "chart"
     ? "Gráfico"
+    : el.type === "icon"
+    ? "Ícone"
     : "Forma";
 }
 
@@ -526,6 +528,7 @@ function ElementInspector({ el }: { el: Element }) {
           onChange={(f) => set((x) => x.type === "text" && (x.fill = f))}
           themeColors={themeColors}
           allowNone
+          allowImage
         />
       )}
 
@@ -711,6 +714,7 @@ function ElementInspector({ el }: { el: Element }) {
             onChange={(f) => set((x) => x.type === "shape" && (x.fill = f ?? { kind: "none" }))}
             themeColors={themeColors}
             allowNone
+            allowImage
           />
           <Row label="Traço">
             <input
@@ -811,6 +815,16 @@ function ElementInspector({ el }: { el: Element }) {
             />
           </Row>
         </>
+      )}
+
+      {el.type === "icon" && (
+        <Row label="Cor do ícone">
+          <ColorPicker
+            value={el.color ?? themeColors[2] ?? "#2563eb"}
+            themeColors={themeColors}
+            onChange={(c) => set((x) => x.type === "icon" && (x.color = c))}
+          />
+        </Row>
       )}
 
       {el.type === "chart" && (

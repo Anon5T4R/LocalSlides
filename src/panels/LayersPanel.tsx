@@ -22,6 +22,8 @@ function labelFor(el: Element): string {
       return "Desenho";
     case "chart":
       return "Gráfico";
+    case "icon":
+      return "Ícone";
     default:
       return "Forma";
   }
@@ -40,6 +42,8 @@ function iconFor(el: Element): string {
     ? "✎"
     : el.type === "chart"
     ? "📊"
+    : el.type === "icon"
+    ? "★"
     : "◆";
 }
 

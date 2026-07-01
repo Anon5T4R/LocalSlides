@@ -7,7 +7,8 @@ import { EditorStage } from "./editor/EditorStage";
 import { SlidesPanel } from "./panels/SlidesPanel";
 import { Inspector } from "./panels/Inspector";
 import { PresentMode } from "./present/PresentMode";
-import { newChart, newFreeTextBox, newImage, newShape, newTable, newVideo, type ChartKind, type ShapeKind } from "./model/deck";
+import { newChart, newFreeTextBox, newIcon, newImage, newShape, newTable, newVideo, type ChartKind, type ShapeKind } from "./model/deck";
+import { ICONS } from "./model/icons";
 import { pickImageDataUri, pickVideoDataUri, imageDataUrlFromPath } from "./lib/media";
 import {
   DeckFile,
@@ -200,6 +201,13 @@ function App() {
   const insertChart = useCallback(
     (kind: ChartKind = "bar") => {
       addElement(newChart(useStore.getState().deck, kind));
+    },
+    [addElement]
+  );
+
+  const insertIcon = useCallback(
+    (path: string) => {
+      addElement(newIcon(useStore.getState().deck, path));
     },
     [addElement]
   );
@@ -450,16 +458,41 @@ function App() {
   // ---- OS drag-and-drop of image files onto the canvas ----
   const dropImageAt = useCallback(
     (src: string, clientX?: number, clientY?: number) => {
-      const deckNow = useStore.getState().deck;
-      addAsset("image", "Imagem", src); // dropped images join the library too
-      const img = newImage(deckNow, src);
-      // If we know where it was dropped, center the image there.
+      const st = useStore.getState();
+      const deckNow = st.deck;
       const scaled = document.querySelector(".slide-scaled") as HTMLElement | null;
+      let lx: number | undefined;
+      let ly: number | undefined;
       if (scaled && clientX != null && clientY != null) {
         const rect = scaled.getBoundingClientRect();
         const s = rect.width / deckNow.size.w;
-        const lx = (clientX - rect.left) / s;
-        const ly = (clientY - rect.top) / s;
+        lx = (clientX - rect.left) / s;
+        ly = (clientY - rect.top) / s;
+        // Dropped onto a shape? Fill that shape with the image (Canva-style).
+        const slide = findSlide(deckNow, st.currentSlideId);
+        const shape = slide?.elements
+          .slice()
+          .reverse()
+          .find(
+            (e) =>
+              e.type === "shape" &&
+              lx! >= e.geom.x &&
+              lx! <= e.geom.x + e.geom.w &&
+              ly! >= e.geom.y &&
+              ly! <= e.geom.y + e.geom.h
+          );
+        if (shape) {
+          addAsset("image", "Imagem", src);
+          st.updateElement(shape.id, (x) => {
+            if (x.type === "shape") x.fill = { kind: "image", src, fit: "cover" };
+          });
+          st.select([shape.id]);
+          return;
+        }
+      }
+      addAsset("image", "Imagem", src); // dropped images join the library too
+      const img = newImage(deckNow, src);
+      if (lx != null && ly != null) {
         img.geom.x = Math.round(lx - img.geom.w / 2);
         img.geom.y = Math.round(ly - img.geom.h / 2);
       }
@@ -574,6 +607,16 @@ function App() {
         { kind: "item", label: "Linhas", icon: "📈", onClick: () => insertChart("line") },
         { kind: "item", label: "Pizza", icon: "🥧", onClick: () => insertChart("pie") },
       ],
+    },
+    {
+      kind: "sub",
+      label: "Ícone",
+      icon: "★",
+      items: ICONS.map((ic) => ({
+        kind: "item" as const,
+        label: ic.label,
+        onClick: () => insertIcon(ic.path),
+      })),
     },
   ];
 

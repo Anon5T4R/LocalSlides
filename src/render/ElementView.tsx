@@ -209,6 +209,7 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
   const { w, h } = el.geom;
   // Gradient fill uses an SVG linearGradient keyed to the element id.
   const gradId = el.fill?.kind === "gradient" ? `g-${el.id}` : null;
+  const patId = el.fill?.kind === "image" ? `img-${el.id}` : null;
   const fill = !el.fill
     ? "#cbd5e1"
     : el.fill.kind === "none"
@@ -216,7 +217,7 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
     : el.fill.kind === "gradient"
     ? `url(#${gradId})`
     : el.fill.kind === "image"
-    ? "#cbd5e1" // image fills aren't supported on shapes; fall back to a neutral tone
+    ? `url(#${patId})`
     : el.fill.color;
   const stroke = el.stroke?.color ?? "none";
   const sw = el.stroke?.width ?? 0;
@@ -328,6 +329,20 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
       {needsDefs(style) && <StrokeDefs />}
       {gradId && el.fill?.kind === "gradient" && (
         <defs>{gradientDef(gradId, el.fill)}</defs>
+      )}
+      {patId && el.fill?.kind === "image" && (
+        <defs>
+          <pattern id={patId} patternUnits="userSpaceOnUse" width={w} height={h}>
+            <image
+              href={el.fill.src}
+              x={0}
+              y={0}
+              width={w}
+              height={h}
+              preserveAspectRatio={el.fill.fit === "contain" ? "xMidYMid meet" : "xMidYMid slice"}
+            />
+          </pattern>
+        </defs>
       )}
       {shape}
     </svg>
@@ -541,6 +556,16 @@ export function ElementView({
     return (
       <div style={base}>
         <ChartView el={el} theme={theme} />
+      </div>
+    );
+  }
+
+  if (el.type === "icon") {
+    return (
+      <div style={base}>
+        <svg width="100%" height="100%" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
+          <path d={el.path} fill={el.color ?? theme.colors.accent1} />
+        </svg>
       </div>
     );
   }
