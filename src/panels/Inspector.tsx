@@ -332,9 +332,14 @@ function typeLabel(el: Element): string {
 
 const CHART_KINDS: { value: ChartKind; label: string }[] = [
   { value: "bar", label: "Barras" },
+  { value: "stackedBar", label: "Barras empilhadas" },
   { value: "line", label: "Linhas" },
+  { value: "area", label: "Área" },
   { value: "pie", label: "Pizza" },
+  { value: "donut", label: "Rosca" },
 ];
+
+const isPieLikeChart = (k: ChartKind) => k === "pie" || k === "donut";
 
 function ElementInspector({ el }: { el: Element }) {
   const updateElement = useStore((s) => s.updateElement);
@@ -872,6 +877,13 @@ function ElementInspector({ el }: { el: Element }) {
               onChange={(c) => set((x) => x.type === "table" && (x.headerFill = c))}
             />
           </Row>
+          <Row label="Linhas zebradas">
+            <input
+              type="checkbox"
+              checked={!!el.zebra}
+              onChange={(e) => set((x) => x.type === "table" && (x.zebra = e.target.checked))}
+            />
+          </Row>
         </>
       )}
 
@@ -922,6 +934,30 @@ function ElementInspector({ el }: { el: Element }) {
           </Row>
 
           <Section title="Dados" defaultOpen>
+            <button
+              className="insp-mini"
+              title="Colar dados CSV (1a linha = categorias, 1 linha por série)"
+              onClick={() => {
+                const text = window.prompt(
+                  "Cole os dados CSV — primeira linha = categorias, demais linhas = 1 série cada:\n\n,Cat 1,Cat 2\nSérie 1,10,20"
+                );
+                if (!text) return;
+                const lines = text.trim().split(/\r?\n/).filter(Boolean);
+                if (lines.length < 2) return;
+                const categories = lines[0].split(",").slice(1).map((c) => c.trim());
+                const parsedSeries = lines.slice(1).map((line) => {
+                  const cells = line.split(",");
+                  return { name: cells[0]?.trim() || "Série", values: cells.slice(1).map((v) => Number(v.trim()) || 0) };
+                });
+                set((x) => {
+                  if (x.type !== "chart") return;
+                  x.categories = categories;
+                  x.series = isPieLikeChart(x.chart) ? parsedSeries.slice(0, 1) : parsedSeries;
+                });
+              }}
+            >
+              📋 Colar dados (CSV)
+            </button>
             <div className="chart-grid">
               {/* Category header row */}
               <div className="chart-grid-row">
@@ -950,7 +986,7 @@ function ElementInspector({ el }: { el: Element }) {
               </div>
 
               {/* Series rows */}
-              {(el.chart === "pie" ? el.series.slice(0, 1) : el.series).map((s, si) => (
+              {(isPieLikeChart(el.chart) ? el.series.slice(0, 1) : el.series).map((s, si) => (
                 <div key={si} className="chart-grid-row">
                   <input
                     className="chart-cell chart-series-name"
@@ -968,7 +1004,7 @@ function ElementInspector({ el }: { el: Element }) {
                       }
                     />
                   ))}
-                  {el.series.length > 1 && el.chart !== "pie" && (
+                  {el.series.length > 1 && !isPieLikeChart(el.chart) && (
                     <button
                       className="insp-mini"
                       title="Remover série"
@@ -980,7 +1016,7 @@ function ElementInspector({ el }: { el: Element }) {
                 </div>
               ))}
             </div>
-            {el.chart !== "pie" && (
+            {!isPieLikeChart(el.chart) && (
               <button
                 className="insp-mini"
                 onClick={() =>
@@ -1011,7 +1047,7 @@ function ElementInspector({ el }: { el: Element }) {
           </Section>
 
           <Section title="Cores">
-            {(el.chart === "pie" ? el.categories : el.series.map((s) => s.name)).map((lab, i) => {
+            {(isPieLikeChart(el.chart) ? el.categories : el.series.map((s) => s.name)).map((lab, i) => {
               const fallback = ["#2563eb", "#0ea5e9", "#f59e0b", "#ef4444", "#10b981", "#8b5cf6", "#ec4899", "#14b8a6"];
               const color = el.palette?.[i] ?? fallback[i % fallback.length];
               return (

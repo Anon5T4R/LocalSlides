@@ -34,10 +34,8 @@ export function ChartView({ el, theme }: { el: ChartEl; theme: Theme }) {
   const legendH = el.showLegend ? 24 : 8;
   const fontFamily = theme.fonts.body;
 
-  const labels =
-    el.chart === "pie"
-      ? el.categories
-      : el.series.map((s, i) => s.name || `Série ${i + 1}`);
+  const isPieLike = el.chart === "pie" || el.chart === "donut";
+  const labels = isPieLike ? el.categories : el.series.map((s, i) => s.name || `Série ${i + 1}`);
   const legend = el.showLegend ? (
     <g>
       {labels.map((lab, i) => {
@@ -64,12 +62,13 @@ export function ChartView({ el, theme }: { el: ChartEl; theme: Theme }) {
 
   let body: React.ReactNode = null;
 
-  if (el.chart === "pie") {
+  if (isPieLike) {
     const vals = (el.series[0]?.values ?? []).map((v) => Math.max(0, v));
     const total = vals.reduce((a, b) => a + b, 0) || 1;
     const cx = w / 2;
     const cy = titleH + (h - titleH - legendH) / 2;
     const r = Math.max(10, Math.min(w, h - titleH - legendH) / 2 - 8);
+    const innerR = el.chart === "donut" ? r * 0.55 : 0;
     let a0 = -Math.PI / 2;
     body = (
       <g>
@@ -80,14 +79,20 @@ export function ChartView({ el, theme }: { el: ChartEl; theme: Theme }) {
           const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
           const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
           const mid = (a0 + a1) / 2;
-          const lx = cx + r * 0.6 * Math.cos(mid), ly = cy + r * 0.6 * Math.sin(mid);
-          const d = `M ${cx} ${cy} L ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+          const lx = cx + (r + innerR) * 0.5 * Math.cos(mid), ly = cy + (r + innerR) * 0.5 * Math.sin(mid);
+          const d = innerR
+            ? (() => {
+                const ix1 = cx + innerR * Math.cos(a1), iy1 = cy + innerR * Math.sin(a1);
+                const ix0 = cx + innerR * Math.cos(a0), iy0 = cy + innerR * Math.sin(a0);
+                return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} L ${ix1.toFixed(2)} ${iy1.toFixed(2)} A ${innerR} ${innerR} 0 ${large} 0 ${ix0.toFixed(2)} ${iy0.toFixed(2)} Z`;
+              })()
+            : `M ${cx} ${cy} L ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
           a0 = a1;
           return (
             <g key={i}>
               <path d={d} fill={palette[i % palette.length]} stroke="#fff" strokeWidth={1} />
               {el.showValues && frac > 0.04 && (
-                <text x={lx} y={ly} fontSize={11} fill="#fff" fontFamily={fontFamily} textAnchor="middle" dominantBaseline="middle">
+                <text x={lx} y={ly} fontSize={11} fill={innerR ? text : "#fff"} fontFamily={fontFamily} textAnchor="middle" dominantBaseline="middle">
                   {Math.round(frac * 100)}%
                 </text>
               )}
@@ -105,8 +110,11 @@ export function ChartView({ el, theme }: { el: ChartEl; theme: Theme }) {
     const plotW = Math.max(1, x1 - x0);
     const plotH = Math.max(1, y1 - y0);
     const cats = el.categories.length || 1;
-    const allVals = el.series.flatMap((s) => s.values);
-    const maxV = niceMax(Math.max(1, ...allVals.map((v) => Math.max(0, v))));
+    const stacked = el.chart === "stackedBar";
+    const peakVal = stacked
+      ? Math.max(1, ...el.categories.map((_, ci) => el.series.reduce((sum, s) => sum + Math.max(0, s.values[ci] ?? 0), 0)))
+      : Math.max(1, ...el.series.flatMap((s) => s.values).map((v) => Math.max(0, v)));
+    const maxV = niceMax(peakVal);
     const yOf = (v: number) => y1 - (Math.max(0, v) / maxV) * plotH;
 
     const grid = [0, 0.25, 0.5, 0.75, 1].map((f, i) => {
@@ -157,6 +165,36 @@ export function ChartView({ el, theme }: { el: ChartEl; theme: Theme }) {
           );
         })
       );
+    } else if (el.chart === "stackedBar") {
+      const groupPad = catW * 0.22;
+      const barW = catW - groupPad * 2;
+      const running = el.categories.map(() => 0);
+      series = el.series.map((s, si) =>
+        s.values.map((v, ci) => {
+          const base = running[ci];
+          running[ci] += Math.max(0, v);
+          const bx = x0 + catW * ci + groupPad;
+          const by = yOf(base + Math.max(0, v));
+          const topOfPrev = yOf(base);
+          return (
+            <g key={`sb-${si}-${ci}`}>
+              <rect x={bx} y={by} width={Math.max(1, barW)} height={Math.max(0, topOfPrev - by)} fill={palette[si % palette.length]} />
+            </g>
+          );
+        })
+      );
+    } else if (el.chart === "area") {
+      series = el.series.map((s, si) => {
+        const pts = s.values.map((v, ci) => [x0 + catW * (ci + 0.5), yOf(v)] as const);
+        const line = pts.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(" ");
+        const fillPath = `M ${x0 + catW * 0.5},${y1} L ${line} L ${x0 + catW * (pts.length - 0.5)},${y1} Z`;
+        return (
+          <g key={`a-${si}`}>
+            <path d={fillPath} fill={palette[si % palette.length]} opacity={0.25} />
+            <polyline points={line} fill="none" stroke={palette[si % palette.length]} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+          </g>
+        );
+      });
     } else {
       // line
       series = el.series.map((s, si) => {

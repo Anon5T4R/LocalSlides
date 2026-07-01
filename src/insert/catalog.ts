@@ -52,8 +52,11 @@ export const SHAPE_PICKER: { kind: ShapeKind; label: string; glyph: string }[] =
 
 export const CHART_PICKER: { kind: ChartKind; label: string; glyph: string }[] = [
   { kind: "bar", label: "Barras", glyph: "📊" },
+  { kind: "stackedBar", label: "Barras empilhadas", glyph: "📶" },
   { kind: "line", label: "Linhas", glyph: "📈" },
+  { kind: "area", label: "Área", glyph: "🏔" },
   { kind: "pie", label: "Pizza", glyph: "🥧" },
+  { kind: "donut", label: "Rosca", glyph: "🍩" },
 ];
 
 /**

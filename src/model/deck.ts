@@ -224,6 +224,8 @@ export interface TableEl extends Base {
   border?: Stroke;
   /** Optional header-row tint. */
   headerFill?: string;
+  /** Alternate a light tint on odd body rows (Onda 13.2). */
+  zebra?: boolean;
 }
 
 /** A single freehand stroke: flat [x0,y0,x1,y1,…] points in the ink base coords. */
@@ -241,7 +243,7 @@ export interface InkEl extends Base {
   strokes: InkStroke[];
 }
 
-export type ChartKind = "bar" | "line" | "pie";
+export type ChartKind = "bar" | "line" | "pie" | "donut" | "area" | "stackedBar";
 
 export interface ChartSeries {
   name: string;

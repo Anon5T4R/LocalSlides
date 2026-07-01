@@ -399,7 +399,12 @@ function TableView({ el, theme, style }: { el: TableEl; theme: Theme; style: CSS
               padding: "4px 8px",
               overflow: "hidden",
               boxSizing: "border-box",
-              background: r === 0 && el.headerFill ? el.headerFill : "transparent",
+              background:
+                r === 0 && el.headerFill
+                  ? el.headerFill
+                  : el.zebra && r > 0 && r % 2 === 0
+                  ? "rgba(100,116,139,0.08)"
+                  : "transparent",
               color: r === 0 && el.headerFill ? "#fff" : theme.colors.text,
               fontWeight: r === 0 ? 600 : 400,
             }}

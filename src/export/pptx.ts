@@ -261,11 +261,12 @@ const CHART_PALETTE = ["2563EB", "0EA5E9", "F59E0B", "EF4444", "10B981", "8B5CF6
 
 function addChartEl(s: AnySlide, el: ChartEl) {
   const { x, y, w, h } = el.geom;
-  const type = el.chart === "line" ? "line" : el.chart === "pie" ? "pie" : "bar";
-  const data =
-    el.chart === "pie"
-      ? [{ name: el.series[0]?.name ?? "Série 1", labels: el.categories, values: el.series[0]?.values ?? [] }]
-      : el.series.map((se) => ({ name: se.name, labels: el.categories, values: se.values }));
+  const isPieLike = el.chart === "pie" || el.chart === "donut";
+  const type =
+    el.chart === "line" ? "line" : el.chart === "area" ? "area" : el.chart === "donut" ? "doughnut" : isPieLike ? "pie" : "bar";
+  const data = isPieLike
+    ? [{ name: el.series[0]?.name ?? "Série 1", labels: el.categories, values: el.series[0]?.values ?? [] }]
+    : el.series.map((se) => ({ name: se.name, labels: el.categories, values: se.values }));
   const colors = el.palette && el.palette.length ? el.palette.map((c) => hex(c)) : CHART_PALETTE;
   const opts: Record<string, unknown> = {
     x: px(x),
@@ -277,8 +278,9 @@ function addChartEl(s: AnySlide, el: ChartEl) {
     showTitle: !!el.title,
     ...(el.title ? { title: el.title } : {}),
     chartColors: colors,
-    showValue: el.chart !== "pie" && !!el.showValues,
-    showPercent: el.chart === "pie" && !!el.showValues,
+    showValue: !isPieLike && !!el.showValues,
+    showPercent: isPieLike && !!el.showValues,
+    ...(el.chart === "stackedBar" ? { barGrouping: "stacked" } : {}),
   };
   s.addChart(type as never, data as never, opts);
 }
