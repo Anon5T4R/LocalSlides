@@ -117,6 +117,8 @@ export interface Base {
   /** Mirror horizontally / vertically (visual only; geometry unchanged). */
   flipH?: boolean;
   flipV?: boolean;
+  /** Accessible description (Onda 16) — used as img alt / aria-label in export. */
+  alt?: string;
 }
 
 /** Canva-style text effect presets, applied to the whole box (Onda 10). */

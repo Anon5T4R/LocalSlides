@@ -503,7 +503,7 @@ export function ElementView({
         <div style={{ ...base, overflow: "hidden", clipPath: clip }}>
           <img
             src={el.src}
-            alt=""
+            alt={el.alt ?? ""}
             draggable={false}
             style={{
               position: "absolute",
@@ -525,7 +525,7 @@ export function ElementView({
     return (
       <img
         src={el.src}
-        alt=""
+        alt={el.alt ?? ""}
         draggable={false}
         style={{ ...base, objectFit: el.fit ?? "contain", userSelect: "none", filter: imgFilter, clipPath: clip }}
       />

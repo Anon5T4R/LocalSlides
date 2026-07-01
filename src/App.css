@@ -960,6 +960,74 @@ body {
   line-height: 1.4;
 }
 
+/* ---- Shortcuts modal (Onda 16) ---- */
+.shortcuts-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shortcuts-modal {
+  width: min(720px, 92vw);
+  max-height: 82vh;
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.shortcuts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 15px;
+}
+.shortcuts-body {
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.shortcuts-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+.shortcuts-row kbd {
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .shortcuts-body {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- Entrance animations (present mode) ---- */
 @keyframes anim-fadeIn {
   from { opacity: 0; }

@@ -35,6 +35,7 @@ import { saveRecovery, loadRecovery, clearRecovery } from "./lib/recovery";
 import { findSlide } from "./model/deck";
 import { Menu, type MenuItemDef } from "./ui/Menu";
 import { ContextBar } from "./ui/ContextBar";
+import { ShortcutsModal } from "./ui/ShortcutsModal";
 import "./App.css";
 
 const ASPECT_PICKER: { kind: AspectRatio; label: string; size: { w: number; h: number } }[] = [
@@ -82,6 +83,7 @@ function App() {
   const [showMedia, setShowMedia] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
   const [showInsert, setShowInsert] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [rightWidth, setRightWidth] = useState(300);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
@@ -623,6 +625,22 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // "?" opens the shortcuts cheat-sheet (Onda 16); Esc closes it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const inField = !!t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA");
+      if (e.key === "?" && !inField) {
+        e.preventDefault();
+        setShowShortcuts((v) => !v);
+      } else if (e.key === "Escape" && showShortcuts) {
+        setShowShortcuts(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showShortcuts]);
+
   const title = (filePath ? baseName(filePath) : "Sem título") + (dirty ? " •" : "");
   const zoomPct = zoom > 0 ? Math.round(zoom * 100) : 0;
 
@@ -799,6 +817,7 @@ function App() {
           <button onClick={() => setZoom(Math.max(0.1, (zoom || 0.5) - 0.1))} title="Reduzir">−</button>
           <button onClick={() => setZoom(0)} title="Ajustar à tela">{zoomPct ? `${zoomPct}%` : "Ajustar"}</button>
           <button onClick={() => setZoom((zoom || 0.5) + 0.1)} title="Ampliar">+</button>
+          <button onClick={() => setShowShortcuts(true)} title="Atalhos de teclado (?)">?</button>
         </div>
       </div>
       <ContextBar
@@ -839,6 +858,7 @@ function App() {
       {busy && <div className="busy">{busy}</div>}
       {presenting && <PresentMode onExit={() => setPresenting(false)} />}
       {printing && <PrintView deck={deck} />}
+      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
     </div>
   );
 }

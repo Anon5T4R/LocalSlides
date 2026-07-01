@@ -42,6 +42,7 @@ export function SlidesPanel() {
   const setCurrentSlide = useStore((s) => s.setCurrentSlide);
   const addSlide = useStore((s) => s.addSlide);
   const duplicateSlide = useStore((s) => s.duplicateSlide);
+  const duplicateSlideAt = useStore((s) => s.duplicateSlideAt);
   const deleteSlide = useStore((s) => s.deleteSlide);
   const moveSlide = useStore((s) => s.moveSlide);
 
@@ -71,8 +72,11 @@ export function SlidesPanel() {
               e.preventDefault();
               setOverIndex(i);
             }}
-            onDrop={() => {
-              if (dragId) moveSlide(dragId, i);
+            onDrop={(e) => {
+              if (dragId) {
+                if (e.altKey) duplicateSlideAt(dragId, i);
+                else moveSlide(dragId, i);
+              }
               setDragId(null);
               setOverIndex(null);
             }}

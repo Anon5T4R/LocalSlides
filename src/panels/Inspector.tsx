@@ -482,6 +482,15 @@ function ElementInspector({ el }: { el: Element }) {
         <span className="insp-num">{Math.round((el.opacity ?? 1) * 100)}%</span>
       </Row>
 
+      <Row label="Texto alternativo">
+        <input
+          type="text"
+          value={el.alt ?? ""}
+          placeholder="Descrição para acessibilidade"
+          onChange={(e) => set((x) => (x.alt = e.target.value || undefined))}
+        />
+      </Row>
+
       {/* Outline ("contorno") */}
       <Row label="Contorno">
         <input

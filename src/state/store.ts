@@ -129,6 +129,8 @@ export interface SlidesState {
   applyLayout: (layoutId: string) => void;
   addTemplateSlide: (templateId: string) => void;
   duplicateSlide: (id: string) => void;
+  /** Onda 16 — Alt+drag in SlidesPanel: clone `id` and insert the copy at `toIndex`. */
+  duplicateSlideAt: (id: string, toIndex: number) => void;
   deleteSlide: (id: string) => void;
   moveSlide: (id: string, toIndex: number) => void;
 
@@ -482,6 +484,20 @@ export const useStore = create<SlidesState>((set, get) => ({
     clone.elements = clone.elements.map((e) => ({ ...e, id: makeId(e.type) }));
     get().apply((d) => {
       d.slides.splice(idx + 1, 0, clone);
+    });
+    set({ currentSlideId: clone.id, selection: [] });
+  },
+
+  duplicateSlideAt: (id, toIndex) => {
+    const { deck } = get();
+    const idx = deck.slides.findIndex((s) => s.id === id);
+    if (idx < 0) return;
+    const clone: Slide = structuredClone(deck.slides[idx]);
+    clone.id = makeId("slide");
+    clone.elements = clone.elements.map((e) => ({ ...e, id: makeId(e.type) }));
+    get().apply((d) => {
+      const clamped = Math.max(0, Math.min(toIndex, d.slides.length));
+      d.slides.splice(clamped, 0, clone);
     });
     set({ currentSlideId: clone.id, selection: [] });
   },
