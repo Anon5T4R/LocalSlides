@@ -303,7 +303,7 @@ function placeholderGeom(kind: "title" | "body", size: { w: number; h: number })
     : { x: m, y: Math.round(size.h * 0.3), w: size.w - 2 * m, h: Math.round(size.h * 0.6), rotation: 0 };
 }
 
-function parseSp(sp: Element_, t: Xform, ctx: SlideCtx): Element | null {
+async function parseSp(sp: Element_, t: Xform, ctx: SlideCtx): Promise<Element | null> {
   const spPr = kid(sp, "spPr");
   const txBody = kid(sp, "txBody");
   const parsed = txBody ? parseTextBody(txBody) : null;
@@ -316,6 +316,11 @@ function parseSp(sp: Element_, t: Xform, ctx: SlideCtx): Element | null {
 
   const prst = kid(spPr, "prstGeom")?.getAttribute("prst") ?? undefined;
   const shapeKind = prst ? PRST_MAP[prst] : undefined;
+  // Freeform/custom-geometry shapes (<a:custGeom>) have no `prst`, but templates
+  // (Canva/Slidesgo-style exports) commonly draw full-bleed backgrounds and
+  // decorative art this way instead of a plain <p:pic>. Without this, a whole
+  // slide built from one such shape imports as completely empty.
+  const hasCustGeom = !!kid(spPr, "custGeom");
 
   const rect = readXfrm(kid(spPr, "xfrm"));
   let geom: Geom;
@@ -324,9 +329,6 @@ function parseSp(sp: Element_, t: Xform, ctx: SlideCtx): Element | null {
   else if (isBody || hasText) geom = placeholderGeom("body", ctx.size);
   else return null; // no geometry and nothing to salvage
 
-  const opacity = undefined;
-  void opacity;
-
   // Decide concrete element type.
   if (isTitle) {
     return mkText(parsed?.doc, geom, "title");
@@ -334,8 +336,21 @@ function parseSp(sp: Element_, t: Xform, ctx: SlideCtx): Element | null {
   if (txBox || isBody) {
     return mkText(parsed?.doc, geom, "body");
   }
+
+  // A shape (preset or freeform) whose fill is a picture behaves like an image
+  // in practice — this is how many template decks paint full-slide photo
+  // backgrounds, so import it as an ImageEl rather than dropping it.
+  const blip = desc(kid(spPr, "blipFill"), "blip");
+  const embed = blip?.getAttributeNS(R_NS, "embed") ?? blip?.getAttribute("r:embed") ?? undefined;
+  if (embed) {
+    const path = ctx.rels.get(embed);
+    const src = path ? await loadMedia(path, ctx) : null;
+    if (src) return { id: makeId("image"), type: "image", geom, fit: "cover", src };
+  }
+
   const treatAsShape =
     (shapeKind && shapeKind !== "rect") ||
+    hasCustGeom ||
     (prst === "rect" && !hasText) ||
     (!!prst && !hasText);
   if (treatAsShape) {
@@ -471,7 +486,7 @@ async function walkTree(
   for (const node of Array.from(container.children) as Element_[]) {
     switch (node.localName) {
       case "sp": {
-        const el = parseSp(node, t, ctx);
+        const el = await parseSp(node, t, ctx);
         if (el) out.push(el);
         break;
       }

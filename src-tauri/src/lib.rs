@@ -268,12 +268,18 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .manage(Mutex::new(LlmState::default()))
-        // Intercept the window close: keep the app open and ask the frontend to
-        // confirm (it knows whether the deck is unsaved). It then calls exit_app.
+        // Intercept the *main* window's close: keep the app open and ask the
+        // frontend to confirm (it knows whether the deck is unsaved). It then
+        // calls exit_app. Other windows (e.g. the presenter view) close normally —
+        // `window.emit` broadcasts to every webview, so without this guard closing
+        // the presenter would also fire main's close-confirm flow and quit the
+        // whole app instead of just that window.
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.emit("close-requested", ());
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.emit_to("main", "close-requested", ());
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![

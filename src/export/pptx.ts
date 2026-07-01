@@ -297,6 +297,7 @@ function addChartEl(s: AnySlide, el: ChartEl) {
     showValue: !isPieLike && !!el.showValues,
     showPercent: isPieLike && !!el.showValues,
     ...(el.chart === "stackedBar" ? { barGrouping: "stacked" } : {}),
+    ...(!isPieLike && el.showAxis === false ? { valAxisHidden: true } : {}),
   };
   s.addChart(type as never, data as never, opts);
 }

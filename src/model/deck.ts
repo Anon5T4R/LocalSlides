@@ -282,6 +282,8 @@ export interface ChartEl extends Base {
   palette?: string[];
   showLegend?: boolean;
   showValues?: boolean;
+  /** Value-axis gridlines + numbers (bar/line/area/stackedBar only). Undefined = on. */
+  showAxis?: boolean;
   title?: string;
 }
 
@@ -553,7 +555,9 @@ export function newShape(deck: Deck, shape: ShapeKind): ShapeEl {
     type: "shape",
     geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
     shape,
-    fill: { kind: "solid", color: deck.theme.colors.accent1 },
+    // No fill by default — just an outline (still editable/fillable in the Inspector).
+    fill: { kind: "none" },
+    stroke: { color: deck.theme.colors.accent1, width: 2, style: "solid" },
   };
 }
 

@@ -15,7 +15,22 @@ export function VersionsModal({ onClose }: { onClose: () => void }) {
 
   const onSave = () => {
     const name = window.prompt("Nome da versão:", `Versão ${new Date().toLocaleDateString()}`);
-    if (name) saveVersion(name);
+    if (!name) return;
+    try {
+      saveVersion(name);
+    } catch (e) {
+      window.alert(`Não foi possível salvar a versão:\n${e}`);
+    }
+  };
+
+  const onRestore = (id: string, name: string) => {
+    if (!window.confirm(`Restaurar "${name}"? As mudanças atuais não salvas nesta versão serão substituídas (mas continuam no histórico de desfazer).`)) return;
+    try {
+      restoreVersion(id);
+      onClose();
+    } catch (e) {
+      window.alert(`Não foi possível restaurar a versão:\n${e}`);
+    }
   };
 
   return (
@@ -38,15 +53,7 @@ export function VersionsModal({ onClose }: { onClose: () => void }) {
                     <span className="versions-row-ts">{fmt(v.ts)}</span>
                   </div>
                   <div className="insp-zorder">
-                    <button
-                      className="insp-mini"
-                      onClick={() => {
-                        if (window.confirm(`Restaurar "${v.name}"? As mudanças atuais não salvas nesta versão serão substituídas (mas continuam no histórico de desfazer).`)) {
-                          restoreVersion(v.id);
-                          onClose();
-                        }
-                      }}
-                    >
+                    <button className="insp-mini" onClick={() => onRestore(v.id, v.name)}>
                       Restaurar
                     </button>
                     <button className="insp-mini" onClick={() => deleteVersion(v.id)} title="Excluir versão">

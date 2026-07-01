@@ -117,17 +117,20 @@ export function ChartView({ el, theme }: { el: ChartEl; theme: Theme }) {
     const maxV = niceMax(peakVal);
     const yOf = (v: number) => y1 - (Math.max(0, v) / maxV) * plotH;
 
-    const grid = [0, 0.25, 0.5, 0.75, 1].map((f, i) => {
-      const gy = y1 - f * plotH;
-      return (
-        <g key={`g-${i}`}>
-          <line x1={x0} y1={gy} x2={x1} y2={gy} stroke="#e2e8f0" strokeWidth={1} />
-          <text x={x0 - 6} y={gy} fontSize={10} fill={text} fontFamily={fontFamily} textAnchor="end" dominantBaseline="middle">
-            {Math.round(maxV * f)}
-          </text>
-        </g>
-      );
-    });
+    const showAxis = el.showAxis !== false;
+    const grid = showAxis
+      ? [0, 0.25, 0.5, 0.75, 1].map((f, i) => {
+          const gy = y1 - f * plotH;
+          return (
+            <g key={`g-${i}`}>
+              <line x1={x0} y1={gy} x2={x1} y2={gy} stroke="#e2e8f0" strokeWidth={1} />
+              <text x={x0 - 6} y={gy} fontSize={10} fill={text} fontFamily={fontFamily} textAnchor="end" dominantBaseline="middle">
+                {Math.round(maxV * f)}
+              </text>
+            </g>
+          );
+        })
+      : null;
 
     const catW = plotW / cats;
     const catLabels = el.categories.map((c, i) => (

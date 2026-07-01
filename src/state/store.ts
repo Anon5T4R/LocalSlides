@@ -739,9 +739,12 @@ export const useStore = create<SlidesState>((set, get) => ({
   },
 
   saveVersion: (name) => {
+    // Clone the *actual* current deck (get().deck), never a value seen inside an
+    // `apply` recipe — that's an immer draft (Proxy), and structuredClone-ing a
+    // draft walks/instantiates the whole proxy graph and can hang on a big deck.
+    const snapshot = structuredClone(get().deck) as Deck;
+    delete snapshot.versions;
     get().apply((d) => {
-      const snapshot = structuredClone(d) as Deck;
-      delete snapshot.versions;
       (d.versions ??= []).push({ id: makeId("ver"), name, ts: Date.now(), snapshot });
     });
   },

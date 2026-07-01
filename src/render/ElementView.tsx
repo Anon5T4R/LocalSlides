@@ -264,7 +264,7 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
       break;
     case "arrow": {
       // Right-pointing block arrow (rotate the element for other directions).
-      const sh = h * 0.34, hl = w * 0.4; // shaft half-height, head length
+      const sh = h * 0.14, hl = w * 0.4; // shaft half-height, head length
       const cy = h / 2;
       shape = (
         <polygon

@@ -1131,6 +1131,16 @@ function ElementInspector({ el }: { el: Element }) {
               onChange={(e) => set((x) => x.type === "chart" && (x.showValues = e.target.checked))}
             />
           </Row>
+          {!isPieLikeChart(el.chart) && (
+            <Row label="Eixo de valores">
+              <input
+                type="checkbox"
+                checked={el.showAxis !== false}
+                onChange={(e) => set((x) => x.type === "chart" && (x.showAxis = e.target.checked))}
+                title="Números de referência à esquerda (0, 25%, 50%…), calculados automaticamente a partir dos dados"
+              />
+            </Row>
+          )}
 
           <Section title="Dados" defaultOpen>
             <button
