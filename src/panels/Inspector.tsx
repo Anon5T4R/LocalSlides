@@ -15,6 +15,7 @@ import {
   type Fill,
   type GradientStop,
   type ImageAdjust,
+  type ImageEl,
   type ShapeKind,
   type StrokeStyle,
   type TransitionKind,
@@ -24,6 +25,7 @@ import { LAYOUTS } from "../model/layouts";
 import { ColorPicker } from "../ui/ColorPicker";
 import { TEXT_EFFECT_PRESETS } from "../render/textEffects";
 import { loadBrandKits, saveBrandKit, removeBrandKit, type BrandKit } from "../lib/brandKit";
+import { ensureModelLoaded, removeBackground } from "../lib/backgroundRemoval";
 
 const ANIMS: { value: AnimKind; label: string }[] = [
   { value: "none", label: "Nenhuma" },
@@ -341,6 +343,44 @@ const CHART_KINDS: { value: ChartKind; label: string }[] = [
 ];
 
 const isPieLikeChart = (k: ChartKind) => k === "pie" || k === "donut";
+
+/** Onda 15.1 — "Remover fundo" button + model-picker state for image elements. */
+function BackgroundRemoveRow({
+  el,
+  set,
+}: {
+  el: ImageEl;
+  set: (recipe: (e: Element) => void) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const ok = await ensureModelLoaded();
+      if (!ok) return; // user cancelled the file picker
+      const src = await removeBackground(el.src);
+      set((x) => x.type === "image" && (x.src = src));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Row label="Fundo">
+      <div className="insp-zorder">
+        <button className="insp-mini" onClick={run} disabled={busy} title="Remover o fundo da imagem (modelo ONNX local)">
+          {busy ? "Processando…" : "Remover fundo"}
+        </button>
+      </div>
+      {error && <p className="insp-bgremove-error">{error}</p>}
+    </Row>
+  );
+}
 
 function ElementInspector({ el }: { el: Element }) {
   const updateElement = useStore((s) => s.updateElement);
@@ -681,6 +721,8 @@ function ElementInspector({ el }: { el: Element }) {
           </div>
         </Row>
       )}
+
+      {el.type === "image" && <BackgroundRemoveRow el={el} set={set} />}
 
       {el.type === "image" && (
         <Row label="Máscara">

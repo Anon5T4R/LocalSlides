@@ -29,6 +29,7 @@ export default defineConfig(async () => ({
             if (id.includes("@tiptap") || id.includes("prosemirror")) return "tiptap";
             if (id.includes("pptxgenjs")) return "pptx";
             if (id.includes("jszip")) return "zip";
+            if (id.includes("onnxruntime-web")) return "ort";
           }
         },
       },

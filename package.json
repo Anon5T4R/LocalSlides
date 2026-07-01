@@ -22,6 +22,7 @@
     "html-to-image": "^1.11.13",
     "immer": "^10.1.1",
     "jszip": "^3.10.1",
+    "onnxruntime-web": "^1.17.3",
     "pptxgenjs": "^3.12.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

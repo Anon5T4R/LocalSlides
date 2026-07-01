@@ -953,6 +953,13 @@ body {
   color: inherit;
 }
 
+.insp-bgremove-error {
+  font-size: 11px;
+  color: #ef4444;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
 /* ---- Entrance animations (present mode) ---- */
 @keyframes anim-fadeIn {
   from { opacity: 0; }
