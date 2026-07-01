@@ -2,13 +2,19 @@
 // alongside undo/autosave and persisted inside the .tslides file itself.
 
 import { useStore } from "../state/store";
+import type { DeckVersion } from "../model/deck";
+
+// Stable reference: a selector returning a fresh `[]` on every call breaks
+// useSyncExternalStore's snapshot-consistency check and freezes the app in an
+// infinite re-render loop (looks like a white-screen hang, not a JS error).
+const NO_VERSIONS: DeckVersion[] = [];
 
 function fmt(ts: number): string {
   return new Date(ts).toLocaleString();
 }
 
 export function VersionsModal({ onClose }: { onClose: () => void }) {
-  const versions = useStore((s) => s.deck.versions ?? []);
+  const versions = useStore((s) => s.deck.versions ?? NO_VERSIONS);
   const saveVersion = useStore((s) => s.saveVersion);
   const restoreVersion = useStore((s) => s.restoreVersion);
   const deleteVersion = useStore((s) => s.deleteVersion);

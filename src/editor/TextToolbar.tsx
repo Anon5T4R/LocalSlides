@@ -9,8 +9,13 @@ import { FONT_FAMILIES, FONT_SIZES } from "./tiptapExtensions";
 import { ColorPicker } from "../ui/ColorPicker";
 import { useStore } from "../state/store";
 import { pickAndLoadFont } from "../lib/fonts";
+import type { EmbeddedFont } from "../model/deck";
 
 const IMPORT_FONT = "__import_font__";
+
+// Stable reference — see VersionsModal.tsx for why a fresh `[]` fallback on
+// every selector call is unsafe with useSyncExternalStore.
+const NO_FONTS: EmbeddedFont[] = [];
 
 const LINE_HEIGHTS = [
   { label: "Padrão", value: "" },
@@ -68,7 +73,7 @@ function Btn({
 export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; scale: number; themeColors?: string[] }) {
   // Re-render on selection/transaction so active states stay in sync.
   void editor.state.selection;
-  const customFonts = useStore((s) => s.deck.fonts ?? []);
+  const customFonts = useStore((s) => s.deck.fonts ?? NO_FONTS);
   const embedFont = useStore((s) => s.embedFont);
   const chain = () => editor.chain().focus();
   const ts = editor.getAttributes("textStyle") as {
