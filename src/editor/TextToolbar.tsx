@@ -68,8 +68,8 @@ function Btn({
 export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; scale: number; themeColors?: string[] }) {
   // Re-render on selection/transaction so active states stay in sync.
   void editor.state.selection;
-  const customFonts = useStore((s) => s.customFonts);
-  const addCustomFont = useStore((s) => s.addCustomFont);
+  const customFonts = useStore((s) => s.deck.fonts ?? []);
+  const embedFont = useStore((s) => s.embedFont);
   const chain = () => editor.chain().focus();
   const ts = editor.getAttributes("textStyle") as {
     fontFamily?: string;
@@ -105,8 +105,9 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       try {
         const font = await pickAndLoadFont();
         if (font) {
-          addCustomFont(font.label, font.value);
-          setStyle("fontFamily", font.value); // apply to the current selection
+          // Embed in the deck so the font survives save/reopen, then apply it.
+          embedFont({ family: font.family, label: font.label, value: font.value, src: font.src });
+          setStyle("fontFamily", font.value);
         }
       } catch (e) {
         window.alert(`Não foi possível carregar a fonte:\n${e}`);

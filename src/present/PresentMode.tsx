@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
+import { pmToPlainText } from "../model/deck";
 import { SlideView } from "../render/SlideView";
 
 export function PresentMode({ onExit }: { onExit: () => void }) {
@@ -23,6 +24,8 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  // Presenter notes overlay (toggle with N).
+  const [showNotes, setShowNotes] = useState(false);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -69,6 +72,9 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
       } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
         e.preventDefault();
         go(-1);
+      } else if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        setShowNotes((v) => !v);
       } else if (e.key === "Escape") {
         e.preventDefault();
         // Sync the editor's current slide to where we left off, then exit.
@@ -83,6 +89,7 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
   const slide = deck.slides[index];
   if (!slide) return null;
 
+  const notesText = pmToPlainText(slide.notes);
   const t = slide.transition;
   const dur = t?.duration ?? 0.5;
   const kind = t?.kind ?? "none";
@@ -117,12 +124,28 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
         {layer(index, `cur-${visit}`, enterAnim)}
       </div>
 
+      {showNotes && (
+        <div className="present-notes" onClick={(e) => e.stopPropagation()}>
+          <div className="present-notes-head">Notas — slide {index + 1}</div>
+          <div className="present-notes-body">
+            {notesText ? notesText : <span className="present-notes-empty">Sem notas para este slide.</span>}
+          </div>
+        </div>
+      )}
+
       <div className="present-hud" onClick={(e) => e.stopPropagation()}>
         <button onClick={() => go(-1)} disabled={index === 0} title="Anterior">‹</button>
         <span>
           {index + 1} / {deck.slides.length}
         </span>
         <button onClick={() => go(1)} disabled={index === deck.slides.length - 1} title="Próximo">›</button>
+        <button
+          className={showNotes ? "active" : ""}
+          onClick={() => setShowNotes((v) => !v)}
+          title="Notas do apresentador (N)"
+        >
+          🗒
+        </button>
         <button onClick={onExit} title="Sair (Esc)">✕</button>
       </div>
     </div>

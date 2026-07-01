@@ -20,6 +20,8 @@ function labelFor(el: Element): string {
       return "Tabela";
     case "ink":
       return "Desenho";
+    case "chart":
+      return "Gráfico";
     default:
       return "Forma";
   }
@@ -36,6 +38,8 @@ function iconFor(el: Element): string {
     ? "▦"
     : el.type === "ink"
     ? "✎"
+    : el.type === "chart"
+    ? "📊"
     : "◆";
 }
 

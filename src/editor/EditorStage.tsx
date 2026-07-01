@@ -28,6 +28,7 @@ import { TableCellEditor } from "./TableCellEditor";
 import { CropOverlay } from "./CropOverlay";
 import { DrawLayer } from "./DrawLayer";
 import { CommentsLayer } from "./CommentsLayer";
+import { GuidesOverlay } from "./GuidesOverlay";
 
 const FIT_MARGIN = 48;
 
@@ -75,6 +76,9 @@ export function EditorStage() {
   const reorder = useStore((s) => s.reorder);
   const beginTx = useStore((s) => s.beginTx);
   const endTx = useStore((s) => s.endTx);
+  const addGuide = useStore((s) => s.addGuide);
+  const moveGuide = useStore((s) => s.moveGuide);
+  const removeGuide = useStore((s) => s.removeGuide);
 
   const slide = findSlide(deck, currentSlideId);
 
@@ -154,7 +158,8 @@ export function EditorStage() {
         const others =
           slideRef.current?.elements.filter((el) => !movingIds.has(el.id)).map((el) => el.geom) ?? [];
         const proposed: Geom = { ...primaryStart, x: primaryStart.x + dx, y: primaryStart.y + dy };
-        const snap = computeSnap(proposed, others, deck.size);
+        const manual = { x: slideRef.current?.guides?.x ?? [], y: slideRef.current?.guides?.y ?? [] };
+        const snap = computeSnap(proposed, others, deck.size, undefined, manual);
         const adjDx = snap.x - primaryStart.x;
         const adjDy = snap.y - primaryStart.y;
         setGuides({ v: snap.vGuides, h: snap.hGuides, gap: snap.gapGuides });
@@ -632,6 +637,20 @@ export function EditorStage() {
             />
           )}
         </div>
+
+        {/* Rulers + manual guides (hidden while drawing/commenting/cropping). */}
+        {!drawing && !commenting && !croppingId && (
+          <GuidesOverlay
+            size={deck.size}
+            scale={scale}
+            guides={slide.guides}
+            addGuide={addGuide}
+            moveGuide={moveGuide}
+            removeGuide={removeGuide}
+            beginTx={beginTx}
+            endTx={endTx}
+          />
+        )}
       </div>
 
       {/* Drag tooltip (W×H / x,y / °) */}

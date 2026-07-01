@@ -137,12 +137,14 @@ export function computeSnap(
   moving: Geom,
   others: Geom[],
   slide: Size,
-  threshold = DEFAULT_THRESHOLD
+  threshold = DEFAULT_THRESHOLD,
+  /** Manual ruler guides to also snap against (vertical x[], horizontal y[]). */
+  manual?: { x: number[]; y: number[] }
 ): SnapResult {
   const xs = others.map((g) => ({ lo: g.x, mid: g.x + g.w / 2, hi: g.x + g.w }));
   const ys = others.map((g) => ({ lo: g.y, mid: g.y + g.h / 2, hi: g.y + g.h }));
-  const xSnap = snapAxis(moving.x, moving.w, axisTargets(xs, slide.w), threshold);
-  const ySnap = snapAxis(moving.y, moving.h, axisTargets(ys, slide.h), threshold);
+  const xSnap = snapAxis(moving.x, moving.w, axisTargets(xs, slide.w).concat(manual?.x ?? []), threshold);
+  const ySnap = snapAxis(moving.y, moving.h, axisTargets(ys, slide.h).concat(manual?.y ?? []), threshold);
 
   // Only apply gap-snap if no alignment snap won on that axis.
   const gapGuides: GapGuide[] = [];

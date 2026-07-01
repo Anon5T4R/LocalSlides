@@ -3,8 +3,10 @@
 // stage and the (non-interactive) thumbnails.
 
 import type { CSSProperties, ReactNode } from "react";
-import type { Element, Geom, InkEl, ShapeEl, Stroke, TableEl, Theme } from "../model/deck";
+import type { Element, Geom, ImageAdjust, InkEl, ShapeEl, ShapeKind, Stroke, TableEl, Theme } from "../model/deck";
 import { pmHasExplicitFontSize } from "../model/deck";
+import { fillToCss } from "./fill";
+import { ChartView } from "./ChartView";
 import { RenderPM } from "./renderPM";
 import { AutoFitText } from "./AutoFitText";
 import {
@@ -67,6 +69,68 @@ function OutlineLayer({
       />
     </svg>
   );
+}
+
+/** Build a CSS `filter` string from photographic adjustments (empty = neutral). */
+export function adjustFilter(a?: ImageAdjust): string {
+  if (!a) return "";
+  const p: string[] = [];
+  if (a.brightness != null && a.brightness !== 100) p.push(`brightness(${a.brightness}%)`);
+  if (a.contrast != null && a.contrast !== 100) p.push(`contrast(${a.contrast}%)`);
+  if (a.saturate != null && a.saturate !== 100) p.push(`saturate(${a.saturate}%)`);
+  if (a.grayscale) p.push(`grayscale(${a.grayscale}%)`);
+  if (a.sepia) p.push(`sepia(${a.sepia}%)`);
+  if (a.hueRotate) p.push(`hue-rotate(${a.hueRotate}deg)`);
+  if (a.blur) p.push(`blur(${a.blur}px)`);
+  return p.join(" ");
+}
+
+/** Vertices of a regular n-gon inscribed in the box (px), starting at the top. */
+function polygonVerts(w: number, h: number, n: number, rotDeg = -90): [number, number][] {
+  const cx = w / 2, cy = h / 2, rx = w / 2, ry = h / 2;
+  const start = (rotDeg * Math.PI) / 180;
+  const pts: [number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    const a = start + (i * 2 * Math.PI) / n;
+    pts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+  }
+  return pts;
+}
+
+function starVerts(w: number, h: number): [number, number][] {
+  const cx = w / 2, cy = h / 2, ox = w / 2, oy = h / 2, ix = ox * 0.4, iy = oy * 0.4;
+  const pts: [number, number][] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rx = i % 2 === 0 ? ox : ix;
+    const ry = i % 2 === 0 ? oy : iy;
+    pts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+  }
+  return pts;
+}
+
+/** CSS `clip-path` that masks a box to a shape silhouette, or undefined for none. */
+export function shapeClipPath(shape: ShapeKind, w: number, h: number): string | undefined {
+  const poly = (v: [number, number][]) =>
+    `polygon(${v.map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`).join(", ")})`;
+  switch (shape) {
+    case "ellipse":
+      return "ellipse(50% 50% at 50% 50%)";
+    case "roundRect":
+      return `inset(0 round ${(Math.min(w, h) * 0.12).toFixed(1)}px)`;
+    case "triangle":
+      return poly([[w / 2, 0], [w, h], [0, h]]);
+    case "diamond":
+      return poly([[w / 2, 0], [w, h / 2], [w / 2, h], [0, h / 2]]);
+    case "pentagon":
+      return poly(polygonVerts(w, h, 5));
+    case "hexagon":
+      return poly(polygonVerts(w, h, 6, 0));
+    case "star":
+      return poly(starVerts(w, h));
+    default:
+      return undefined; // rect & unsupported shapes → no clip
+  }
 }
 
 /** Points for a regular n-gon inscribed in the box, starting at the top. */
@@ -151,6 +215,8 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
     ? "none"
     : el.fill.kind === "gradient"
     ? `url(#${gradId})`
+    : el.fill.kind === "image"
+    ? "#cbd5e1" // image fills aren't supported on shapes; fall back to a neutral tone
     : el.fill.color;
   const stroke = el.stroke?.color ?? "none";
   const sw = el.stroke?.width ?? 0;
@@ -261,19 +327,31 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", overflow: "visible" }}>
       {needsDefs(style) && <StrokeDefs />}
       {gradId && el.fill?.kind === "gradient" && (
-        <defs>
-          <linearGradient
-            id={gradId}
-            gradientTransform={`rotate(${el.fill.angle}, 0.5, 0.5)`}
-            gradientUnits="objectBoundingBox"
-          >
-            <stop offset="0%" stopColor={el.fill.from} />
-            <stop offset="100%" stopColor={el.fill.to} />
-          </linearGradient>
-        </defs>
+        <defs>{gradientDef(gradId, el.fill)}</defs>
       )}
       {shape}
     </svg>
+  );
+}
+
+/** Build an SVG linear/radial gradient (supporting multi-stop) keyed by id. */
+function gradientDef(id: string, g: Extract<NonNullable<ShapeEl["fill"]>, { kind: "gradient" }>) {
+  const stops =
+    g.stops && g.stops.length >= 2
+      ? g.stops
+      : [
+          { color: g.from, pos: 0 },
+          { color: g.to, pos: 100 },
+        ];
+  const stopEls = stops.map((s, i) => <stop key={i} offset={`${s.pos}%`} stopColor={s.color} />);
+  return g.radial ? (
+    <radialGradient id={id} cx="50%" cy="50%" r="65%">
+      {stopEls}
+    </radialGradient>
+  ) : (
+    <linearGradient id={id} gradientTransform={`rotate(${g.angle}, 0.5, 0.5)`} gradientUnits="objectBoundingBox">
+      {stopEls}
+    </linearGradient>
   );
 }
 
@@ -366,12 +444,7 @@ export function ElementView({
   const body: ReactNode = (() => {
   if (el.type === "text") {
     const isTitle = el.placeholder === "title";
-    const textBg =
-      !el.fill || el.fill.kind === "none"
-        ? undefined
-        : el.fill.kind === "gradient"
-        ? `linear-gradient(${el.fill.angle}deg, ${el.fill.from}, ${el.fill.to})`
-        : el.fill.color;
+    const textBg = fillToCss(el.fill);
     return (
       <div
         style={{
@@ -400,10 +473,12 @@ export function ElementView({
 
   if (el.type === "image") {
     const c = el.crop;
+    const adj = adjustFilter(el.adjust) || undefined;
+    const clip = el.maskShape ? shapeClipPath(el.maskShape, el.geom.w, el.geom.h) : undefined;
     // A crop shows only a sub-rectangle of the source, scaled to fill the box.
     if (c && (c.x > 0 || c.y > 0 || c.w < 1 || c.h < 1)) {
       return (
-        <div style={{ ...base, overflow: "hidden" }}>
+        <div style={{ ...base, overflow: "hidden", clipPath: clip }}>
           <img
             src={el.src}
             alt=""
@@ -415,17 +490,22 @@ export function ElementView({
               left: `${(-c.x / c.w) * 100}%`,
               top: `${(-c.y / c.h) * 100}%`,
               userSelect: "none",
+              filter: adj,
             }}
           />
         </div>
       );
     }
+    // Combine adjustments, the alpha-silhouette outline, and any shadow into one
+    // filter string (an explicit `filter` here would otherwise drop base.shadow).
+    const imgFilter =
+      [adj, imgOutline, base.filter as string | undefined].filter(Boolean).join(" ") || undefined;
     return (
       <img
         src={el.src}
         alt=""
         draggable={false}
-        style={{ ...base, objectFit: el.fit ?? "contain", userSelect: "none", filter: imgOutline }}
+        style={{ ...base, objectFit: el.fit ?? "contain", userSelect: "none", filter: imgFilter, clipPath: clip }}
       />
     );
   }
@@ -453,6 +533,14 @@ export function ElementView({
     return (
       <div style={base}>
         <InkSvg el={el} />
+      </div>
+    );
+  }
+
+  if (el.type === "chart") {
+    return (
+      <div style={base}>
+        <ChartView el={el} theme={theme} />
       </div>
     );
   }

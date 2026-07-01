@@ -28,6 +28,10 @@ import {
   makeId,
 } from "../model/deck";
 import { copyElements, pasteElements } from "../lib/clipboard";
+import { copyStyle as copyStyleSnapshot, getStyle as getStyleSnapshot } from "../lib/styleClipboard";
+import { applyStyle } from "../lib/styleClipboard";
+import { registerEmbeddedFont } from "../lib/fonts";
+import type { EmbeddedFont } from "../model/deck";
 import { buildLayout } from "../model/layouts";
 
 const HISTORY_LIMIT = 100;
@@ -70,9 +74,8 @@ export interface SlidesState {
   commenting: boolean;
   /** 0 = fit-to-container (computed by the canvas); otherwise a literal scale. */
   zoom: number;
-  /** Fonts imported from disk this session (not persisted in the deck). */
-  customFonts: { label: string; value: string }[];
-  addCustomFont: (label: string, value: string) => void;
+  /** Embed an imported font into the deck (persisted in `.tslides`) and register it. */
+  embedFont: (font: EmbeddedFont) => void;
 
   past: Deck[];
   future: Deck[];
@@ -138,6 +141,16 @@ export interface SlidesState {
   cutSelection: () => void;
   pasteFromClipboard: () => void;
 
+  // style clipboard ("copiar/colar estilo"); styleClipboardSize drives reactivity
+  styleClipboardSize: number;
+  copyStyle: () => void;
+  pasteStyle: () => void;
+
+  // manual ruler guides (undoable)
+  addGuide: (axis: "x" | "y", pos: number) => void;
+  moveGuide: (axis: "x" | "y", index: number, pos: number) => void;
+  removeGuide: (axis: "x" | "y", index: number) => void;
+
   // comments (undoable)
   addComment: (x: number, y: number) => string;
   updateComment: (id: string, patch: { text?: string; resolved?: boolean }) => void;
@@ -183,8 +196,8 @@ export const useStore = create<SlidesState>((set, get) => ({
   inkStyle: "solid",
   commenting: false,
   zoom: 0,
-  customFonts: [],
   clipboardSize: 0,
+  styleClipboardSize: 0,
 
   past: [],
   future: [],
@@ -253,7 +266,9 @@ export const useStore = create<SlidesState>((set, get) => ({
   canUndo: () => get().past.length > 0,
   canRedo: () => get().future.length > 0,
 
-  loadDeck: (deck, filePath) =>
+  loadDeck: (deck, filePath) => {
+    // Re-register embedded fonts so saved decks render with their imported fonts.
+    (deck.fonts ?? []).forEach((f) => registerEmbeddedFont(f.family, f.src).catch(() => {}));
     set({
       deck,
       filePath,
@@ -264,7 +279,8 @@ export const useStore = create<SlidesState>((set, get) => ({
       selection: [],
       currentSlideId: deck.slides[0]?.id ?? "",
       zoom: 0,
-    }),
+    });
+  },
 
   resetDeck: () => {
     const deck = newDeck("16:9");
@@ -299,8 +315,13 @@ export const useStore = create<SlidesState>((set, get) => ({
   setCropping: (id) => set({ croppingId: id }),
   setDrawing: (b) => set({ drawing: b, croppingId: null, commenting: false, inkMode: b ? get().inkMode : "pen" }),
   setInkMode: (m) => set({ inkMode: m }),
-  addCustomFont: (label, value) =>
-    set((s) => (s.customFonts.some((f) => f.value === value) ? {} : { customFonts: [...s.customFonts, { label, value }] })),
+  embedFont: (font) => {
+    registerEmbeddedFont(font.family, font.src).catch(() => {});
+    get().apply((d) => {
+      d.fonts ??= [];
+      if (!d.fonts.some((f) => f.value === font.value)) d.fonts.push(font);
+    });
+  },
   setInkColor: (c) => set({ inkColor: c }),
   setInkWidth: (n) => set({ inkWidth: n }),
   setInkStyle: (s) => set({ inkStyle: s }),
@@ -519,6 +540,28 @@ export const useStore = create<SlidesState>((set, get) => ({
     if (els.length) get().addElements(els);
   },
 
+  copyStyle: () => {
+    const { deck, currentSlideId, selection } = get();
+    const slide = findSlide(deck, currentSlideId);
+    const el = slide?.elements.find((e) => e.id === selection[0]);
+    if (el) {
+      copyStyleSnapshot(el);
+      set({ styleClipboardSize: 1 });
+    }
+  },
+
+  pasteStyle: () => {
+    const style = getStyleSnapshot();
+    if (!style) return;
+    const { currentSlideId, selection } = get();
+    const sel = new Set(selection);
+    get().apply((d) => {
+      findSlide(d, currentSlideId)?.elements.forEach((e) => {
+        if (sel.has(e.id)) applyStyle(e, style);
+      });
+    });
+  },
+
   updateElement: (elId, recipe) => {
     const { currentSlideId } = get();
     get().apply((d) => {
@@ -551,6 +594,31 @@ export const useStore = create<SlidesState>((set, get) => ({
       const to =
         dir === "front" ? last : dir === "back" ? 0 : dir === "forward" ? Math.min(i + 1, last) : Math.max(i - 1, 0);
       slide.elements.splice(to, 0, el);
+    });
+  },
+
+  addGuide: (axis, pos) => {
+    const { currentSlideId } = get();
+    get().apply((d) => {
+      const slide = findSlide(d, currentSlideId);
+      if (!slide) return;
+      (slide.guides ??= { x: [], y: [] })[axis].push(Math.round(pos));
+    });
+  },
+
+  moveGuide: (axis, index, pos) => {
+    const { currentSlideId } = get();
+    get().apply((d) => {
+      const g = findSlide(d, currentSlideId)?.guides;
+      if (g && g[axis][index] != null) g[axis][index] = Math.round(pos);
+    });
+  },
+
+  removeGuide: (axis, index) => {
+    const { currentSlideId } = get();
+    get().apply((d) => {
+      const g = findSlide(d, currentSlideId)?.guides;
+      if (g) g[axis].splice(index, 1);
     });
   },
 

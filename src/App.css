@@ -256,6 +256,57 @@ body {
   flex: 0 0 auto;
 }
 
+/* ---- Rulers + manual guides ---- */
+.ruler,
+.ruler-corner {
+  position: absolute;
+  z-index: 8;
+}
+.ruler {
+  background: var(--panel, #f1f5f9);
+  border: 1px solid var(--border, #cbd5e1);
+}
+.ruler-top {
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+.ruler-left {
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+}
+.ruler:hover {
+  background: #e0e7ff;
+}
+.ruler-corner {
+  background: var(--panel, #e2e8f0);
+  border: 1px solid var(--border, #cbd5e1);
+}
+.guide-hit {
+  position: absolute;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.guide-line {
+  background: #14b8a6;
+  pointer-events: none;
+}
+.guide-line-v {
+  width: 1px;
+  height: 100%;
+}
+.guide-line-h {
+  width: 100%;
+  height: 1px;
+}
+.guide-hit:hover .guide-line {
+  background: #0d9488;
+  box-shadow: 0 0 0 1px rgba(13, 148, 136, 0.4);
+}
+
 .slide-scaled {
   position: relative;
 }
@@ -442,6 +493,44 @@ body {
   min-width: 34px;
   text-align: right;
 }
+.insp-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.insp-stop-pos {
+  width: 48px;
+}
+.chart-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: auto;
+}
+.chart-grid-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chart-grid-corner {
+  width: 70px;
+  flex: 0 0 auto;
+}
+.chart-cell {
+  box-sizing: border-box;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+.chart-cat,
+.chart-val {
+  width: 52px;
+  flex: 0 0 auto;
+  text-align: center;
+}
+.chart-series-name {
+  width: 70px;
+  flex: 0 0 auto;
+}
 .insp-zorder,
 .insp-align {
   display: flex;
@@ -556,6 +645,56 @@ body {
 .present-hud button:disabled {
   opacity: 0.3;
   cursor: default;
+}
+.present-hud button.active {
+  color: #fbbf24;
+}
+
+/* ---- Presenter notes overlay ---- */
+.present-notes {
+  position: fixed;
+  right: 16px;
+  bottom: 70px;
+  width: min(420px, 38vw);
+  max-height: 46vh;
+  overflow: auto;
+  background: rgba(20, 20, 25, 0.92);
+  color: #f1f5f9;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+.present-notes-head {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+.present-notes-body {
+  font-size: 17px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.present-notes-empty {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Presenter-notes textarea in the slide inspector */
+.insp-notes {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 6px;
+  background: var(--panel, #fff);
+  color: inherit;
 }
 
 /* ---- Entrance animations (present mode) ---- */

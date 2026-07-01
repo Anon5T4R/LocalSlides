@@ -12,6 +12,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useStore } from "../state/store";
 import { findSlide } from "../model/deck";
 import { buildTextExtensions } from "./tiptapExtensions";
+import { fillToCss } from "../render/fill";
 import { TextToolbar } from "./TextToolbar";
 
 export function TextBoxEditor({
@@ -104,12 +105,7 @@ export function TextBoxEditor({
         fontWeight: isTitle ? 700 : 400,
         lineHeight: 1.25,
         color: deck.theme.colors.text,
-        background:
-          !el.fill || el.fill.kind === "none"
-            ? "transparent"
-            : el.fill.kind === "gradient"
-            ? `linear-gradient(${el.fill.angle}deg, ${el.fill.from}, ${el.fill.to})`
-            : el.fill.color,
+        background: fillToCss(el.fill) ?? "transparent",
       }}
       onPointerDown={(e) => e.stopPropagation()}
     >

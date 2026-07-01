@@ -17,6 +17,24 @@ export default defineConfig(async () => ({
     include: ["react", "react-dom", "@tiptap/react", "@tiptap/react/menus"],
   },
 
+  // Split heavy, independently-loaded libraries into their own chunks so the
+  // main bundle stays small (silences the >500 kB chunk warning and improves
+  // cold-load on lower-end machines).
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("@tiptap") || id.includes("prosemirror")) return "tiptap";
+            if (id.includes("pptxgenjs")) return "pptx";
+            if (id.includes("jszip")) return "zip";
+          }
+        },
+      },
+    },
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors

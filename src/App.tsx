@@ -7,7 +7,7 @@ import { EditorStage } from "./editor/EditorStage";
 import { SlidesPanel } from "./panels/SlidesPanel";
 import { Inspector } from "./panels/Inspector";
 import { PresentMode } from "./present/PresentMode";
-import { newFreeTextBox, newImage, newShape, newTable, newVideo, type ShapeKind } from "./model/deck";
+import { newChart, newFreeTextBox, newImage, newShape, newTable, newVideo, type ChartKind, type ShapeKind } from "./model/deck";
 import { pickImageDataUri, pickVideoDataUri, imageDataUrlFromPath } from "./lib/media";
 import {
   DeckFile,
@@ -196,6 +196,13 @@ function App() {
   const insertTable = useCallback(() => {
     addElement(newTable(useStore.getState().deck, 3, 3));
   }, [addElement]);
+
+  const insertChart = useCallback(
+    (kind: ChartKind = "bar") => {
+      addElement(newChart(useStore.getState().deck, kind));
+    },
+    [addElement]
+  );
 
   const insertImage = useCallback(async () => {
     if (!inTauri()) return;
@@ -399,13 +406,15 @@ function App() {
         if (slide) st.select(slide.elements.filter((el) => !el.hidden && !el.locked).map((el) => el.id));
       } else if (k === "c") {
         e.preventDefault();
-        useStore.getState().copySelection();
+        if (e.shiftKey) useStore.getState().copyStyle();
+        else useStore.getState().copySelection();
       } else if (k === "x") {
         e.preventDefault();
         useStore.getState().cutSelection();
       } else if (k === "v") {
         e.preventDefault();
-        useStore.getState().pasteFromClipboard();
+        if (e.shiftKey) useStore.getState().pasteStyle();
+        else useStore.getState().pasteFromClipboard();
       } else if (k === "d") {
         e.preventDefault();
         const { selection } = useStore.getState();
@@ -556,6 +565,16 @@ function App() {
       })),
     },
     { kind: "item", label: "Tabela", icon: "⊞", onClick: insertTable },
+    {
+      kind: "sub",
+      label: "Gráfico",
+      icon: "📊",
+      items: [
+        { kind: "item", label: "Barras", icon: "📊", onClick: () => insertChart("bar") },
+        { kind: "item", label: "Linhas", icon: "📈", onClick: () => insertChart("line") },
+        { kind: "item", label: "Pizza", icon: "🥧", onClick: () => insertChart("pie") },
+      ],
+    },
   ];
 
   const togglePanel = (which: "layers" | "media" | "ai") => {

@@ -8,9 +8,13 @@ import { useStore } from "../state/store";
 import {
   findSlide,
   plainTextToPM,
+  pmToPlainText,
   type AnimKind,
+  type ChartKind,
   type Element,
   type Fill,
+  type GradientStop,
+  type ImageAdjust,
   type ShapeKind,
   type StrokeStyle,
   type TransitionKind,
@@ -42,6 +46,35 @@ const STROKE_STYLES: { value: StrokeStyle; label: string }[] = [
   { value: "smudge", label: "Esfumaçado" },
 ];
 
+const ADJUST_SLIDERS: {
+  k: keyof ImageAdjust;
+  label: string;
+  min: number;
+  max: number;
+  neutral: number;
+  suffix: string;
+}[] = [
+  { k: "brightness", label: "Brilho", min: 0, max: 200, neutral: 100, suffix: "%" },
+  { k: "contrast", label: "Contraste", min: 0, max: 200, neutral: 100, suffix: "%" },
+  { k: "saturate", label: "Saturação", min: 0, max: 200, neutral: 100, suffix: "%" },
+  { k: "hueRotate", label: "Matiz", min: 0, max: 360, neutral: 0, suffix: "°" },
+  { k: "grayscale", label: "P&B", min: 0, max: 100, neutral: 0, suffix: "%" },
+  { k: "sepia", label: "Sépia", min: 0, max: 100, neutral: 0, suffix: "%" },
+  { k: "blur", label: "Desfoque", min: 0, max: 20, neutral: 0, suffix: "px" },
+];
+
+/** Shapes that can be used as an image mask silhouette (clip-path). */
+const MASK_SHAPES: { value: "" | ShapeKind; label: string }[] = [
+  { value: "", label: "Nenhuma" },
+  { value: "ellipse", label: "Círculo / elipse" },
+  { value: "roundRect", label: "Arredondado" },
+  { value: "triangle", label: "Triângulo" },
+  { value: "diamond", label: "Losango" },
+  { value: "pentagon", label: "Pentágono" },
+  { value: "hexagon", label: "Hexágono" },
+  { value: "star", label: "Estrela" },
+];
+
 const SHAPES: { value: ShapeKind; label: string }[] = [
   { value: "rect", label: "Retângulo" },
   { value: "roundRect", label: "Arredondado" },
@@ -58,6 +91,184 @@ const SHAPES: { value: ShapeKind; label: string }[] = [
   { value: "speech", label: "Balão de fala" },
   { value: "thought", label: "Balão de pensamento" },
 ];
+
+/** Open a file picker and resolve to an image data URL (works in browser + Tauri). */
+function pickImageDataUrl(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  });
+}
+
+/** Current stops for a gradient fill (falls back to its from/to endpoints). */
+function gradientStops(g: Extract<Fill, { kind: "gradient" }>): GradientStop[] {
+  if (g.stops && g.stops.length >= 2) return g.stops;
+  return [
+    { color: g.from, pos: 0 },
+    { color: g.to, pos: 100 },
+  ];
+}
+
+/**
+ * Unified fill editor: solid / gradient (linear|radial, multi-stop) / image / none.
+ * Renders its own rows. `onChange(undefined)` is used by the "tema" reset option.
+ */
+function FillEditor({
+  value,
+  onChange,
+  themeColors,
+  allowNone = true,
+  allowImage = false,
+  themeLabel,
+}: {
+  value: Fill | undefined;
+  onChange: (f: Fill | undefined) => void;
+  themeColors: string[];
+  allowNone?: boolean;
+  allowImage?: boolean;
+  themeLabel?: string;
+}) {
+  const kind = value ? value.kind : themeLabel ? "theme" : "none";
+
+  const onKind = async (next: string) => {
+    if (next === "theme") return onChange(undefined);
+    if (next === "none") return onChange({ kind: "none" });
+    if (next === "solid") {
+      const color = value?.kind === "solid" ? value.color : value?.kind === "gradient" ? value.from : "#2563eb";
+      return onChange({ kind: "solid", color });
+    }
+    if (next === "gradient") {
+      const from = value?.kind === "solid" ? value.color : "#2563eb";
+      return onChange({ kind: "gradient", from, to: "#0ea5e9", angle: 135 });
+    }
+    if (next === "image") {
+      const src = await pickImageDataUrl();
+      if (src) onChange({ kind: "image", src, fit: "cover" });
+    }
+  };
+
+  const setGradient = (patch: Partial<Extract<Fill, { kind: "gradient" }>>) => {
+    if (value?.kind !== "gradient") return;
+    onChange({ ...value, ...patch });
+  };
+  const setStops = (stops: GradientStop[]) => {
+    // Keep from/to synced to the endpoints for export fallbacks.
+    const sorted = [...stops].sort((a, b) => a.pos - b.pos);
+    setGradient({ stops: sorted, from: sorted[0].color, to: sorted[sorted.length - 1].color });
+  };
+
+  return (
+    <>
+      <Row label="Preenchimento">
+        <select value={kind} onChange={(e) => onKind(e.target.value)}>
+          {themeLabel && <option value="theme">{themeLabel}</option>}
+          {allowNone && <option value="none">Nenhum</option>}
+          <option value="solid">Sólido</option>
+          <option value="gradient">Gradiente</option>
+          {allowImage && <option value="image">Imagem</option>}
+        </select>
+      </Row>
+
+      {value?.kind === "solid" && (
+        <Row label="Cor">
+          <ColorPicker value={value.color} themeColors={themeColors} onChange={(c) => onChange({ kind: "solid", color: c })} />
+        </Row>
+      )}
+
+      {value?.kind === "gradient" && (
+        <>
+          <Row label="Tipo">
+            <select value={value.radial ? "radial" : "linear"} onChange={(e) => setGradient({ radial: e.target.value === "radial" })}>
+              <option value="linear">Linear</option>
+              <option value="radial">Radial</option>
+            </select>
+          </Row>
+          {!value.radial && (
+            <Row label="Ângulo (°)">
+              <input type="number" min={0} max={360} value={value.angle} onChange={(e) => setGradient({ angle: Number(e.target.value) })} />
+            </Row>
+          )}
+          {gradientStops(value).map((stop, i, arr) => (
+            <Row key={i} label={i === 0 ? "Cores" : ""}>
+              <span className="insp-stop">
+                <ColorPicker
+                  value={stop.color}
+                  themeColors={themeColors}
+                  onChange={(c) => {
+                    const next = gradientStops(value).map((s, j) => (j === i ? { ...s, color: c } : s));
+                    setStops(next);
+                  }}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="insp-stop-pos"
+                  value={stop.pos}
+                  onChange={(e) => {
+                    const next = gradientStops(value).map((s, j) => (j === i ? { ...s, pos: Number(e.target.value) } : s));
+                    setStops(next);
+                  }}
+                />
+                {arr.length > 2 && (
+                  <button
+                    className="insp-mini"
+                    title="Remover cor"
+                    onClick={() => setStops(gradientStops(value).filter((_, j) => j !== i))}
+                  >
+                    −
+                  </button>
+                )}
+              </span>
+            </Row>
+          ))}
+          <button
+            className="insp-mini"
+            onClick={() => {
+              const stops = gradientStops(value);
+              const mid = { color: stops[stops.length - 1].color, pos: Math.round((stops[stops.length - 2].pos + stops[stops.length - 1].pos) / 2) };
+              setStops([...stops, mid]);
+            }}
+          >
+            ＋ Cor
+          </button>
+        </>
+      )}
+
+      {value?.kind === "image" && (
+        <>
+          <Row label="Ajuste">
+            <select value={value.fit ?? "cover"} onChange={(e) => onChange({ ...value, fit: e.target.value as "cover" | "contain" })}>
+              <option value="cover">Preencher</option>
+              <option value="contain">Conter</option>
+            </select>
+          </Row>
+          <Row label="Imagem">
+            <button
+              className="insp-mini"
+              onClick={async () => {
+                const src = await pickImageDataUrl();
+                if (src) onChange({ kind: "image", src, fit: value.fit ?? "cover" });
+              }}
+            >
+              Trocar…
+            </button>
+          </Row>
+        </>
+      )}
+    </>
+  );
+}
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -101,8 +312,16 @@ function typeLabel(el: Element): string {
     ? "Tabela"
     : el.type === "ink"
     ? "Desenho"
+    : el.type === "chart"
+    ? "Gráfico"
     : "Forma";
 }
+
+const CHART_KINDS: { value: ChartKind; label: string }[] = [
+  { value: "bar", label: "Barras" },
+  { value: "line", label: "Linhas" },
+  { value: "pie", label: "Pizza" },
+];
 
 function ElementInspector({ el }: { el: Element }) {
   const updateElement = useStore((s) => s.updateElement);
@@ -111,12 +330,29 @@ function ElementInspector({ el }: { el: Element }) {
   const setCropping = useStore((s) => s.setCropping);
   const theme = useStore((s) => s.deck.theme);
   const themeColors = Object.values(theme.colors) as string[];
+  const copyStyle = useStore((s) => s.copyStyle);
+  const pasteStyle = useStore((s) => s.pasteStyle);
+  const styleClipboardSize = useStore((s) => s.styleClipboardSize);
 
   const set = (recipe: (e: Element) => void) => updateElement(el.id, recipe);
 
   return (
     <>
       <div className="insp-head">{typeLabel(el)}</div>
+
+      <div className="insp-zorder">
+        <button className="insp-mini" onClick={copyStyle} title="Copiar estilo (Ctrl+Shift+C)">
+          Copiar estilo
+        </button>
+        <button
+          className="insp-mini"
+          onClick={pasteStyle}
+          disabled={!styleClipboardSize}
+          title="Colar estilo (Ctrl+Shift+V)"
+        >
+          Colar estilo
+        </button>
+      </div>
 
       {/* Position & size */}
       <Section title="Posição e tamanho" defaultOpen>
@@ -285,62 +521,12 @@ function ElementInspector({ el }: { el: Element }) {
 
       {/* Text box fill */}
       {el.type === "text" && (
-        <>
-          <Row label="Fundo">
-            <select
-              value={(el.fill as Fill | undefined)?.kind ?? "none"}
-              onChange={(e) => {
-                const kind = e.target.value as "none" | "solid" | "gradient";
-                set((x) => {
-                  if (x.type !== "text") return;
-                  if (kind === "none") x.fill = undefined;
-                  else if (kind === "solid") x.fill = { kind: "solid", color: "#ffffff" };
-                  else x.fill = { kind: "gradient", from: "#ffffff", to: "#e2e8f0", angle: 135 };
-                });
-              }}
-            >
-              <option value="none">Nenhum</option>
-              <option value="solid">Sólido</option>
-              <option value="gradient">Gradiente</option>
-            </select>
-          </Row>
-          {el.fill?.kind === "solid" && (
-            <Row label="Cor">
-              <ColorPicker
-                value={el.fill.color}
-                themeColors={themeColors}
-                onChange={(c) => set((x) => x.type === "text" && (x.fill = { kind: "solid", color: c }))}
-              />
-            </Row>
-          )}
-          {el.fill?.kind === "gradient" && (
-            <>
-              <Row label="Cor inicial">
-                <ColorPicker
-                  value={el.fill.from}
-                  themeColors={themeColors}
-                  onChange={(c) => set((x) => x.type === "text" && x.fill?.kind === "gradient" && (x.fill.from = c))}
-                />
-              </Row>
-              <Row label="Cor final">
-                <ColorPicker
-                  value={el.fill.to}
-                  themeColors={themeColors}
-                  onChange={(c) => set((x) => x.type === "text" && x.fill?.kind === "gradient" && (x.fill.to = c))}
-                />
-              </Row>
-              <Row label="Ângulo (°)">
-                <input
-                  type="number"
-                  min={0}
-                  max={360}
-                  value={el.fill.angle}
-                  onChange={(e) => set((x) => x.type === "text" && x.fill?.kind === "gradient" && (x.fill.angle = Number(e.target.value)))}
-                />
-              </Row>
-            </>
-          )}
-        </>
+        <FillEditor
+          value={el.fill}
+          onChange={(f) => set((x) => x.type === "text" && (x.fill = f))}
+          themeColors={themeColors}
+          allowNone
+        />
       )}
 
       {/* Animation */}
@@ -429,6 +615,57 @@ function ElementInspector({ el }: { el: Element }) {
         </Row>
       )}
 
+      {el.type === "image" && (
+        <Row label="Máscara">
+          <select
+            value={el.maskShape ?? ""}
+            onChange={(e) =>
+              set((x) => x.type === "image" && (x.maskShape = (e.target.value || undefined) as ShapeKind | undefined))
+            }
+          >
+            {MASK_SHAPES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </Row>
+      )}
+
+      {el.type === "image" && (
+        <Section title="Ajustes de imagem">
+          {ADJUST_SLIDERS.map((s) => {
+            const v = el.adjust?.[s.k] ?? s.neutral;
+            return (
+              <Row key={s.k} label={s.label}>
+                <input
+                  type="range"
+                  min={s.min}
+                  max={s.max}
+                  value={v}
+                  onChange={(e) =>
+                    set((x) => {
+                      if (x.type !== "image") return;
+                      const value = Number(e.target.value);
+                      const adj = { ...(x.adjust ?? {}) };
+                      if (value === s.neutral) delete adj[s.k];
+                      else adj[s.k] = value;
+                      x.adjust = Object.keys(adj).length ? adj : undefined;
+                    })
+                  }
+                />
+                <span className="insp-num">{v}{s.suffix}</span>
+              </Row>
+            );
+          })}
+          {el.adjust && (
+            <button className="insp-mini" onClick={() => set((x) => x.type === "image" && (x.adjust = undefined))}>
+              Redefinir ajustes
+            </button>
+          )}
+        </Section>
+      )}
+
       {el.type === "video" && (
         <>
           <Row label="Autoplay">
@@ -469,60 +706,12 @@ function ElementInspector({ el }: { el: Element }) {
               ))}
             </select>
           </Row>
-          <Row label="Preenchimento">
-            <select
-              value={el.fill?.kind ?? "solid"}
-              onChange={(e) => {
-                const kind = e.target.value as "none" | "solid" | "gradient";
-                set((x) => {
-                  if (x.type !== "shape") return;
-                  if (kind === "none") x.fill = { kind: "none" };
-                  else if (kind === "solid") x.fill = { kind: "solid", color: x.fill?.kind === "solid" ? x.fill.color : "#2563eb" };
-                  else x.fill = { kind: "gradient", from: "#2563eb", to: "#0ea5e9", angle: 135 };
-                });
-              }}
-            >
-              <option value="none">Nenhum</option>
-              <option value="solid">Sólido</option>
-              <option value="gradient">Gradiente</option>
-            </select>
-          </Row>
-          {el.fill?.kind === "solid" && (
-            <Row label="Cor">
-              <ColorPicker
-                value={el.fill.color}
-                themeColors={themeColors}
-                onChange={(c) => set((x) => x.type === "shape" && (x.fill = { kind: "solid", color: c }))}
-              />
-            </Row>
-          )}
-          {el.fill?.kind === "gradient" && (
-            <>
-              <Row label="Cor inicial">
-                <ColorPicker
-                  value={el.fill.from}
-                  themeColors={themeColors}
-                  onChange={(c) => set((x) => x.type === "shape" && x.fill?.kind === "gradient" && (x.fill.from = c))}
-                />
-              </Row>
-              <Row label="Cor final">
-                <ColorPicker
-                  value={el.fill.to}
-                  themeColors={themeColors}
-                  onChange={(c) => set((x) => x.type === "shape" && x.fill?.kind === "gradient" && (x.fill.to = c))}
-                />
-              </Row>
-              <Row label="Ângulo (°)">
-                <input
-                  type="number"
-                  min={0}
-                  max={360}
-                  value={el.fill.angle}
-                  onChange={(e) => set((x) => x.type === "shape" && x.fill?.kind === "gradient" && (x.fill.angle = Number(e.target.value)))}
-                />
-              </Row>
-            </>
-          )}
+          <FillEditor
+            value={el.fill}
+            onChange={(f) => set((x) => x.type === "shape" && (x.fill = f ?? { kind: "none" }))}
+            themeColors={themeColors}
+            allowNone
+          />
           <Row label="Traço">
             <input
               type="checkbox"
@@ -624,6 +813,157 @@ function ElementInspector({ el }: { el: Element }) {
         </>
       )}
 
+      {el.type === "chart" && (
+        <>
+          <div className="insp-head">Gráfico</div>
+          <Row label="Tipo">
+            <select
+              value={el.chart}
+              onChange={(e) => set((x) => x.type === "chart" && (x.chart = e.target.value as ChartKind))}
+            >
+              {CHART_KINDS.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </Row>
+          <Row label="Título">
+            <input
+              type="text"
+              value={el.title ?? ""}
+              placeholder="(sem título)"
+              onChange={(e) => set((x) => x.type === "chart" && (x.title = e.target.value))}
+            />
+          </Row>
+          <Row label="Legenda">
+            <input
+              type="checkbox"
+              checked={el.showLegend !== false}
+              onChange={(e) => set((x) => x.type === "chart" && (x.showLegend = e.target.checked))}
+            />
+          </Row>
+          <Row label="Mostrar valores">
+            <input
+              type="checkbox"
+              checked={!!el.showValues}
+              onChange={(e) => set((x) => x.type === "chart" && (x.showValues = e.target.checked))}
+            />
+          </Row>
+
+          <Section title="Dados" defaultOpen>
+            <div className="chart-grid">
+              {/* Category header row */}
+              <div className="chart-grid-row">
+                <span className="chart-grid-corner" />
+                {el.categories.map((c, ci) => (
+                  <input
+                    key={ci}
+                    className="chart-cell chart-cat"
+                    value={c}
+                    onChange={(e) => set((x) => x.type === "chart" && (x.categories[ci] = e.target.value))}
+                  />
+                ))}
+                <button
+                  className="insp-mini"
+                  title="Adicionar categoria"
+                  onClick={() =>
+                    set((x) => {
+                      if (x.type !== "chart") return;
+                      x.categories.push(`Cat ${x.categories.length + 1}`);
+                      x.series.forEach((s) => s.values.push(0));
+                    })
+                  }
+                >
+                  ＋
+                </button>
+              </div>
+
+              {/* Series rows */}
+              {(el.chart === "pie" ? el.series.slice(0, 1) : el.series).map((s, si) => (
+                <div key={si} className="chart-grid-row">
+                  <input
+                    className="chart-cell chart-series-name"
+                    value={s.name}
+                    onChange={(e) => set((x) => x.type === "chart" && (x.series[si].name = e.target.value))}
+                  />
+                  {el.categories.map((_, ci) => (
+                    <input
+                      key={ci}
+                      type="number"
+                      className="chart-cell chart-val"
+                      value={s.values[ci] ?? 0}
+                      onChange={(e) =>
+                        set((x) => x.type === "chart" && (x.series[si].values[ci] = Number(e.target.value)))
+                      }
+                    />
+                  ))}
+                  {el.series.length > 1 && el.chart !== "pie" && (
+                    <button
+                      className="insp-mini"
+                      title="Remover série"
+                      onClick={() => set((x) => x.type === "chart" && x.series.splice(si, 1))}
+                    >
+                      −
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {el.chart !== "pie" && (
+              <button
+                className="insp-mini"
+                onClick={() =>
+                  set((x) => {
+                    if (x.type !== "chart") return;
+                    x.series.push({ name: `Série ${x.series.length + 1}`, values: x.categories.map(() => 0) });
+                  })
+                }
+              >
+                ＋ Série
+              </button>
+            )}
+            {el.categories.length > 1 && (
+              <button
+                className="insp-mini"
+                title="Remover última categoria"
+                onClick={() =>
+                  set((x) => {
+                    if (x.type !== "chart") return;
+                    x.categories.pop();
+                    x.series.forEach((s) => s.values.pop());
+                  })
+                }
+              >
+                − Categoria
+              </button>
+            )}
+          </Section>
+
+          <Section title="Cores">
+            {(el.chart === "pie" ? el.categories : el.series.map((s) => s.name)).map((lab, i) => {
+              const fallback = ["#2563eb", "#0ea5e9", "#f59e0b", "#ef4444", "#10b981", "#8b5cf6", "#ec4899", "#14b8a6"];
+              const color = el.palette?.[i] ?? fallback[i % fallback.length];
+              return (
+                <Row key={i} label={lab || `#${i + 1}`}>
+                  <ColorPicker
+                    value={color}
+                    themeColors={themeColors}
+                    onChange={(c) =>
+                      set((x) => {
+                        if (x.type !== "chart") return;
+                        const pal = [...(x.palette ?? [])];
+                        while (pal.length <= i) pal.push(fallback[pal.length % fallback.length]);
+                        pal[i] = c;
+                        x.palette = pal;
+                      })
+                    }
+                  />
+                </Row>
+              );
+            })}
+          </Section>
+        </>
+      )}
+
       {/* Transform: flip + quick rotate */}
       <div className="insp-head">Transformar</div>
       <div className="insp-zorder">
@@ -669,7 +1009,6 @@ function SlideInspector() {
   const slide = findSlide(deck, currentSlideId);
   if (!slide) return null;
 
-  const bgColor = slide.background?.kind === "solid" ? slide.background.color : deck.theme.colors.bg;
   const themeColors = Object.values(deck.theme.colors) as string[];
   const activeTheme = findThemePreset(deck.theme);
 
@@ -714,22 +1053,15 @@ function SlideInspector() {
       </div>
       </Section>
 
-      <div className="insp-head">Slide</div>
-      <Row label="Fundo">
-        <ColorPicker
-          value={bgColor}
-          themeColors={themeColors}
-          onChange={(c) => updateCurrentSlide((s) => (s.background = { kind: "solid", color: c }))}
-        />
-      </Row>
-      <Row label="Usar tema">
-        <button
-          className="insp-mini"
-          onClick={() => updateCurrentSlide((s) => (s.background = undefined))}
-        >
-          Restaurar
-        </button>
-      </Row>
+      <div className="insp-head">Fundo do slide</div>
+      <FillEditor
+        value={slide.background}
+        onChange={(f) => updateCurrentSlide((s) => (s.background = f))}
+        themeColors={themeColors}
+        allowNone={false}
+        allowImage
+        themeLabel="Tema"
+      />
 
       <div className="insp-head">Transição de entrada</div>
       <Row label="Tipo">
@@ -762,6 +1094,17 @@ function SlideInspector() {
           />
         </Row>
       )}
+
+      <div className="insp-head">Notas do apresentador</div>
+      <textarea
+        className="insp-notes"
+        placeholder="Notas visíveis só para você ao apresentar (tecla N)."
+        value={pmToPlainText(slide.notes)}
+        onChange={(e) => {
+          const text = e.target.value;
+          updateCurrentSlide((s) => (s.notes = text ? plainTextToPM(text) : undefined));
+        }}
+      />
     </>
   );
 }
@@ -771,10 +1114,19 @@ function MultiInspector({ count }: { count: number }) {
   const distribute = useStore((s) => s.distribute);
   const group = useStore((s) => s.group);
   const ungroup = useStore((s) => s.ungroup);
+  const pasteStyle = useStore((s) => s.pasteStyle);
+  const styleClipboardSize = useStore((s) => s.styleClipboardSize);
 
   return (
     <>
       <div className="insp-head">{count} elementos</div>
+      {styleClipboardSize > 0 && (
+        <div className="insp-zorder">
+          <button className="insp-mini" onClick={pasteStyle} title="Colar estilo (Ctrl+Shift+V)">
+            Colar estilo nos {count}
+          </button>
+        </div>
+      )}
       <div className="insp-head">Alinhar</div>
       <div className="insp-align">
         <button onClick={() => align("left")} title="Esquerda">⫷</button>

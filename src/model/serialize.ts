@@ -12,6 +12,7 @@ import type { Deck, Element } from "./deck";
 
 const DECK_ENTRY = "deck.json";
 const MEDIA_DIR = "media/";
+const FONTS_DIR = "fonts/";
 
 const MIME_EXT: Record<string, string> = {
   "image/png": "png",
@@ -23,6 +24,11 @@ const MIME_EXT: Record<string, string> = {
   "video/webm": "webm",
   "video/ogg": "ogv",
   "video/quicktime": "mov",
+  "font/ttf": "ttf",
+  "font/otf": "otf",
+  "font/woff": "woff",
+  "font/woff2": "woff2",
+  "font/collection": "ttc",
 };
 const EXT_MIME: Record<string, string> = {
   png: "image/png",
@@ -35,6 +41,11 @@ const EXT_MIME: Record<string, string> = {
   webm: "video/webm",
   ogv: "video/ogg",
   mov: "video/quicktime",
+  ttf: "font/ttf",
+  otf: "font/otf",
+  woff: "font/woff",
+  woff2: "font/woff2",
+  ttc: "font/collection",
 };
 
 function dataUrlToParts(dataUrl: string): { mime: string; bytes: Uint8Array } | null {
@@ -81,12 +92,28 @@ export async function packDeck(deck: Deck): Promise<Uint8Array> {
     return path;
   };
 
+  const externalizeFont = (src: string, family: string): string => {
+    if (!src.startsWith("data:")) return src;
+    const hit = seen.get(src);
+    if (hit) return hit;
+    const parts = dataUrlToParts(src);
+    if (!parts) return src;
+    const ext = MIME_EXT[parts.mime] ?? "ttf";
+    const safe = family.replace(/[^a-z0-9_-]+/gi, "_") || "font";
+    const path = `${FONTS_DIR}${safe}-${++mediaCount}.${ext}`;
+    zip.file(path, parts.bytes);
+    seen.set(src, path);
+    return path;
+  };
+
   for (const slide of out.slides) {
+    if (slide.background?.kind === "image") slide.background.src = externalize(slide.background.src, "image");
     for (const el of slide.elements) {
       if (el.type === "image" || el.type === "video") el.src = externalize(el.src, el.type);
     }
   }
   for (const asset of out.assets ?? []) asset.src = externalize(asset.src, asset.kind);
+  for (const font of out.fonts ?? []) font.src = externalizeFont(font.src, font.family);
 
   zip.file(DECK_ENTRY, JSON.stringify(out));
   return zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
@@ -102,7 +129,7 @@ export async function unpackDeck(bytes: Uint8Array): Promise<Deck> {
   // Inline any media/ references back into data URLs.
   const cache = new Map<string, string>();
   const resolve = async (src: string): Promise<string> => {
-    if (!src.startsWith(MEDIA_DIR)) return src;
+    if (!src.startsWith(MEDIA_DIR) && !src.startsWith(FONTS_DIR)) return src;
     if (cache.has(src)) return cache.get(src)!;
     const f = zip.file(src);
     if (!f) return src;
@@ -114,10 +141,12 @@ export async function unpackDeck(bytes: Uint8Array): Promise<Deck> {
   };
 
   for (const slide of deck.slides) {
+    if (slide.background?.kind === "image") slide.background.src = await resolve(slide.background.src);
     for (const el of slide.elements as Element[]) {
       if (el.type === "image" || el.type === "video") el.src = await resolve(el.src);
     }
   }
   for (const asset of deck.assets ?? []) asset.src = await resolve(asset.src);
+  for (const font of deck.fonts ?? []) font.src = await resolve(font.src);
   return deck;
 }

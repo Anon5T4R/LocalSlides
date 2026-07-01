@@ -34,9 +34,27 @@ export type AspectRatio = keyof typeof SLIDE_SIZES;
 
 // --- Fills & strokes ---------------------------------------------------------
 
+/** One color stop in a multi-stop gradient (pos is a 0..100 percentage). */
+export interface GradientStop {
+  color: string;
+  pos: number;
+}
+
 export type Fill =
   | { kind: "solid"; color: string }
-  | { kind: "gradient"; from: string; to: string; angle: number }
+  | {
+      kind: "gradient";
+      /** Legacy 2-color endpoints; used when `stops` is absent. */
+      from: string;
+      to: string;
+      /** Linear angle in degrees (ignored when radial). */
+      angle: number;
+      /** Radial instead of linear. */
+      radial?: boolean;
+      /** 3+ color stops; when present these win over from/to. */
+      stops?: GradientStop[];
+    }
+  | { kind: "image"; src: string; fit?: "cover" | "contain" }
   | { kind: "none" };
 
 /** Visual style of a line/stroke: plain, dashed, dotted, chalky, or smudged. */
@@ -119,6 +137,21 @@ export interface Crop {
   h: number;
 }
 
+/**
+ * Photographic adjustments applied as a CSS `filter` to an image. Percent values
+ * are 0..200 with 100 = neutral; grayscale/sepia are 0..100; hueRotate in deg;
+ * blur in px. Undefined fields mean "neutral".
+ */
+export interface ImageAdjust {
+  brightness?: number;
+  contrast?: number;
+  saturate?: number;
+  grayscale?: number;
+  sepia?: number;
+  hueRotate?: number;
+  blur?: number;
+}
+
 export interface ImageEl extends Base {
   type: "image";
   /** "media/img1.png" inside the zip, or a data URL. */
@@ -126,6 +159,10 @@ export interface ImageEl extends Base {
   fit?: "contain" | "cover";
   /** Visible region of the source image; the element box shows only this. */
   crop?: Crop;
+  /** Photographic adjustments (brightness/contrast/saturation/blur/…). */
+  adjust?: ImageAdjust;
+  /** Clip the image to a shape silhouette (Canva "mascarar"). */
+  maskShape?: ShapeKind;
 }
 
 export interface VideoEl extends Base {
@@ -191,7 +228,28 @@ export interface InkEl extends Base {
   strokes: InkStroke[];
 }
 
-export type Element = TextBox | ImageEl | VideoEl | ShapeEl | TableEl | InkEl;
+export type ChartKind = "bar" | "line" | "pie";
+
+export interface ChartSeries {
+  name: string;
+  values: number[];
+}
+
+export interface ChartEl extends Base {
+  type: "chart";
+  chart: ChartKind;
+  /** X-axis / slice labels. */
+  categories: string[];
+  /** One or more data series (pie uses only the first). */
+  series: ChartSeries[];
+  /** Colors per series (bar/line) or per slice (pie); falls back to theme accents. */
+  palette?: string[];
+  showLegend?: boolean;
+  showValues?: boolean;
+  title?: string;
+}
+
+export type Element = TextBox | ImageEl | VideoEl | ShapeEl | TableEl | InkEl | ChartEl;
 
 /** Element types that reference a media file (image/video) in the zip. */
 export type MediaEl = ImageEl | VideoEl;
@@ -229,6 +287,12 @@ export interface Comment {
   resolved?: boolean;
 }
 
+/** Manual ruler guides for a slide: vertical lines at x[], horizontal at y[] (logical px). */
+export interface SlideGuides {
+  x: number[];
+  y: number[];
+}
+
 export interface Slide {
   id: string;
   /** Overrides the theme/layout background for this slide. */
@@ -239,6 +303,8 @@ export interface Slide {
   transition?: Transition;
   /** Authoring comments (editor-only). */
   comments?: Comment[];
+  /** User-placed ruler guides (editor-only; elements snap to them). */
+  guides?: SlideGuides;
 }
 
 /** A reusable media asset uploaded once and inserted many times. */
@@ -250,6 +316,18 @@ export interface Asset {
   src: string;
 }
 
+/** A font imported from the user's machine, embedded so the deck stays portable. */
+export interface EmbeddedFont {
+  /** CSS family name registered via FontFace, e.g. "My Font". */
+  family: string;
+  /** Display label shown in the font picker. */
+  label: string;
+  /** Full CSS font-family value, e.g. "'My Font', sans-serif". */
+  value: string;
+  /** Font file as a data URL in memory; externalized to fonts/ on disk. */
+  src: string;
+}
+
 export interface Deck {
   version: 1;
   size: Size;
@@ -257,6 +335,8 @@ export interface Deck {
   slides: Slide[];
   /** Deck-level library of uploaded media, for quick reuse. */
   assets?: Asset[];
+  /** Fonts imported from disk and embedded so the deck renders anywhere. */
+  fonts?: EmbeddedFont[];
 }
 
 export const DEFAULT_THEME: Theme = {
@@ -407,6 +487,39 @@ export function newShape(deck: Deck, shape: ShapeKind): ShapeEl {
     geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
     shape,
     fill: { kind: "solid", color: deck.theme.colors.accent1 },
+  };
+}
+
+/** Default chart palette derived from the deck theme (accents + a few extras). */
+export function chartPalette(deck: Deck): string[] {
+  return [
+    deck.theme.colors.accent1,
+    deck.theme.colors.accent2,
+    "#f59e0b",
+    "#ef4444",
+    "#10b981",
+    "#8b5cf6",
+    "#ec4899",
+    "#14b8a6",
+  ];
+}
+
+export function newChart(deck: Deck, kind: ChartKind = "bar"): ChartEl {
+  const w = Math.min(720, deck.size.w * 0.6);
+  const h = Math.min(440, deck.size.h * 0.6);
+  return {
+    id: makeId("chart"),
+    type: "chart",
+    geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
+    chart: kind,
+    categories: ["Jan", "Fev", "Mar", "Abr"],
+    series: [
+      { name: "Série 1", values: [12, 19, 9, 17] },
+      { name: "Série 2", values: [8, 11, 14, 6] },
+    ],
+    showLegend: true,
+    showValues: false,
+    title: "",
   };
 }
 

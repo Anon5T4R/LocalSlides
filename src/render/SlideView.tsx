@@ -5,11 +5,10 @@
 import type { CSSProperties } from "react";
 import type { Deck, Slide } from "../model/deck";
 import { ElementView } from "./ElementView";
+import { fillToCss } from "./fill";
 
 function slideBackground(slide: Slide, deck: Deck): string {
-  const bg = slide.background;
-  if (bg && bg.kind === "solid") return bg.color;
-  return deck.theme.colors.bg;
+  return fillToCss(slide.background) ?? deck.theme.colors.bg;
 }
 
 export function SlideView({
