@@ -1164,6 +1164,15 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
+.brand-kit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.brand-kit-row .theme-swatch {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .theme-swatch {
   position: relative;
   display: flex;

@@ -21,6 +21,8 @@ import {
   InkEl,
   InkStroke,
   StrokeStyle,
+  AspectRatio,
+  SLIDE_SIZES,
   newDeck,
   newSlide,
   newAsset,
@@ -96,6 +98,9 @@ export interface SlidesState {
   resetDeck: () => void;
   markSaved: (filePath?: string) => void;
   setTheme: (theme: Theme) => void;
+  /** Onda 15.2 "Magic resize": rescale the deck to another aspect ratio,
+   * repositioning every element proportionally (relative scale, no reflow). */
+  resizeDeck: (aspect: AspectRatio) => void;
 
   // media library (undoable)
   addAsset: (kind: "image" | "video", name: string, src: string) => Asset;
@@ -296,6 +301,27 @@ export const useStore = create<SlidesState>((set, get) => ({
     get().apply((d) => {
       d.theme = structuredClone(theme);
     }),
+
+  resizeDeck: (aspect) => {
+    const next = SLIDE_SIZES[aspect];
+    get().apply((d) => {
+      const sx = next.w / d.size.w;
+      const sy = next.h / d.size.h;
+      d.slides.forEach((s) => {
+        s.elements.forEach((el) => {
+          el.geom.x = Math.round(el.geom.x * sx);
+          el.geom.y = Math.round(el.geom.y * sy);
+          el.geom.w = Math.round(el.geom.w * sx);
+          el.geom.h = Math.round(el.geom.h * sy);
+        });
+        if (s.guides) {
+          s.guides.x = s.guides.x.map((v) => Math.round(v * sx));
+          s.guides.y = s.guides.y.map((v) => Math.round(v * sy));
+        }
+      });
+      d.size = { ...next };
+    });
+  },
 
   addAsset: (kind, name, src) => {
     // Dedup by src so re-uploading or re-inserting the same file reuses one asset.

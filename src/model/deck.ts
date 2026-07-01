@@ -28,6 +28,8 @@ export interface Size {
 export const SLIDE_SIZES = {
   "16:9": { w: 1280, h: 720 },
   "4:3": { w: 960, h: 720 },
+  "1:1": { w: 1080, h: 1080 },
+  "9:16": { w: 720, h: 1280 },
 } as const;
 
 export type AspectRatio = keyof typeof SLIDE_SIZES;

@@ -7,7 +7,7 @@ import { EditorStage } from "./editor/EditorStage";
 import { SlidesPanel } from "./panels/SlidesPanel";
 import { Inspector } from "./panels/Inspector";
 import { PresentMode } from "./present/PresentMode";
-import { newChart, newFreeTextBox, newIcon, newImage, newShape, newTable, newVideo, type ChartKind, type ShapeKind } from "./model/deck";
+import { newChart, newFreeTextBox, newIcon, newImage, newShape, newTable, newVideo, SLIDE_SIZES, type AspectRatio, type ChartKind, type ShapeKind } from "./model/deck";
 import { ICONS } from "./model/icons";
 import { SHAPE_PICKER, CHART_PICKER } from "./insert/catalog";
 import { InsertPanel } from "./panels/InsertPanel";
@@ -37,6 +37,13 @@ import { Menu, type MenuItemDef } from "./ui/Menu";
 import { ContextBar } from "./ui/ContextBar";
 import "./App.css";
 
+const ASPECT_PICKER: { kind: AspectRatio; label: string; size: { w: number; h: number } }[] = [
+  { kind: "16:9", label: "16:9 (widescreen)", size: SLIDE_SIZES["16:9"] },
+  { kind: "4:3", label: "4:3 (clássico)", size: SLIDE_SIZES["4:3"] },
+  { kind: "1:1", label: "1:1 (quadrado)", size: SLIDE_SIZES["1:1"] },
+  { kind: "9:16", label: "9:16 (story/reels)", size: SLIDE_SIZES["9:16"] },
+];
+
 function App() {
   const deck = useStore((s) => s.deck);
   const filePath = useStore((s) => s.filePath);
@@ -53,6 +60,7 @@ function App() {
   const addSlide = useStore((s) => s.addSlide);
   const addElement = useStore((s) => s.addElement);
   const addAsset = useStore((s) => s.addAsset);
+  const resizeDeck = useStore((s) => s.resizeDeck);
   const group = useStore((s) => s.group);
   const ungroup = useStore((s) => s.ungroup);
   const drawing = useStore((s) => s.drawing);
@@ -626,6 +634,21 @@ function App() {
     { kind: "item", label: "Salvar como…", shortcut: "Ctrl+Shift+S", onClick: handleSaveAs },
     { kind: "sep" },
     { kind: "item", label: "Importar PPTX…", onClick: handleImportPptx },
+    { kind: "sep" },
+    {
+      kind: "sub",
+      label: "Redimensionar (mágico)",
+      items: ASPECT_PICKER.map((a) => ({
+        kind: "item" as const,
+        label: a.label,
+        onClick: () => {
+          if (deck.size.w === a.size.w && deck.size.h === a.size.h) return;
+          if (window.confirm(`Redimensionar a apresentação para ${a.label}?\nCada elemento é reposicionado proporcionalmente.`)) {
+            resizeDeck(a.kind);
+          }
+        },
+      })),
+    },
     { kind: "sep" },
     {
       kind: "sub",

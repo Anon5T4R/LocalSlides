@@ -23,6 +23,7 @@ import { THEME_PRESETS, findThemePreset } from "../model/themes";
 import { LAYOUTS } from "../model/layouts";
 import { ColorPicker } from "../ui/ColorPicker";
 import { TEXT_EFFECT_PRESETS } from "../render/textEffects";
+import { loadBrandKits, saveBrandKit, removeBrandKit, type BrandKit } from "../lib/brandKit";
 
 const ANIMS: { value: AnimKind; label: string }[] = [
   { value: "none", label: "Nenhuma" },
@@ -1115,6 +1116,7 @@ function SlideInspector() {
   const applyLayout = useStore((s) => s.applyLayout);
   const addSlide = useStore((s) => s.addSlide);
   const slide = findSlide(deck, currentSlideId);
+  const [brandKits, setBrandKits] = useState<BrandKit[]>(() => loadBrandKits());
   if (!slide) return null;
 
   const themeColors = Object.values(deck.theme.colors) as string[];
@@ -1140,6 +1142,42 @@ function SlideInspector() {
           </button>
         ))}
       </div>
+      </Section>
+
+      <Section title="Kit de marca">
+      <div className="insp-themes">
+        {brandKits.map((k) => (
+          <div key={k.id} className="brand-kit-row">
+            <button
+              className="theme-swatch"
+              title={k.name}
+              onClick={() => setTheme(k.theme)}
+              style={{ background: k.theme.colors.bg, color: k.theme.colors.text }}
+            >
+              <span className="theme-dot" style={{ background: k.theme.colors.accent1 }} />
+              <span className="theme-dot" style={{ background: k.theme.colors.accent2 }} />
+              <span className="theme-name" style={{ fontFamily: k.theme.fonts.heading }}>{k.name}</span>
+            </button>
+            <button
+              className="insp-mini"
+              title="Remover deste kit de marca"
+              onClick={() => setBrandKits(removeBrandKit(k.id))}
+            >
+              🗑
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        className="insp-mini"
+        title="Salvar as cores e fontes atuais como um kit de marca reutilizável"
+        onClick={() => {
+          const name = window.prompt("Nome do kit de marca:", "Minha marca");
+          if (name) setBrandKits(saveBrandKit(name, deck.theme));
+        }}
+      >
+        ＋ Salvar marca atual
+      </button>
       </Section>
 
       <Section title="Layout do slide">
