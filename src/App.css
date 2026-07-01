@@ -1178,6 +1178,31 @@ body {
   padding-bottom: 10px;
 }
 
+/* --- Text effect presets (Onda 10) --- */
+.insp-effect-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.insp-effect-btn {
+  font: inherit;
+  font-size: 10.5px;
+  padding: 6px 2px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.insp-effect-btn:hover {
+  border-color: var(--accent);
+}
+.insp-effect-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 /* --- Collapsible + resizable right panel --- */
 .right-pane {
   position: relative;

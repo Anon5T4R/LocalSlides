@@ -9,6 +9,7 @@ import { fillToCss } from "./fill";
 import { ChartView } from "./ChartView";
 import { RenderPM } from "./renderPM";
 import { AutoFitText } from "./AutoFitText";
+import { textEffectStyle } from "./textEffects";
 import {
   StrokeDefs,
   dashArrayFor,
@@ -471,6 +472,7 @@ export function ElementView({
           lineHeight: 1.25,
           color: theme.colors.text,
           background: textBg,
+          ...textEffectStyle(el.effect, theme.colors.text),
         }}
       >
         <AutoFitText

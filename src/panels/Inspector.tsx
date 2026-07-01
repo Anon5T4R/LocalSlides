@@ -22,6 +22,7 @@ import {
 import { THEME_PRESETS, findThemePreset } from "../model/themes";
 import { LAYOUTS } from "../model/layouts";
 import { ColorPicker } from "../ui/ColorPicker";
+import { TEXT_EFFECT_PRESETS } from "../render/textEffects";
 
 const ANIMS: { value: AnimKind; label: string }[] = [
   { value: "none", label: "Nenhuma" },
@@ -530,6 +531,53 @@ function ElementInspector({ el }: { el: Element }) {
           allowNone
           allowImage
         />
+      )}
+
+      {/* Text effects (Onda 10) */}
+      {el.type === "text" && (
+        <Section title="Efeitos">
+          <div className="insp-effect-grid">
+            {TEXT_EFFECT_PRESETS.map((p) => (
+              <button
+                key={p.kind}
+                className={"insp-effect-btn" + ((el.effect?.kind ?? "none") === p.kind ? " active" : "")}
+                onClick={() =>
+                  set(
+                    (x) =>
+                      x.type === "text" &&
+                      (x.effect = p.kind === "none" ? undefined : { kind: p.kind, intensity: 50, color: x.effect?.color })
+                  )
+                }
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {el.effect && el.effect.kind !== "none" && (
+            <>
+              <Row label="Intensidade">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={el.effect.intensity ?? 50}
+                  onChange={(e) =>
+                    set((x) => x.type === "text" && x.effect && (x.effect.intensity = Number(e.target.value)))
+                  }
+                />
+              </Row>
+              {["splice", "echo", "neon", "glow"].includes(el.effect.kind) && (
+                <Row label="Cor">
+                  <ColorPicker
+                    value={el.effect.color ?? theme.colors.accent1}
+                    themeColors={themeColors}
+                    onChange={(c) => set((x) => x.type === "text" && x.effect && (x.effect.color = c))}
+                  />
+                </Row>
+              )}
+            </>
+          )}
+        </Section>
       )}
 
       {/* Animation */}

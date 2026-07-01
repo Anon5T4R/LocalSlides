@@ -117,6 +117,17 @@ export interface Base {
   flipV?: boolean;
 }
 
+/** Canva-style text effect presets, applied to the whole box (Onda 10). */
+export type TextEffectKind = "none" | "shadow" | "lift" | "hollow" | "splice" | "echo" | "neon" | "glow";
+
+export interface TextEffect {
+  kind: TextEffectKind;
+  /** Accent color used by splice/echo/neon/glow (defaults to the theme accent). */
+  color?: string;
+  /** 0..100, controls offset/blur strength. */
+  intensity?: number;
+}
+
 export interface TextBox extends Base {
   type: "text";
   content: ProseMirrorJSON;
@@ -127,6 +138,8 @@ export interface TextBox extends Base {
   autoFit?: boolean;
   /** Background fill for the text box. */
   fill?: Fill;
+  /** Canva-style whole-box text effect (shadow/hollow/neon/…). */
+  effect?: TextEffect;
 }
 
 /** Crop rectangle as fractions (0..1) of the natural image. Undefined = full. */

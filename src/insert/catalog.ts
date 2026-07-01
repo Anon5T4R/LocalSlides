@@ -8,6 +8,8 @@ import {
   newIcon,
   newShape,
   newTable,
+  newTextBox,
+  plainTextToPM,
   type ChartKind,
   type Deck,
   type Element,
@@ -60,6 +62,56 @@ export const INSERT_CATALOG: InsertItem[] = [
     tags: ["texto", "text", "caixa"],
     glyph: "T",
     make: (deck) => newFreeTextBox(deck),
+  },
+  {
+    id: "text:title",
+    label: "Adicionar título",
+    tab: "text",
+    tags: ["texto", "text", "título", "titulo", "heading"],
+    glyph: "𝐓",
+    make: (deck) => {
+      const w = Math.min(880, deck.size.w * 0.7);
+      const h = 110;
+      return newTextBox({
+        geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
+        placeholder: "title",
+        vAlign: "middle",
+        content: plainTextToPM("Adicione um título"),
+      });
+    },
+  },
+  {
+    id: "text:subtitle",
+    label: "Adicionar subtítulo",
+    tab: "text",
+    tags: ["texto", "text", "subtítulo", "subtitulo"],
+    glyph: "𝐭",
+    make: (deck) => {
+      const w = Math.min(720, deck.size.w * 0.6);
+      const h = 70;
+      return newTextBox({
+        geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
+        vAlign: "top",
+        content: plainTextToPM("Adicione um subtítulo"),
+      });
+    },
+  },
+  {
+    id: "text:body",
+    label: "Adicionar corpo de texto",
+    tab: "text",
+    tags: ["texto", "text", "corpo", "parágrafo", "paragrafo"],
+    glyph: "¶",
+    make: (deck) => {
+      const w = Math.min(880, deck.size.w * 0.7);
+      const h = 200;
+      return newTextBox({
+        geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
+        placeholder: "body",
+        vAlign: "top",
+        content: plainTextToPM("Adicione um pouco de texto ao seu design."),
+      });
+    },
   },
   ...SHAPE_PICKER.map((s): InsertItem => ({
     id: `shape:${s.kind}`,
