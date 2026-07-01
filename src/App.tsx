@@ -534,6 +534,30 @@ function App() {
     [addElement, addAsset]
   );
 
+  // ---- Paste an image from the OS clipboard (Ctrl+V of a screenshot/copy) ----
+  // Onda 14: a native `paste` event carries files the keydown Ctrl+V handler
+  // (which only drives the app's own element clipboard) can't see. Skipped
+  // while actively editing text so a normal text paste isn't hijacked.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const inField = !!t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA");
+      if (inField) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageItem = [...items].find((it) => it.kind === "file" && it.type.startsWith("image/"));
+      if (!imageItem) return;
+      const file = imageItem.getAsFile();
+      if (!file) return;
+      e.preventDefault();
+      const reader = new FileReader();
+      reader.onload = () => dropImageAt(String(reader.result));
+      reader.readAsDataURL(file);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [dropImageAt]);
+
   // Browser fallback (works in the dev preview).
   useEffect(() => {
     if (inTauri()) return;
