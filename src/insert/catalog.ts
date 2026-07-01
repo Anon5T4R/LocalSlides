@@ -3,6 +3,7 @@
 // list of shapes/icons/charts/tables never drifts between the two UIs.
 
 import {
+  makeId,
   newChart,
   newFreeTextBox,
   newIcon,
@@ -13,6 +14,7 @@ import {
   type ChartKind,
   type Deck,
   type Element,
+  type ShapeEl,
   type ShapeKind,
 } from "../model/deck";
 import { ICONS } from "../model/icons";
@@ -53,6 +55,29 @@ export const CHART_PICKER: { kind: ChartKind; label: string; glyph: string }[] =
   { kind: "line", label: "Linhas", glyph: "📈" },
   { kind: "pie", label: "Pizza", glyph: "🥧" },
 ];
+
+/**
+ * "Frames" (Onda 8.3) reuse the plain shape + fill:image machinery instead of a
+ * new element type: a dashed placeholder shape that fills with a photo the
+ * moment one is dropped on it (see App.tsx `dropImageAt`, which already
+ * targets any shape under the cursor).
+ */
+export const FRAME_PICKER: { kind: ShapeKind; label: string; w: number; h: number }[] = [
+  { kind: "roundRect", label: "Moldura retangular", w: 320, h: 320 },
+  { kind: "ellipse", label: "Moldura circular", w: 300, h: 300 },
+];
+
+function newFrame(deck: Deck, kind: ShapeKind, w: number, h: number): ShapeEl {
+  return {
+    id: makeId("shape"),
+    type: "shape",
+    geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
+    shape: kind,
+    fill: { kind: "solid", color: "#e2e8f0" },
+    stroke: { color: "#94a3b8", width: 2, style: "dash" },
+    text: plainTextToPM("Arraste uma foto aqui"),
+  };
+}
 
 export const INSERT_CATALOG: InsertItem[] = [
   {
@@ -121,11 +146,19 @@ export const INSERT_CATALOG: InsertItem[] = [
     glyph: s.glyph,
     make: (deck) => newShape(deck, s.kind),
   })),
+  ...FRAME_PICKER.map((f): InsertItem => ({
+    id: `frame:${f.kind}`,
+    label: f.label,
+    tab: "elements",
+    tags: ["moldura", "frame", "foto", f.label.toLowerCase()],
+    glyph: "🖼",
+    make: (deck) => newFrame(deck, f.kind, f.w, f.h),
+  })),
   ...ICONS.map((ic): InsertItem => ({
     id: `icon:${ic.name}`,
     label: ic.label,
     tab: "elements",
-    tags: ["ícone", "icon", "adesivo", ic.name, ic.label.toLowerCase()],
+    tags: ["ícone", "icon", "adesivo", ic.name, ic.label.toLowerCase(), ic.category ?? "", ...(ic.tags ?? [])],
     iconPath: ic.path,
     make: (deck) => newIcon(deck, ic.path),
   })),
