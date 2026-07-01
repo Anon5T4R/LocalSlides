@@ -40,19 +40,35 @@ function SubMenuItem({
   onClose: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
-  const [flipLeft, setFlipLeft] = useState(false);
+  // Submenu is position:fixed so it escapes the parent menu's overflow clipping;
+  // coords are measured from the trigger row (flip left / clamp to viewport).
+  const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
 
-  // Open to the left instead if the submenu would overflow the right edge.
   useLayoutEffect(() => {
-    if (!open) return;
-    const r = popRef.current?.getBoundingClientRect();
-    if (r && r.right > window.innerWidth - 8) setFlipLeft(true);
-    else setFlipLeft(false);
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+    const trig = rowRef.current?.getBoundingClientRect();
+    if (!trig) return;
+    const pop = popRef.current?.getBoundingClientRect();
+    const pw = pop?.width || 200;
+    const ph = pop?.height || 0;
+    const margin = 8;
+    let left = trig.right; // touch the row (no gap → mouse can cross into it)
+    if (left + pw > window.innerWidth - margin) left = trig.left - pw; // flip to the left
+    left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
+    let top = trig.top - 4;
+    if (ph && top + ph > window.innerHeight - margin) top = window.innerHeight - ph - margin;
+    top = Math.max(margin, top);
+    setCoords({ left, top });
   }, [open]);
 
   return (
     <div
+      ref={rowRef}
       className={"menu-sub" + (open ? " open" : "")}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
@@ -63,7 +79,16 @@ function SubMenuItem({
         <span className="menu-arrow">›</span>
       </button>
       {open && (
-        <div ref={popRef} className={"menu-sub-popover" + (flipLeft ? " flip-left" : "")}>
+        <div
+          ref={popRef}
+          className="menu-sub-popover"
+          style={{
+            position: "fixed",
+            left: coords?.left ?? -9999,
+            top: coords?.top ?? -9999,
+            visibility: coords ? "visible" : "hidden",
+          }}
+        >
           <MenuItems items={item.items} onClose={onClose} />
         </div>
       )}
