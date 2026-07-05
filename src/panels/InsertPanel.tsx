@@ -3,12 +3,14 @@
 // centered), matching the old "Inserir ▾" menu behavior; dragging drops the
 // element at the cursor. EditorStage reads the same INSERT_MIME payload.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "../state/store";
-import { newImage, newVideo } from "../model/deck";
+import { newIcon, newImage, newVideo } from "../model/deck";
 import { pickImageDataUri, pickVideoDataUri } from "../lib/media";
 import { INSERT_CATALOG, INSERT_MIME, type InsertItem, type InsertTab } from "../insert/catalog";
+import { ICONS, type IconDef } from "../model/icons";
 import { TEMPLATES } from "../templates";
+import { DECK_TEMPLATES, buildDeckTemplate, themeForDeckTemplate } from "../templates/decks";
 import { SlideView } from "../render/SlideView";
 
 const TEMPLATE_THUMB_W = 220;
@@ -16,6 +18,7 @@ const TEMPLATE_THUMB_W = 220;
 const TABS: { id: InsertTab | "photos" | "templates"; label: string }[] = [
   { id: "elements", label: "Elementos" },
   { id: "text", label: "Texto" },
+  { id: "icons", label: "Ícones" },
   { id: "photos", label: "Fotos" },
   { id: "charts", label: "Gráficos" },
   { id: "tables", label: "Tabelas" },
@@ -122,40 +125,172 @@ function PhotosTab() {
   );
 }
 
+// Cache de módulo: o pack (7k+ ícones, chunk lazy) só é importado uma vez por
+// sessão, na primeira abertura da aba Ícones.
+let packCache: IconDef[] | null = null;
+
+const ICONS_GRID_MAX = 240;
+
+function IconsTab({ query }: { query: string }) {
+  const addElement = useStore((s) => s.addElement);
+  const [pack, setPack] = useState<IconDef[] | null>(packCache);
+
+  useEffect(() => {
+    if (packCache) return;
+    let alive = true;
+    import("../model/iconsPack").then(
+      (m) => {
+        packCache = m.ICONS_PACK;
+        if (alive) setPack(packCache);
+      },
+      () => {
+        /* pack indisponível — a aba segue só com os ícones core */
+      }
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const all = useMemo(() => (pack ? [...ICONS, ...pack] : ICONS), [pack]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter(
+      (ic) =>
+        ic.name.includes(q) ||
+        ic.label.toLowerCase().includes(q) ||
+        (ic.category ?? "").includes(q) ||
+        (ic.tags ?? []).some((t) => t.includes(q))
+    );
+  }, [all, query]);
+
+  const shown = filtered.length > ICONS_GRID_MAX ? filtered.slice(0, ICONS_GRID_MAX) : filtered;
+
+  return (
+    <div>
+      <div className="insert-grid">
+        {shown.map((ic) => (
+          <button
+            key={ic.name}
+            className="insert-item"
+            title={ic.label}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData(INSERT_MIME, JSON.stringify({ kind: "iconPath", path: ic.path }));
+              e.dataTransfer.effectAllowed = "copy";
+            }}
+            onClick={() => addElement(newIcon(useStore.getState().deck, ic.path))}
+          >
+            <span className="insert-item-glyph">
+              <svg viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
+                <path d={ic.path} />
+              </svg>
+            </span>
+            <span className="insert-item-label">{ic.label}</span>
+          </button>
+        ))}
+      </div>
+      {!pack && <p className="insert-empty">Carregando pack completo de ícones…</p>}
+      {filtered.length > ICONS_GRID_MAX && (
+        <p className="insert-empty">
+          Mostrando {ICONS_GRID_MAX} de {filtered.length} ícones — refine a busca.
+        </p>
+      )}
+      {filtered.length === 0 && <p className="insert-empty">Nada encontrado.</p>}
+    </div>
+  );
+}
+
+const TEMPLATE_CATEGORIES = ["Capa", "Conteúdo", "Dados", "Encerramento"] as const;
+
+function TemplateThumb({
+  elements,
+  background,
+  deck,
+}: {
+  elements: React.ComponentProps<typeof SlideView>["slide"]["elements"];
+  background?: React.ComponentProps<typeof SlideView>["slide"]["background"];
+  deck: ReturnType<typeof useStore.getState>["deck"];
+}) {
+  const scale = TEMPLATE_THUMB_W / deck.size.w;
+  return (
+    <div className="template-thumb" style={{ width: TEMPLATE_THUMB_W, height: deck.size.h * scale }}>
+      <div
+        style={{
+          width: deck.size.w,
+          height: deck.size.h,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          pointerEvents: "none",
+        }}
+      >
+        <SlideView slide={{ id: "tpl-preview", elements, background }} deck={deck} />
+      </div>
+    </div>
+  );
+}
+
 function TemplatesTab() {
   const deck = useStore((s) => s.deck);
   const addTemplateSlide = useStore((s) => s.addTemplateSlide);
-  const scale = TEMPLATE_THUMB_W / deck.size.w;
+  const newDeckFromTemplate = useStore((s) => s.newDeckFromTemplate);
+
+  const startDeck = (id: string, name: string) => {
+    const { dirty } = useStore.getState();
+    if (
+      dirty &&
+      !window.confirm(`Criar a apresentação "${name}"?\nA apresentação atual será substituída (alterações não salvas serão perdidas).`)
+    ) {
+      return;
+    }
+    newDeckFromTemplate(id);
+  };
 
   return (
     <div className="insert-templates">
-      {TEMPLATES.map((tpl) => {
-        const { elements, background } = tpl.build(deck);
+      <div className="template-section">Apresentações completas</div>
+      {DECK_TEMPLATES.map((dt) => {
+        const theme = themeForDeckTemplate(dt) ?? deck.theme;
+        const previewDeck = { ...deck, theme };
+        const first = buildDeckTemplate(dt, previewDeck)[0];
         return (
           <button
-            key={tpl.id}
+            key={dt.id}
             className="template-item"
-            title={`Inserir slide "${tpl.name}"`}
-            onClick={() => addTemplateSlide(tpl.id)}
+            title={dt.description}
+            onClick={() => startDeck(dt.id, dt.name)}
           >
-            <div
-              className="template-thumb"
-              style={{ width: TEMPLATE_THUMB_W, height: deck.size.h * scale }}
-            >
-              <div
-                style={{
-                  width: deck.size.w,
-                  height: deck.size.h,
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top left",
-                  pointerEvents: "none",
-                }}
-              >
-                <SlideView slide={{ id: "tpl-preview", elements, background }} deck={deck} />
-              </div>
-            </div>
-            <span className="template-label">{tpl.name}</span>
+            {first && <TemplateThumb elements={first.elements} background={first.background} deck={previewDeck} />}
+            <span className="template-label">
+              {dt.name} · {dt.slides.length} slides
+            </span>
           </button>
+        );
+      })}
+
+      {TEMPLATE_CATEGORIES.map((cat) => {
+        const tpls = TEMPLATES.filter((t) => t.category === cat);
+        if (!tpls.length) return null;
+        return (
+          <div key={cat} className="template-group">
+            <div className="template-section">{cat}</div>
+            {tpls.map((tpl) => {
+              const { elements, background } = tpl.build(deck);
+              return (
+                <button
+                  key={tpl.id}
+                  className="template-item"
+                  title={`Inserir slide "${tpl.name}"`}
+                  onClick={() => addTemplateSlide(tpl.id)}
+                >
+                  <TemplateThumb elements={elements} background={background} deck={deck} />
+                  <span className="template-label">{tpl.name}</span>
+                </button>
+              );
+            })}
+          </div>
         );
       })}
     </div>
@@ -212,6 +347,8 @@ export function InsertPanel({ onClose }: { onClose: () => void }) {
           <PhotosTab />
         ) : tab === "templates" ? (
           <TemplatesTab />
+        ) : tab === "icons" ? (
+          <IconsTab query={query} />
         ) : (
           <CatalogGrid items={filtered} onInsert={insert} />
         )}

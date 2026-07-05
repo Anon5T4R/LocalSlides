@@ -36,6 +36,7 @@ import { registerEmbeddedFont } from "../lib/fonts";
 import type { EmbeddedFont } from "../model/deck";
 import { buildLayout } from "../model/layouts";
 import { findTemplate } from "../templates";
+import { buildDeckTemplate, findDeckTemplate, themeForDeckTemplate } from "../templates/decks";
 
 const HISTORY_LIMIT = 100;
 
@@ -96,6 +97,8 @@ export interface SlidesState {
   // document lifecycle
   loadDeck: (deck: Deck, filePath: string | null) => void;
   resetDeck: () => void;
+  /** Onda 17.3 — new deck from a full-deck template (theme + slide sequence). */
+  newDeckFromTemplate: (deckTemplateId: string) => void;
   markSaved: (filePath?: string) => void;
   setTheme: (theme: Theme) => void;
   /** Onda 15.2 "Magic resize": rescale the deck to another aspect ratio,
@@ -303,6 +306,17 @@ export const useStore = create<SlidesState>((set, get) => ({
 
   resetDeck: () => {
     const deck = newDeck("16:9");
+    get().loadDeck(deck, null);
+  },
+
+  newDeckFromTemplate: (deckTemplateId) => {
+    const tpl = findDeckTemplate(deckTemplateId);
+    if (!tpl) return;
+    const deck = newDeck("16:9");
+    const theme = themeForDeckTemplate(tpl);
+    if (theme) deck.theme = structuredClone(theme);
+    const slides = buildDeckTemplate(tpl, deck);
+    if (slides.length) deck.slides = slides;
     get().loadDeck(deck, null);
   },
 

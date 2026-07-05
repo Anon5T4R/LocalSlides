@@ -10,6 +10,7 @@ import { ChartView } from "./ChartView";
 import { RenderPM } from "./renderPM";
 import { AutoFitText } from "./AutoFitText";
 import { textEffectStyle } from "./textEffects";
+import { CurvedText } from "./CurvedText";
 import {
   StrokeDefs,
   dashArrayFor,
@@ -96,6 +97,33 @@ function polygonVerts(w: number, h: number, n: number, rotDeg = -90): [number, n
     pts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
   }
   return pts;
+}
+
+/** Organic blob outlines (Onda 17.5): normalized cubic paths scaled to the box. */
+function blobPath(kind: "blob1" | "blob2" | "blob3", w: number, h: number): string {
+  // [startX,startY, then repeating c1x,c1y,c2x,c2y,x,y] in 0..1 space.
+  const B: Record<typeof kind, number[]> = {
+    blob1: [
+      0.76, 0.12, 0.9, 0.2, 0.98, 0.38, 0.95, 0.55, 0.92, 0.72, 0.79, 0.87, 0.62, 0.93, 0.45, 0.99, 0.25, 0.95,
+      0.13, 0.83, 0.01, 0.71, 0.0, 0.52, 0.05, 0.36, 0.1, 0.2, 0.23, 0.07, 0.4, 0.03, 0.54, 0.0, 0.65, 0.05, 0.76,
+      0.12,
+    ],
+    blob2: [
+      0.84, 0.25, 0.95, 0.4, 1.0, 0.62, 0.9, 0.76, 0.8, 0.9, 0.56, 0.96, 0.37, 0.91, 0.18, 0.86, 0.05, 0.71, 0.03,
+      0.54, 0.01, 0.37, 0.09, 0.17, 0.25, 0.08, 0.41, -0.01, 0.63, 0.02, 0.74, 0.11, 0.8, 0.16, 0.77, 0.15, 0.84,
+      0.25,
+    ],
+    blob3: [
+      0.88, 0.42, 0.95, 0.58, 0.9, 0.79, 0.75, 0.88, 0.6, 0.97, 0.37, 0.95, 0.23, 0.85, 0.09, 0.75, 0.03, 0.57,
+      0.08, 0.41, 0.13, 0.25, 0.27, 0.13, 0.44, 0.09, 0.63, 0.05, 0.82, 0.26, 0.88, 0.42,
+    ],
+  };
+  const v = B[kind];
+  let d = `M ${v[0] * w} ${v[1] * h}`;
+  for (let k = 2; k + 5 < v.length + 1; k += 6) {
+    d += ` C ${v[k] * w} ${v[k + 1] * h} ${v[k + 2] * w} ${v[k + 3] * h} ${v[k + 4] * w} ${v[k + 5] * h}`;
+  }
+  return d + " Z";
 }
 
 function starVerts(w: number, h: number): [number, number][] {
@@ -322,6 +350,54 @@ function ShapeSvg({ el }: { el: ShapeEl }) {
       );
       break;
     }
+    // Onda 17.5 — blobs orgânicos (paths cúbicos normalizados escalados pelo box).
+    case "blob1":
+    case "blob2":
+    case "blob3":
+      shape = <path d={blobPath(el.shape, w, h)} {...common} />;
+      break;
+    // Onda 17.5 — linhas decorativas (stroke-only, como "line").
+    case "wave": {
+      const cy = h / 2;
+      const amp = Math.max(4, h * 0.35);
+      const q = w / 8;
+      const d = `M ${i} ${cy} Q ${q} ${cy - amp} ${q * 2} ${cy} T ${q * 4} ${cy} T ${q * 6} ${cy} T ${w - i} ${cy}`;
+      shape = (
+        <path
+          d={d}
+          fill="none"
+          stroke={stroke === "none" ? (fill === "none" ? "#94a3b8" : fill) : stroke}
+          strokeWidth={Math.max(sw, 3)}
+          strokeDasharray={dash}
+          filter={filterId ? `url(#${filterId})` : undefined}
+          strokeLinecap="round"
+        />
+      );
+      break;
+    }
+    case "zigzag": {
+      const amp = Math.max(4, h * 0.35);
+      const n = 8;
+      const pts: string[] = [];
+      for (let k = 0; k <= n; k++) {
+        const x = i + ((w - 2 * i) / n) * k;
+        const y = h / 2 + (k % 2 === 0 ? amp : -amp);
+        pts.push(`${x},${y}`);
+      }
+      shape = (
+        <polyline
+          points={pts.join(" ")}
+          fill="none"
+          stroke={stroke === "none" ? (fill === "none" ? "#94a3b8" : fill) : stroke}
+          strokeWidth={Math.max(sw, 3)}
+          strokeDasharray={dash}
+          filter={filterId ? `url(#${filterId})` : undefined}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      );
+      break;
+    }
     default:
       shape = <rect x={i} y={i} width={iw} height={ih} {...common} />;
   }
@@ -481,29 +557,40 @@ export function ElementView({
   if (el.type === "text") {
     const isTitle = el.placeholder === "title";
     const textBg = fillToCss(el.fill);
+    const curved = !!el.curve && Math.abs(el.curve) >= 2;
     return (
       <div
         style={{
           ...base,
-          overflow: "hidden",
+          overflow: curved ? "visible" : "hidden",
           fontFamily: isTitle ? theme.fonts.heading : theme.fonts.body,
           fontSize: isTitle ? 40 : 24,
           fontWeight: isTitle ? 700 : 400,
           lineHeight: 1.25,
           color: theme.colors.text,
           background: textBg,
-          ...textEffectStyle(el.effect, theme.colors.text),
+          // Curvado desenha em SVG próprio; efeitos CSS de texto não se aplicam lá.
+          ...(curved
+            ? {}
+            : textEffectStyle(el.effect, theme.colors.text, {
+                a1: theme.colors.accent1,
+                a2: theme.colors.accent2,
+              })),
         }}
       >
-        <AutoFitText
-          vAlign={el.vAlign ?? "top"}
-          // An explicit font size wins over shrink-to-fit: stop auto-shrinking
-          // so the chosen size is respected (clear it back to "Auto" to re-enable).
-          enabled={el.autoFit !== false && !pmHasExplicitFontSize(el.content)}
-          contentKey={JSON.stringify(el.content)}
-        >
-          <RenderPM doc={el.content} />
-        </AutoFitText>
+        {curved ? (
+          <CurvedText el={el} theme={theme} />
+        ) : (
+          <AutoFitText
+            vAlign={el.vAlign ?? "top"}
+            // An explicit font size wins over shrink-to-fit: stop auto-shrinking
+            // so the chosen size is respected (clear it back to "Auto" to re-enable).
+            enabled={el.autoFit !== false && !pmHasExplicitFontSize(el.content)}
+            contentKey={JSON.stringify(el.content)}
+          >
+            <RenderPM doc={el.content} />
+          </AutoFitText>
+        )}
       </div>
     );
   }

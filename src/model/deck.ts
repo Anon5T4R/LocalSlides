@@ -121,14 +121,25 @@ export interface Base {
   alt?: string;
 }
 
-/** Canva-style text effect presets, applied to the whole box (Onda 10). */
-export type TextEffectKind = "none" | "shadow" | "lift" | "hollow" | "splice" | "echo" | "neon" | "glow";
+/** Canva-style text effect presets, applied to the whole box (Onda 10 + 17.4). */
+export type TextEffectKind =
+  | "none"
+  | "shadow"
+  | "lift"
+  | "hollow"
+  | "splice"
+  | "echo"
+  | "neon"
+  | "glow"
+  | "gradient";
 
 export interface TextEffect {
   kind: TextEffectKind;
-  /** Accent color used by splice/echo/neon/glow (defaults to the theme accent). */
+  /** Accent color used by splice/echo/neon/glow; start color for gradient (defaults to theme accents). */
   color?: string;
-  /** 0..100, controls offset/blur strength. */
+  /** End color for the gradient effect (Onda 17.4). */
+  color2?: string;
+  /** 0..100, controls offset/blur strength (gradient: rotation angle). */
   intensity?: number;
 }
 
@@ -144,6 +155,9 @@ export interface TextBox extends Base {
   fill?: Fill;
   /** Canva-style whole-box text effect (shadow/hollow/neon/…). */
   effect?: TextEffect;
+  /** Curvatura do texto (Onda 17.4): -100 (côncavo) .. 100 (arco). 0/undefined = reto.
+   * Renderizado via SVG textPath a partir do texto plano; a edição continua reta. */
+  curve?: number;
 }
 
 /** Crop rectangle as fractions (0..1) of the natural image. Undefined = full. */
@@ -206,7 +220,13 @@ export type ShapeKind =
   | "hexagon"
   | "star"
   | "speech"
-  | "thought";
+  | "thought"
+  // Onda 17.5 — formas orgânicas e linhas decorativas
+  | "blob1"
+  | "blob2"
+  | "blob3"
+  | "wave"
+  | "zigzag";
 
 export interface ShapeEl extends Base {
   type: "shape";
@@ -548,16 +568,19 @@ export function newTable(deck: Deck, rows = 3, cols = 3): TableEl {
 }
 
 export function newShape(deck: Deck, shape: ShapeKind): ShapeEl {
+  const isBlob = shape === "blob1" || shape === "blob2" || shape === "blob3";
+  const isDecoLine = shape === "wave" || shape === "zigzag";
   const w = 320;
-  const h = 220;
+  const h = isDecoLine ? 64 : 220;
   return {
     id: makeId("shape"),
     type: "shape",
     geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
     shape,
-    // No fill by default — just an outline (still editable/fillable in the Inspector).
-    fill: { kind: "none" },
-    stroke: { color: deck.theme.colors.accent1, width: 2, style: "solid" },
+    // Blobs nascem preenchidos (uso típico: mancha decorativa de fundo); as
+    // demais formas nascem só com contorno, editáveis no Inspector.
+    fill: isBlob ? { kind: "solid", color: deck.theme.colors.accent1 } : { kind: "none" },
+    stroke: isBlob ? undefined : { color: deck.theme.colors.accent1, width: 2, style: "solid" },
   };
 }
 

@@ -16,7 +16,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useStore, expandToGroups } from "../state/store";
-import { findSlide, makeId, newImage, newVideo, type Element, type Geom } from "../model/deck";
+import { findSlide, makeId, newIcon, newImage, newVideo, type Element, type Geom } from "../model/deck";
 import { INSERT_CATALOG, INSERT_MIME, type InsertDragPayload } from "../insert/catalog";
 import { ContextMenu, type CtxItemDef } from "../ui/ContextMenu";
 import { SlideView } from "../render/SlideView";
@@ -437,6 +437,8 @@ export function EditorStage() {
       const el: Element | null =
         payload.kind === "catalog"
           ? INSERT_CATALOG.find((it) => it.id === payload.id)?.make(d) ?? null
+          : payload.kind === "iconPath"
+          ? newIcon(d, payload.path)
           : payload.assetKind === "video"
           ? newVideo(d, payload.src)
           : newImage(d, payload.src);

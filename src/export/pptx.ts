@@ -190,6 +190,12 @@ const SHAPE_TYPE: Record<ShapeEl["shape"], string> = {
   star: "star5",
   speech: "wedgeRectCallout",
   thought: "cloudCallout",
+  // Onda 17.5 — sem preset OOXML equivalente: degradar para o mais próximo.
+  blob1: "ellipse",
+  blob2: "ellipse",
+  blob3: "ellipse",
+  wave: "wave",
+  zigzag: "line",
 };
 
 function addShape(s: AnySlide, el: ShapeEl) {

@@ -16,10 +16,21 @@ export interface ThemePreset {
   theme: Theme;
 }
 
+// Pilhas das fontes embutidas (OFL via @fontsource — lib/embeddedFonts.ts).
+// Cada tema agora tem um par heading/body próprio, estilo "font pairing" de
+// template de design, em vez de Inter para tudo.
 const SANS = "Inter, system-ui, sans-serif";
-const SERIF = "Georgia, 'Times New Roman', serif";
 const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace";
-const ROUNDED = "'Trebuchet MS', 'Segoe UI', system-ui, sans-serif";
+const POPPINS = "Poppins, system-ui, sans-serif";
+const MONTSERRAT = "Montserrat, system-ui, sans-serif";
+const DMSANS = "'DM Sans', system-ui, sans-serif";
+const NUNITO = "Nunito, system-ui, sans-serif";
+const RALEWAY = "Raleway, system-ui, sans-serif";
+const GROTESK = "'Space Grotesk', system-ui, sans-serif";
+const OSWALD = "Oswald, Impact, sans-serif";
+const PLAYFAIR = "'Playfair Display', Georgia, serif";
+const LORA = "Lora, Georgia, serif";
+const CAVEAT = "Caveat, 'Comic Sans MS', cursive";
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
@@ -27,7 +38,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Claro",
     theme: {
       colors: { bg: "#ffffff", text: "#1e293b", accent1: "#2563eb", accent2: "#0ea5e9" },
-      fonts: { heading: SANS, body: SANS },
+      fonts: { heading: POPPINS, body: SANS },
     },
   },
   {
@@ -35,7 +46,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Escuro",
     theme: {
       colors: { bg: "#0f172a", text: "#e2e8f0", accent1: "#38bdf8", accent2: "#818cf8" },
-      fonts: { heading: SANS, body: SANS },
+      fonts: { heading: MONTSERRAT, body: SANS },
     },
   },
   {
@@ -43,7 +54,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Carvão",
     theme: {
       colors: { bg: "#1c1917", text: "#f5f5f4", accent1: "#f59e0b", accent2: "#fb7185" },
-      fonts: { heading: SANS, body: SANS },
+      fonts: { heading: OSWALD, body: SANS },
     },
   },
   {
@@ -51,7 +62,31 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Oceano",
     theme: {
       colors: { bg: "#ecfeff", text: "#0e3a4a", accent1: "#0891b2", accent2: "#2563eb" },
-      fonts: { heading: ROUNDED, body: SANS },
+      fonts: { heading: NUNITO, body: NUNITO },
+    },
+  },
+  {
+    id: "startup",
+    name: "Startup",
+    theme: {
+      colors: { bg: "#fafafa", text: "#111827", accent1: "#7c3aed", accent2: "#06b6d4" },
+      fonts: { heading: GROTESK, body: DMSANS },
+    },
+  },
+  {
+    id: "elegante",
+    name: "Elegante",
+    theme: {
+      colors: { bg: "#171717", text: "#fafafa", accent1: "#d4af37", accent2: "#a3a3a3" },
+      fonts: { heading: PLAYFAIR, body: RALEWAY },
+    },
+  },
+  {
+    id: "manuscrito",
+    name: "Manuscrito",
+    theme: {
+      colors: { bg: "#fffbeb", text: "#44403c", accent1: "#d97706", accent2: "#65a30d" },
+      fonts: { heading: CAVEAT, body: NUNITO },
     },
   },
   {
@@ -59,7 +94,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Pôr do sol",
     theme: {
       colors: { bg: "#fff7ed", text: "#7c2d12", accent1: "#ea580c", accent2: "#db2777" },
-      fonts: { heading: ROUNDED, body: SANS },
+      fonts: { heading: RALEWAY, body: NUNITO },
     },
   },
   {
@@ -67,7 +102,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Floresta",
     theme: {
       colors: { bg: "#f0fdf4", text: "#14532d", accent1: "#16a34a", accent2: "#0d9488" },
-      fonts: { heading: SANS, body: SANS },
+      fonts: { heading: LORA, body: SANS },
     },
   },
   {
@@ -75,7 +110,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Ameixa",
     theme: {
       colors: { bg: "#1e1b2e", text: "#ede9fe", accent1: "#a78bfa", accent2: "#f472b6" },
-      fonts: { heading: SANS, body: SANS },
+      fonts: { heading: PLAYFAIR, body: DMSANS },
     },
   },
   {
@@ -83,7 +118,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     name: "Editorial",
     theme: {
       colors: { bg: "#faf8f5", text: "#292524", accent1: "#b45309", accent2: "#1d4ed8" },
-      fonts: { heading: SERIF, body: SERIF },
+      fonts: { heading: PLAYFAIR, body: LORA },
     },
   },
   {

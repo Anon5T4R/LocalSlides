@@ -14,9 +14,15 @@ export const TEXT_EFFECT_PRESETS: { kind: TextEffect["kind"]; label: string }[] 
   { kind: "echo", label: "Eco" },
   { kind: "neon", label: "Neon" },
   { kind: "glow", label: "Brilho" },
+  { kind: "gradient", label: "Gradiente" },
 ];
 
-export function textEffectStyle(effect: TextEffect | undefined, baseColor: string): CSSProperties {
+export function textEffectStyle(
+  effect: TextEffect | undefined,
+  baseColor: string,
+  /** Theme accents, used as gradient defaults (Onda 17.4). */
+  accents?: { a1: string; a2: string }
+): CSSProperties {
   if (!effect || effect.kind === "none") return {};
   const t = (effect.intensity ?? 50) / 100; // 0..1
   const color = effect.color ?? baseColor;
@@ -46,6 +52,20 @@ export function textEffectStyle(effect: TextEffect | undefined, baseColor: strin
     }
     case "glow":
       return { textShadow: `0 0 ${6 + t * 18}px ${color}` };
+    case "gradient": {
+      // background-clip:text no wrapper pinta o texto dos descendentes; spans com
+      // cor explícita continuam sólidos (mesma degradação do Canva).
+      const from = effect.color ?? accents?.a1 ?? baseColor;
+      const to = effect.color2 ?? accents?.a2 ?? baseColor;
+      const angle = Math.round(t * 360); // intensidade vira rotação do gradiente
+      return {
+        background: `linear-gradient(${angle}deg, ${from}, ${to})`,
+        WebkitBackgroundClip: "text",
+        backgroundClip: "text",
+        color: "transparent",
+        WebkitTextFillColor: "transparent",
+      } as CSSProperties;
+    }
     default:
       return {};
   }

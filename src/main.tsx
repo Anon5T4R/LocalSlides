@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import App from "./App";
 import { PresenterWindow } from "./present/PresenterWindow";
 import { inTauri } from "./lib/env";
+import "./lib/embeddedFonts";
 import "./App.css";
 
 // The presenter window (Onda 11.1) loads the very same index.html but under

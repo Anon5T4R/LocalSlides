@@ -766,7 +766,7 @@ function ElementInspector({ el }: { el: Element }) {
           </div>
           {el.effect && el.effect.kind !== "none" && (
             <>
-              <Row label="Intensidade">
+              <Row label={el.effect.kind === "gradient" ? "Ângulo" : "Intensidade"}>
                 <input
                   type="range"
                   min={0}
@@ -786,8 +786,39 @@ function ElementInspector({ el }: { el: Element }) {
                   />
                 </Row>
               )}
+              {el.effect.kind === "gradient" && (
+                <>
+                  <Row label="Cor inicial">
+                    <ColorPicker
+                      value={el.effect.color ?? theme.colors.accent1}
+                      themeColors={themeColors}
+                      onChange={(c) => set((x) => x.type === "text" && x.effect && (x.effect.color = c))}
+                    />
+                  </Row>
+                  <Row label="Cor final">
+                    <ColorPicker
+                      value={el.effect.color2 ?? theme.colors.accent2}
+                      themeColors={themeColors}
+                      onChange={(c) => set((x) => x.type === "text" && x.effect && (x.effect.color2 = c))}
+                    />
+                  </Row>
+                </>
+              )}
             </>
           )}
+          <Row label="Curvar">
+            <input
+              type="range"
+              min={-100}
+              max={100}
+              value={el.curve ?? 0}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                set((x) => x.type === "text" && (x.curve = Math.abs(v) < 2 ? undefined : v));
+              }}
+            />
+            <span className="insp-num">{el.curve ?? 0}</span>
+          </Row>
         </Section>
       )}
 

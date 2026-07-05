@@ -14,10 +14,26 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
 
-/** Curated, system-safe font stacks offered in the toolbar. */
+/** Curated font stacks offered in the toolbar. The first block is bundled with
+ *  the app (OFL via @fontsource — see lib/embeddedFonts.ts); the second is
+ *  system-safe fallbacks. */
 export const FONT_FAMILIES: { label: string; value: string }[] = [
   { label: "Padrão", value: "" },
+  // — Embutidas (sempre disponíveis, offline) —
   { label: "Inter", value: "Inter, system-ui, sans-serif" },
+  { label: "Poppins", value: "Poppins, system-ui, sans-serif" },
+  { label: "Montserrat", value: "Montserrat, system-ui, sans-serif" },
+  { label: "DM Sans", value: "'DM Sans', system-ui, sans-serif" },
+  { label: "Nunito", value: "Nunito, system-ui, sans-serif" },
+  { label: "Raleway", value: "Raleway, system-ui, sans-serif" },
+  { label: "Space Grotesk", value: "'Space Grotesk', system-ui, sans-serif" },
+  { label: "Oswald", value: "Oswald, Impact, sans-serif" },
+  { label: "Playfair Display", value: "'Playfair Display', Georgia, serif" },
+  { label: "Lora", value: "Lora, Georgia, serif" },
+  { label: "Merriweather", value: "Merriweather, Georgia, serif" },
+  { label: "Caveat", value: "Caveat, 'Comic Sans MS', cursive" },
+  { label: "JetBrains Mono", value: "'JetBrains Mono', ui-monospace, monospace" },
+  // — Fontes do sistema —
   { label: "Arial", value: "Arial, Helvetica, sans-serif" },
   { label: "Georgia", value: "Georgia, 'Times New Roman', serif" },
   { label: "Times", value: "'Times New Roman', Times, serif" },

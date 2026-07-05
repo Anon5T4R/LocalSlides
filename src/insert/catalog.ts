@@ -19,7 +19,7 @@ import {
 } from "../model/deck";
 import { ICONS } from "../model/icons";
 
-export type InsertTab = "elements" | "text" | "charts" | "tables";
+export type InsertTab = "elements" | "text" | "charts" | "tables" | "icons";
 
 export interface InsertItem {
   id: string;
@@ -48,6 +48,12 @@ export const SHAPE_PICKER: { kind: ShapeKind; label: string; glyph: string }[] =
   { kind: "line", label: "Linha", glyph: "—" },
   { kind: "speech", label: "Balão de fala", glyph: "💬" },
   { kind: "thought", label: "Balão de pensamento", glyph: "💭" },
+  // Onda 17.5 — orgânicos e linhas decorativas
+  { kind: "blob1", label: "Blob orgânico", glyph: "🫧" },
+  { kind: "blob2", label: "Blob irregular", glyph: "🌀" },
+  { kind: "blob3", label: "Blob suave", glyph: "🫘" },
+  { kind: "wave", label: "Linha ondulada", glyph: "〰" },
+  { kind: "zigzag", label: "Linha zigue-zague", glyph: "⚡" },
 ];
 
 export const CHART_PICKER: { kind: ChartKind; label: string; glyph: string }[] = [
@@ -160,7 +166,7 @@ export const INSERT_CATALOG: InsertItem[] = [
   ...ICONS.map((ic): InsertItem => ({
     id: `icon:${ic.name}`,
     label: ic.label,
-    tab: "elements",
+    tab: "icons",
     tags: ["ícone", "icon", "adesivo", ic.name, ic.label.toLowerCase(), ic.category ?? "", ...(ic.tags ?? [])],
     iconPath: ic.path,
     make: (deck) => newIcon(deck, ic.path),
@@ -188,4 +194,7 @@ export const INSERT_MIME = "application/x-localslides-insert";
 
 export type InsertDragPayload =
   | { kind: "catalog"; id: string }
-  | { kind: "asset"; assetKind: "image" | "video"; src: string };
+  | { kind: "asset"; assetKind: "image" | "video"; src: string }
+  // Ícone do pack grande (iconsPack.ts, lazy) — carrega o path direto no
+  // payload para o EditorStage não precisar do pack em memória.
+  | { kind: "iconPath"; path: string };
