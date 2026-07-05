@@ -624,6 +624,8 @@ body {
   background: var(--panel);
   border-left: 1px solid var(--border);
   overflow-y: auto;
+  /* Nunca rolar horizontalmente — conteúdo largo deve quebrar, não vazar. */
+  overflow-x: hidden;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -721,6 +723,7 @@ body {
 .insp-zorder,
 .insp-align {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 .insp-align {
@@ -757,6 +760,9 @@ body {
   flex: 0 0 auto;
   padding: 0 10px;
   height: 24px;
+  /* Rótulos longos ("Subir em cascata") não podem virar 3 linhas e vazar
+     sobre a seção seguinte — quebra vai entre botões (flex-wrap acima). */
+  white-space: nowrap;
 }
 .insp-zorder button:hover,
 .insp-mini:hover {
