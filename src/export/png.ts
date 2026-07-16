@@ -10,6 +10,7 @@ import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import type { Deck, Slide } from "../model/deck";
 import { SlideView } from "../render/SlideView";
 import { inTauri } from "../lib/env";
+import { t } from "../lib/i18n";
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
@@ -108,18 +109,18 @@ async function saveBinaryDataUrl(
 
 /** Save a PNG data URL to disk (Tauri dialog) or trigger a browser download. */
 export async function savePng(dataUrl: string, suggestedName: string): Promise<void> {
-  await saveBinaryDataUrl(dataUrl, suggestedName, "Imagem PNG", ["png"]);
+  await saveBinaryDataUrl(dataUrl, suggestedName, t("export.pngFilter"), ["png"]);
 }
 
 /** Save a JPEG data URL to disk (Tauri dialog) or trigger a browser download. */
 export async function saveJpeg(dataUrl: string, suggestedName: string): Promise<void> {
-  await saveBinaryDataUrl(dataUrl, suggestedName, "Imagem JPEG", ["jpg", "jpeg"]);
+  await saveBinaryDataUrl(dataUrl, suggestedName, t("export.jpegFilter"), ["jpg", "jpeg"]);
 }
 
 /** Save an SVG data URL (URI-encoded, not base64) to disk or trigger a download. */
 export async function saveSvg(dataUrl: string, suggestedName: string): Promise<void> {
   if (inTauri()) {
-    const path = await saveDialog({ defaultPath: suggestedName, filters: [{ name: "Imagem SVG", extensions: ["svg"] }] });
+    const path = await saveDialog({ defaultPath: suggestedName, filters: [{ name: t("export.svgFilter"), extensions: ["svg"] }] });
     if (!path) return;
     const svgText = decodeURIComponent(dataUrl.slice(dataUrl.indexOf(",") + 1));
     const bytes = new TextEncoder().encode(svgText);
@@ -137,7 +138,7 @@ export async function saveSvg(dataUrl: string, suggestedName: string): Promise<v
 /** Convenience: rasterize and save a single slide as PNG. */
 export async function exportSlidePng(slide: Slide, deck: Deck, index: number, transparentBg = false): Promise<void> {
   const dataUrl = await slideToPngDataUrl(slide, deck, { transparentBg });
-  await savePng(dataUrl, `slide-${index + 1}${transparentBg ? "-transparente" : ""}.png`);
+  await savePng(dataUrl, `slide-${index + 1}${transparentBg ? t("export.transparentSuffix") : ""}.png`);
 }
 
 /** Convenience: rasterize and save a single slide as JPEG. */

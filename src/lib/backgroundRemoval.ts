@@ -19,6 +19,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import * as ort from "onnxruntime-web";
+import { t } from "./i18n";
 
 ort.env.wasm.wasmPaths = "/ort/";
 ort.env.wasm.numThreads = 1; // avoid the threaded WASM build (needs COOP/COEP we don't set)
@@ -52,7 +53,7 @@ async function loadModel(bytes: ArrayBuffer, rememberPath: string): Promise<void
 
 /** Prompt the user for a .onnx file and load it. Returns false if cancelled. */
 export async function pickAndLoadModel(): Promise<boolean> {
-  const selected = await openDialog({ multiple: false, filters: [{ name: "Modelo ONNX (U2Net/rembg)", extensions: ["onnx"] }] });
+  const selected = await openDialog({ multiple: false, filters: [{ name: t("lib.onnxFilter"), extensions: ["onnx"] }] });
   if (!selected || Array.isArray(selected)) return false;
   const b64 = await invoke<string>("read_file_base64", { path: selected });
   await loadModel(base64ToArrayBuffer(b64), selected);
@@ -91,7 +92,7 @@ function sigmoid(x: number): number {
 /** Run background removal on an image; returns a PNG data URL with alpha. */
 export async function removeBackground(imageSrc: string): Promise<string> {
   const session = cachedSession;
-  if (!session) throw new Error("Nenhum modelo carregado.");
+  if (!session) throw new Error(t("lib.noModel"));
 
   const img = await loadImage(imageSrc);
 
@@ -99,7 +100,7 @@ export async function removeBackground(imageSrc: string): Promise<string> {
   off.width = INPUT_DIM;
   off.height = INPUT_DIM;
   const octx = off.getContext("2d");
-  if (!octx) throw new Error("Canvas 2D indisponível.");
+  if (!octx) throw new Error(t("lib.canvas2dUnavailable"));
   octx.drawImage(img, 0, 0, INPUT_DIM, INPUT_DIM);
   const { data } = octx.getImageData(0, 0, INPUT_DIM, INPUT_DIM);
 
@@ -132,7 +133,7 @@ export async function removeBackground(imageSrc: string): Promise<string> {
   maskCanvas.width = outW;
   maskCanvas.height = outH;
   const mctx = maskCanvas.getContext("2d");
-  if (!mctx) throw new Error("Canvas 2D indisponível.");
+  if (!mctx) throw new Error(t("lib.canvas2dUnavailable"));
   const maskImg = mctx.createImageData(outW, outH);
   for (let i = 0; i < outW * outH; i++) {
     const raw = needsSigmoid ? sigmoid(outData[i]) : outData[i];
@@ -148,7 +149,7 @@ export async function removeBackground(imageSrc: string): Promise<string> {
   outCanvas.width = img.naturalWidth;
   outCanvas.height = img.naturalHeight;
   const octx2 = outCanvas.getContext("2d");
-  if (!octx2) throw new Error("Canvas 2D indisponível.");
+  if (!octx2) throw new Error(t("lib.canvas2dUnavailable"));
   octx2.drawImage(img, 0, 0);
   octx2.globalCompositeOperation = "destination-in";
   octx2.drawImage(maskCanvas, 0, 0, outCanvas.width, outCanvas.height);

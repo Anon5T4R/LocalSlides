@@ -10,6 +10,7 @@ import { ColorPicker } from "../ui/ColorPicker";
 import { useStore } from "../state/store";
 import { pickAndLoadFont } from "../lib/fonts";
 import type { EmbeddedFont } from "../model/deck";
+import { t } from "../lib/i18n";
 
 const IMPORT_FONT = "__import_font__";
 
@@ -17,8 +18,10 @@ const IMPORT_FONT = "__import_font__";
 // every selector call is unsafe with useSyncExternalStore.
 const NO_FONTS: EmbeddedFont[] = [];
 
+// The first entry's label ("" here) is resolved at render time so it follows
+// locale changes; module-level consts evaluate only once at import.
 const LINE_HEIGHTS = [
-  { label: "Padrão", value: "" },
+  { label: "", value: "" },
   { label: "1×", value: "1" },
   { label: "1.15×", value: "1.15" },
   { label: "1.5×", value: "1.5" },
@@ -26,7 +29,7 @@ const LINE_HEIGHTS = [
 ];
 
 const LETTER_SPACINGS = [
-  { label: "Normal", value: "" },
+  { label: "", value: "" },
   { label: "-5%", value: "-0.05em" },
   { label: "+8%", value: "0.08em" },
   { label: "+16%", value: "0.16em" },
@@ -115,7 +118,7 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
           setStyle("fontFamily", font.value);
         }
       } catch (e) {
-        window.alert(`Não foi possível carregar a fonte:\n${e}`);
+        window.alert(t("ttb.fontLoadError", { error: String(e) }));
       }
       return;
     }
@@ -135,16 +138,16 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <Btn title="Negrito (Ctrl+B)" active={editor.isActive("bold")} onRun={() => chain().toggleBold().run()}>
+      <Btn title={t("ttb.bold")} active={editor.isActive("bold")} onRun={() => chain().toggleBold().run()}>
         <b>B</b>
       </Btn>
-      <Btn title="Itálico (Ctrl+I)" active={editor.isActive("italic")} onRun={() => chain().toggleItalic().run()}>
+      <Btn title={t("ttb.italic")} active={editor.isActive("italic")} onRun={() => chain().toggleItalic().run()}>
         <i>I</i>
       </Btn>
-      <Btn title="Sublinhado (Ctrl+U)" active={editor.isActive("underline")} onRun={() => chain().toggleUnderline().run()}>
+      <Btn title={t("ttb.underline")} active={editor.isActive("underline")} onRun={() => chain().toggleUnderline().run()}>
         <u>U</u>
       </Btn>
-      <Btn title="Tachado" active={editor.isActive("strike")} onRun={() => chain().toggleStrike().run()}>
+      <Btn title={t("ttb.strike")} active={editor.isActive("strike")} onRun={() => chain().toggleStrike().run()}>
         <s>S</s>
       </Btn>
 
@@ -154,7 +157,7 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
         <ColorPicker
           glyph={<b>A</b>}
-          title="Cor do texto"
+          title={t("ttb.textColor")}
           active={!!ts.color}
           value={ts.color ?? "#1e293b"}
           themeColors={themeColors}
@@ -166,7 +169,7 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       <span className="tt-color-wrap" onMouseDown={(e) => e.preventDefault()}>
         <ColorPicker
           glyph={<MarkerIcon />}
-          title="Realce (marca-texto)"
+          title={t("ttb.highlight")}
           active={!!ts.highlight}
           value={ts.highlight ?? DEFAULT_HIGHLIGHT}
           themeColors={themeColors}
@@ -176,7 +179,7 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       </span>
       {/* Letter outline. */}
       <Btn
-        title="Contorno da letra"
+        title={t("ttb.letterOutline")}
         active={strokeOn}
         onRun={() => setStyle("textStroke", strokeOn ? null : `1px ${strokeColor}`)}
       >
@@ -187,7 +190,7 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
           <ColorPicker
             value={strokeColor}
             themeColors={themeColors}
-            title="Cor do contorno"
+            title={t("ttb.outlineColor")}
             onChange={(c) => setStyle("textStroke", `1px ${c}`)}
           />
         </span>
@@ -196,26 +199,26 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       <span className="tt-sep" />
 
       {/* Lists */}
-      <Btn title="Lista com marcadores" active={editor.isActive("bulletList")} onRun={() => chain().toggleBulletList().run()}>
+      <Btn title={t("ttb.bulletList")} active={editor.isActive("bulletList")} onRun={() => chain().toggleBulletList().run()}>
         •
       </Btn>
-      <Btn title="Lista numerada" active={editor.isActive("orderedList")} onRun={() => chain().toggleOrderedList().run()}>
+      <Btn title={t("ttb.orderedList")} active={editor.isActive("orderedList")} onRun={() => chain().toggleOrderedList().run()}>
         1.
       </Btn>
 
       <span className="tt-sep" />
 
       {/* Alignment (incl. justify) */}
-      <Btn title="Alinhar à esquerda" active={editor.isActive({ textAlign: "left" })} onRun={() => chain().setTextAlign("left").run()}>
+      <Btn title={t("ttb.alignLeft")} active={editor.isActive({ textAlign: "left" })} onRun={() => chain().setTextAlign("left").run()}>
         ⯇
       </Btn>
-      <Btn title="Centralizar" active={editor.isActive({ textAlign: "center" })} onRun={() => chain().setTextAlign("center").run()}>
+      <Btn title={t("ttb.alignCenter")} active={editor.isActive({ textAlign: "center" })} onRun={() => chain().setTextAlign("center").run()}>
         ⊟
       </Btn>
-      <Btn title="Alinhar à direita" active={editor.isActive({ textAlign: "right" })} onRun={() => chain().setTextAlign("right").run()}>
+      <Btn title={t("ttb.alignRight")} active={editor.isActive({ textAlign: "right" })} onRun={() => chain().setTextAlign("right").run()}>
         ⯈
       </Btn>
-      <Btn title="Justificar" active={editor.isActive({ textAlign: "justify" })} onRun={() => chain().setTextAlign("justify").run()}>
+      <Btn title={t("ttb.justify")} active={editor.isActive({ textAlign: "justify" })} onRun={() => chain().setTextAlign("justify").run()}>
         ≣
       </Btn>
 
@@ -224,18 +227,18 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       {/* Font family + size */}
       <select
         className="tt-select"
-        title="Fonte"
+        title={t("ttb.font")}
         value={ts.fontFamily ?? ""}
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => onFontChange(e.target.value)}
       >
         {FONT_FAMILIES.map((f) => (
-          <option key={f.label} value={f.value} style={{ fontFamily: f.value || undefined }}>
-            {f.label}
+          <option key={f.value} value={f.value} style={{ fontFamily: f.value || undefined }}>
+            {f.value === "" ? t("ttb.default") : f.label}
           </option>
         ))}
         {customFonts.length > 0 && (
-          <optgroup label="Importadas">
+          <optgroup label={t("ttb.imported")}>
             {customFonts.map((f) => (
               <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
                 {f.label}
@@ -243,16 +246,16 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
             ))}
           </optgroup>
         )}
-        <option value={IMPORT_FONT}>＋ Importar fonte do PC…</option>
+        <option value={IMPORT_FONT}>＋ {t("ttb.importFont")}</option>
       </select>
       <input
         className="tt-select tt-size"
         type="number"
-        title="Tamanho da fonte"
+        title={t("ttb.fontSize")}
         list="tt-size-list"
         min={4}
         max={400}
-        placeholder="Auto"
+        placeholder={t("ttb.auto")}
         value={curSize}
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => setStyle("fontSize", e.target.value ? `${e.target.value}px` : null)}
@@ -266,25 +269,25 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
       {/* Line height */}
       <select
         className="tt-select"
-        title="Espaçamento entre linhas"
+        title={t("ttb.lineSpacing")}
         value={paraAttrs.lineHeight ?? ""}
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => setLineHeight(e.target.value || null)}
       >
         {LINE_HEIGHTS.map((lh) => (
-          <option key={lh.value} value={lh.value}>{lh.label}</option>
+          <option key={lh.value} value={lh.value}>{lh.value === "" ? t("ttb.default") : lh.label}</option>
         ))}
       </select>
       {/* Letter spacing */}
       <select
         className="tt-select"
-        title="Espaçamento entre letras"
+        title={t("ttb.letterSpacing")}
         value={ts.letterSpacing ?? ""}
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => setStyle("letterSpacing", e.target.value || null)}
       >
         {LETTER_SPACINGS.map((ls) => (
-          <option key={ls.value} value={ls.value}>{ls.label}</option>
+          <option key={ls.value} value={ls.value}>{ls.value === "" ? t("ttb.normal") : ls.label}</option>
         ))}
       </select>
     </div>

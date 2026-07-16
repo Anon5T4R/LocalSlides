@@ -5,27 +5,28 @@
 
 import { useStore } from "../state/store";
 import { findSlide, pmToPlainText, type Element } from "../model/deck";
+import { t as tr } from "../lib/i18n";
 
 function labelFor(el: Element): string {
   switch (el.type) {
     case "text": {
       const t = pmToPlainText(el.content).trim().replace(/\s+/g, " ");
-      return t ? (t.length > 22 ? t.slice(0, 22) + "…" : t) : "Texto";
+      return t ? (t.length > 22 ? t.slice(0, 22) + "…" : t) : tr("layers.text");
     }
     case "image":
-      return "Imagem";
+      return tr("layers.image");
     case "video":
-      return "Vídeo";
+      return tr("layers.video");
     case "table":
-      return "Tabela";
+      return tr("layers.table");
     case "ink":
-      return "Desenho";
+      return tr("layers.ink");
     case "chart":
-      return "Gráfico";
+      return tr("layers.chart");
     case "icon":
-      return "Ícone";
+      return tr("layers.icon");
     default:
-      return "Forma";
+      return tr("layers.shape");
   }
 }
 
@@ -63,15 +64,15 @@ export function LayersPanel({ onClose, onInsert }: { onClose: () => void; onInse
   return (
     <div className="layers-panel">
       <div className="media-head">
-        <span>Camadas</span>
-        <button className="insp-mini" onClick={onClose} title="Fechar">✕</button>
+        <span>{tr("layers.title")}</span>
+        <button className="insp-mini" onClick={onClose} title={tr("layers.close")}>✕</button>
       </div>
 
       {rows.length === 0 ? (
         <div className="insp-empty-state">
-          <p className="media-empty">Nada neste slide ainda.</p>
+          <p className="media-empty">{tr("layers.empty")}</p>
           {onInsert && (
-            <button className="insp-mini" onClick={onInsert}>＋ Inserir um elemento</button>
+            <button className="insp-mini" onClick={onInsert}>{tr("layers.insertElement")}</button>
           )}
         </div>
       ) : (
@@ -82,25 +83,25 @@ export function LayersPanel({ onClose, onInsert }: { onClose: () => void; onInse
               <div key={el.id} className={"layer-row" + (sel ? " active" : "")}>
                 <button
                   className="layer-eye"
-                  title={el.hidden ? "Mostrar" : "Ocultar"}
+                  title={el.hidden ? tr("layers.show") : tr("layers.hide")}
                   onClick={() => updateElement(el.id, (x) => (x.hidden = !x.hidden))}
                 >
                   {el.hidden ? "🚫" : "👁"}
                 </button>
                 <button
                   className="layer-lock"
-                  title={el.locked ? "Desbloquear" : "Bloquear"}
+                  title={el.locked ? tr("layers.unlock") : tr("layers.lock")}
                   onClick={() => updateElement(el.id, (x) => (x.locked = !x.locked))}
                 >
                   {el.locked ? "🔒" : "🔓"}
                 </button>
-                <button className="layer-name" onClick={() => select([el.id])} title="Selecionar">
+                <button className="layer-name" onClick={() => select([el.id])} title={tr("layers.select")}>
                   <span className="layer-icon">{iconFor(el)}</span>
                   <span className="layer-text">{labelFor(el)}</span>
                 </button>
                 <button
                   className="layer-z"
-                  title="Trazer para frente"
+                  title={tr("layers.bringForward")}
                   disabled={i === 0}
                   onClick={() => reorder(el.id, "forward")}
                 >
@@ -108,13 +109,13 @@ export function LayersPanel({ onClose, onInsert }: { onClose: () => void; onInse
                 </button>
                 <button
                   className="layer-z"
-                  title="Enviar para trás"
+                  title={tr("layers.sendBackward")}
                   disabled={i === rows.length - 1}
                   onClick={() => reorder(el.id, "backward")}
                 >
                   ↓
                 </button>
-                <button className="layer-del" title="Excluir" onClick={() => deleteElements([el.id])}>
+                <button className="layer-del" title={tr("layers.delete")} onClick={() => deleteElements([el.id])}>
                   🗑
                 </button>
               </div>

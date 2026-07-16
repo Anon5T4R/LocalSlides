@@ -5,6 +5,7 @@
 import { type PointerEvent as ReactPointerEvent } from "react";
 import { useStore } from "../state/store";
 import type { Comment } from "../model/deck";
+import { t } from "../lib/i18n";
 
 export function CommentsLayer({
   comments,
@@ -38,7 +39,7 @@ export function CommentsLayer({
         >
           <button
             className={"comment-pin" + (c.resolved ? " resolved" : "")}
-            title={c.text || "Comentário"}
+            title={c.text || t("comment.pin")}
             onPointerDown={stop}
             onClick={(e) => {
               e.stopPropagation();
@@ -52,16 +53,16 @@ export function CommentsLayer({
             <div className="comment-pop" onPointerDown={stop} onClick={(e) => e.stopPropagation()}>
               <textarea
                 autoFocus
-                placeholder="Escreva um comentário…"
+                placeholder={t("comment.placeholder")}
                 value={c.text}
                 onChange={(e) => updateComment(c.id, { text: e.target.value })}
               />
               <div className="comment-pop-actions">
                 <button onClick={() => updateComment(c.id, { resolved: !c.resolved })}>
-                  {c.resolved ? "Reabrir" : "Resolver"}
+                  {c.resolved ? t("comment.reopen") : t("comment.resolve")}
                 </button>
-                <button onClick={() => removeComment(c.id)}>Excluir</button>
-                <button onClick={() => onActivate(null)}>Fechar</button>
+                <button onClick={() => removeComment(c.id)}>{t("comment.delete")}</button>
+                <button onClick={() => onActivate(null)}>{t("comment.close")}</button>
               </div>
             </div>
           )}

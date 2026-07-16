@@ -2,6 +2,7 @@
 // hex input, and (when available) the browser EyeDropper API.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { t as tr } from "../lib/i18n";
 
 // Module-level recent colors, shared across all pickers, capped at 12.
 const recent: string[] = [];
@@ -144,9 +145,9 @@ export function ColorPicker({
         >
           {/* Clear / none */}
           {onClear && (
-            <button className="cp-none" onClick={clear} title="Nenhuma (remover)">
+            <button className="cp-none" onClick={clear} title={tr("color.noneTitle")}>
               <span className="cp-none-swatch" />
-              Nenhuma
+              {tr("color.none")}
             </button>
           )}
 
@@ -164,7 +165,7 @@ export function ColorPicker({
           {/* Recent colors */}
           {recent.length > 0 && (
             <div className="cp-section">
-              <div className="cp-row-label">Recentes</div>
+              <div className="cp-row-label">{tr("color.recent")}</div>
               <div className="cp-row">
                 {recent.map((c) => (
                   <button key={c} className="cp-dot" style={{ background: c }} title={c} onClick={() => pick(c)} />
@@ -199,11 +200,11 @@ export function ColorPicker({
               onBlur={commitHex}
             />
             {"EyeDropper" in window && (
-              <button className="cp-eyedrop" title="Conta-gotas" onClick={eyeDrop}>
+              <button className="cp-eyedrop" title={tr("color.eyedropper")} onClick={eyeDrop}>
                 💧
               </button>
             )}
-            <label className="cp-native" title="Abrir seletor de cores">
+            <label className="cp-native" title={tr("color.openPicker")}>
               🎨
               <input
                 type="color"

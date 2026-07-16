@@ -1,6 +1,7 @@
 // Onda 16 — named version history: manual snapshots of the whole deck, kept
 // alongside undo/autosave and persisted inside the .tslides file itself.
 
+import { t, localeTag } from "../lib/i18n";
 import { useStore } from "../state/store";
 import type { DeckVersion } from "../model/deck";
 
@@ -10,7 +11,7 @@ import type { DeckVersion } from "../model/deck";
 const NO_VERSIONS: DeckVersion[] = [];
 
 function fmt(ts: number): string {
-  return new Date(ts).toLocaleString();
+  return new Date(ts).toLocaleString(localeTag());
 }
 
 export function VersionsModal({ onClose }: { onClose: () => void }) {
@@ -20,22 +21,22 @@ export function VersionsModal({ onClose }: { onClose: () => void }) {
   const deleteVersion = useStore((s) => s.deleteVersion);
 
   const onSave = () => {
-    const name = window.prompt("Nome da versão:", `Versão ${new Date().toLocaleDateString()}`);
+    const name = window.prompt(t("ver.promptName"), t("ver.defaultName", { date: new Date().toLocaleDateString(localeTag()) }));
     if (!name) return;
     try {
       saveVersion(name);
     } catch (e) {
-      window.alert(`Não foi possível salvar a versão:\n${e}`);
+      window.alert(t("ver.saveError", { error: String(e) }));
     }
   };
 
   const onRestore = (id: string, name: string) => {
-    if (!window.confirm(`Restaurar "${name}"? As mudanças atuais não salvas nesta versão serão substituídas (mas continuam no histórico de desfazer).`)) return;
+    if (!window.confirm(t("ver.confirmRestore", { name }))) return;
     try {
       restoreVersion(id);
       onClose();
     } catch (e) {
-      window.alert(`Não foi possível restaurar a versão:\n${e}`);
+      window.alert(t("ver.restoreError", { error: String(e) }));
     }
   };
 
@@ -43,13 +44,13 @@ export function VersionsModal({ onClose }: { onClose: () => void }) {
     <div className="shortcuts-backdrop" onClick={onClose}>
       <div className="shortcuts-modal" onClick={(e) => e.stopPropagation()}>
         <div className="shortcuts-head">
-          <span>Histórico de versões</span>
-          <button className="insp-mini" onClick={onClose} title="Fechar (Esc)">✕</button>
+          <span>{t("ver.title")}</span>
+          <button className="insp-mini" onClick={onClose} title={t("ver.close")}>✕</button>
         </div>
         <div className="versions-body">
-          <button className="insp-mini" onClick={onSave}>＋ Salvar versão atual</button>
+          <button className="insp-mini" onClick={onSave}>＋ {t("ver.saveCurrent")}</button>
           {versions.length === 0 ? (
-            <p className="insp-empty-hint">Nenhuma versão salva ainda. Salve uma agora para poder voltar a ela depois.</p>
+            <p className="insp-empty-hint">{t("ver.empty")}</p>
           ) : (
             <div className="versions-list">
               {[...versions].reverse().map((v) => (
@@ -60,9 +61,9 @@ export function VersionsModal({ onClose }: { onClose: () => void }) {
                   </div>
                   <div className="insp-zorder">
                     <button className="insp-mini" onClick={() => onRestore(v.id, v.name)}>
-                      Restaurar
+                      {t("ver.restore")}
                     </button>
-                    <button className="insp-mini" onClick={() => deleteVersion(v.id)} title="Excluir versão">
+                    <button className="insp-mini" onClick={() => deleteVersion(v.id)} title={t("ver.deleteTitle")}>
                       🗑
                     </button>
                   </div>

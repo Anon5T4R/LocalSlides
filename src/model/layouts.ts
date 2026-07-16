@@ -18,6 +18,7 @@ import {
   newTextBox,
   plainTextToPM,
 } from "./deck";
+import { t, type MessageKey } from "../lib/i18n";
 
 function g(x: number, y: number, w: number, h: number): Geom {
   return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), rotation: 0 };
@@ -38,7 +39,7 @@ function imageSlot(geom: Geom): ShapeEl {
     geom,
     shape: "roundRect",
     fill: { kind: "solid", color: "#e2e8f0" },
-    text: plainTextToPM("Imagem"),
+    text: plainTextToPM(t("layout.imageSlot")),
   };
 }
 
@@ -55,8 +56,8 @@ export const LAYOUTS: LayoutDef[] = [
     build: (d) => {
       const W = d.size.w, H = d.size.h, m = W * 0.1;
       return [
-        title("Título da apresentação", g(m, H * 0.36, W - 2 * m, H * 0.2)),
-        body("Subtítulo · autor · data", g(m, H * 0.58, W - 2 * m, H * 0.12), "top"),
+        title(t("layout.presTitle"), g(m, H * 0.36, W - 2 * m, H * 0.2)),
+        body(t("layout.subtitleAuthorDate"), g(m, H * 0.58, W - 2 * m, H * 0.12), "top"),
       ];
     },
   },
@@ -65,7 +66,7 @@ export const LAYOUTS: LayoutDef[] = [
     name: "Seção",
     build: (d) => {
       const W = d.size.w, H = d.size.h, m = W * 0.08;
-      return [title("Título da seção", g(m, H * 0.4, W - 2 * m, H * 0.2))];
+      return [title(t("layout.sectionTitle"), g(m, H * 0.4, W - 2 * m, H * 0.2))];
     },
   },
   {
@@ -74,8 +75,8 @@ export const LAYOUTS: LayoutDef[] = [
     build: (d) => {
       const W = d.size.w, H = d.size.h, m = W * 0.06;
       return [
-        title("Título do slide", g(m, H * 0.08, W - 2 * m, H * 0.16)),
-        body("Clique para editar", g(m, H * 0.3, W - 2 * m, H * 0.6)),
+        title(t("layout.slideTitle"), g(m, H * 0.08, W - 2 * m, H * 0.16)),
+        body(t("layout.clickToEdit"), g(m, H * 0.3, W - 2 * m, H * 0.6)),
       ];
     },
   },
@@ -87,9 +88,9 @@ export const LAYOUTS: LayoutDef[] = [
       const colW = (W - 2 * m - gap) / 2;
       const y = H * 0.3, h = H * 0.6;
       return [
-        title("Título do slide", g(m, H * 0.08, W - 2 * m, H * 0.16)),
-        body("Coluna 1", g(m, y, colW, h)),
-        body("Coluna 2", g(m + colW + gap, y, colW, h)),
+        title(t("layout.slideTitle"), g(m, H * 0.08, W - 2 * m, H * 0.16)),
+        body(t("layout.column1"), g(m, y, colW, h)),
+        body(t("layout.column2"), g(m + colW + gap, y, colW, h)),
       ];
     },
   },
@@ -101,8 +102,8 @@ export const LAYOUTS: LayoutDef[] = [
       const colW = (W - 2 * m - gap) / 2;
       const y = H * 0.3, h = H * 0.6;
       return [
-        title("Título do slide", g(m, H * 0.08, W - 2 * m, H * 0.16)),
-        body("Texto", g(m, y, colW, h)),
+        title(t("layout.slideTitle"), g(m, H * 0.08, W - 2 * m, H * 0.16)),
+        body(t("layout.text"), g(m, y, colW, h)),
         imageSlot(g(m + colW + gap, y, colW, h)),
       ];
     },
@@ -114,7 +115,7 @@ export const LAYOUTS: LayoutDef[] = [
       const W = d.size.w, H = d.size.h, m = W * 0.06;
       return [
         imageSlot(g(m, H * 0.08, W - 2 * m, H * 0.66)),
-        body("Legenda da imagem", g(m, H * 0.78, W - 2 * m, H * 0.12), "top"),
+        body(t("layout.imageCaption"), g(m, H * 0.78, W - 2 * m, H * 0.12), "top"),
       ];
     },
   },
@@ -124,6 +125,11 @@ export const LAYOUTS: LayoutDef[] = [
     build: () => [],
   },
 ];
+
+/** Localized display name for a master layout, keyed by its stable `id`. */
+export function layoutName(id: string): string {
+  return t(`layout.${id}` as MessageKey);
+}
 
 /** Build a layout's elements, falling back to the default title+content. */
 export function buildLayout(layoutId: string, deck: Deck): Element[] {

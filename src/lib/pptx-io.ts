@@ -7,6 +7,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import type { Deck } from "../model/deck";
 import { importPptxToDeck } from "../import/pptx";
 import { inTauri } from "./env";
+import { t } from "./i18n";
 
 function base64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64);
@@ -46,11 +47,11 @@ export async function importPptx(): Promise<ImportedPptx | null> {
   if (!inTauri()) return pickPptxBrowser();
   const selected = await openDialog({
     multiple: false,
-    filters: [{ name: "Apresentação PowerPoint", extensions: ["pptx"] }],
+    filters: [{ name: t("lib.pptxFilter"), extensions: ["pptx"] }],
   });
   if (!selected || Array.isArray(selected)) return null;
   const b64 = await invoke<string>("read_file_base64", { path: selected });
   const deck = await importPptxToDeck(base64ToBytes(b64));
-  const name = selected.split(/[\\/]/).pop() ?? "importado.pptx";
+  const name = selected.split(/[\\/]/).pop() ?? t("lib.importedPptxName");
   return { name, deck };
 }

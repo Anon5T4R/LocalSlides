@@ -5,6 +5,7 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { useStore } from "../state/store";
 import type { TableEl } from "../model/deck";
+import { t } from "../lib/i18n";
 
 export function TableColResizer({ el, scale }: { el: TableEl; scale: number }) {
   const updateElement = useStore((s) => s.updateElement);
@@ -64,7 +65,7 @@ export function TableColResizer({ el, scale }: { el: TableEl; scale: number }) {
           onPointerDown={onDown(i)}
           onPointerMove={onMove}
           onPointerUp={onUp}
-          title="Arrastar para redimensionar a coluna"
+          title={t("tblcell.resizeCol")}
           style={{
             position: "absolute",
             left: el.geom.x + el.geom.w * frac - 3,

@@ -8,6 +8,7 @@
 // main.tsx), so it stays a tiny, dependency-light surface.
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { t } from "../lib/i18n";
 import type { Deck } from "../model/deck";
 import { pmToPlainText } from "../model/deck";
 import { SlideView } from "../render/SlideView";
@@ -44,7 +45,7 @@ function MiniSlide({ deck, index, label }: { deck: Deck; index: number; label: s
           </div>
         </div>
       ) : (
-        <div className="presenter-slide-frame presenter-slide-empty">Fim</div>
+        <div className="presenter-slide-frame presenter-slide-empty">{t("presenter.end")}</div>
       )}
     </div>
   );
@@ -83,7 +84,7 @@ export function PresenterWindow() {
   }, []);
 
   if (!sync) {
-    return <div className="presenter-root presenter-waiting">Aguardando a apresentação iniciar…</div>;
+    return <div className="presenter-root presenter-waiting">{t("presenter.waiting")}</div>;
   }
 
   const { deck, index } = sync;
@@ -103,23 +104,23 @@ export function PresenterWindow() {
 
       <div className="presenter-slides">
         <div style={{ ["--s" as string]: scaleMain } as CSSProperties}>
-          <MiniSlide deck={deck} index={index} label="Atual" />
+          <MiniSlide deck={deck} index={index} label={t("presenter.current")} />
         </div>
         <div style={{ ["--s" as string]: scaleNext } as CSSProperties}>
-          <MiniSlide deck={deck} index={index + 1} label="Próximo" />
+          <MiniSlide deck={deck} index={index + 1} label={t("presenter.next")} />
         </div>
       </div>
 
       <div className="presenter-notes">
-        <div className="presenter-notes-head">Notas</div>
+        <div className="presenter-notes-head">{t("presenter.notes")}</div>
         <div className="presenter-notes-body">
-          {notesText || <span className="presenter-notes-empty">Sem notas para este slide.</span>}
+          {notesText || <span className="presenter-notes-empty">{t("presenter.noNotes")}</span>}
         </div>
       </div>
 
       <div className="presenter-controls">
-        <button onClick={() => navRef.current?.(-1)} disabled={index === 0}>‹ Anterior</button>
-        <button onClick={() => navRef.current?.(1)} disabled={index >= deck.slides.length - 1}>Próximo ›</button>
+        <button onClick={() => navRef.current?.(-1)} disabled={index === 0}>‹ {t("presenter.prev")}</button>
+        <button onClick={() => navRef.current?.(1)} disabled={index >= deck.slides.length - 1}>{t("presenter.next")} ›</button>
       </div>
     </div>
   );

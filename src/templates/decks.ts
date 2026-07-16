@@ -6,6 +6,7 @@
 import { Deck, Slide, TextBox, makeId, plainTextToPM } from "../model/deck";
 import { THEME_PRESETS } from "../model/themes";
 import { findTemplate } from "./index";
+import { t as tr, type MessageKey } from "../lib/i18n";
 
 export interface DeckTemplate {
   id: string;
@@ -24,15 +25,15 @@ export const DECK_TEMPLATES: DeckTemplate[] = [
     description: "Problema, solução, mercado, tração e time — 9 slides.",
     themeId: "startup",
     slides: [
-      { tpl: "capa-solida", title: "Nome da startup" },
-      { tpl: "pergunta", title: "Qual problema ninguém resolveu?" },
-      { tpl: "tres-cards", title: "Nossa solução" },
-      { tpl: "numero-gigante", title: "R$ 4,2 bi" },
-      { tpl: "grafico-destaque", title: "Tração até aqui" },
-      { tpl: "antes-depois", title: "O que muda para o cliente" },
-      { tpl: "timeline", title: "Roadmap" },
-      { tpl: "equipe", title: "Time fundador" },
-      { tpl: "cta", title: "Vamos construir juntos?" },
+      { tpl: "capa-solida", title: tr("tpl.pitch-startup.s1") },
+      { tpl: "pergunta", title: tr("tpl.pitch-startup.s2") },
+      { tpl: "tres-cards", title: tr("tpl.pitch-startup.s3") },
+      { tpl: "numero-gigante", title: tr("tpl.pitch-startup.s4") },
+      { tpl: "grafico-destaque", title: tr("tpl.pitch-startup.s5") },
+      { tpl: "antes-depois", title: tr("tpl.pitch-startup.s6") },
+      { tpl: "timeline", title: tr("tpl.pitch-startup.s7") },
+      { tpl: "equipe", title: tr("tpl.pitch-startup.s8") },
+      { tpl: "cta", title: tr("tpl.pitch-startup.s9") },
     ],
   },
   {
@@ -41,12 +42,12 @@ export const DECK_TEMPLATES: DeckTemplate[] = [
     description: "KPIs, gráfico, comparativo e próximos passos — 7 slides.",
     themeId: "claro",
     slides: [
-      { tpl: "capa-minimal", title: "Resultados do trimestre" },
+      { tpl: "capa-minimal", title: tr("tpl.relatorio-resultados.s1") },
       { tpl: "agenda" },
-      { tpl: "kpi-numeros", title: "Principais indicadores" },
-      { tpl: "grafico-destaque", title: "Evolução no período" },
-      { tpl: "comparacao-2col", title: "Planejado vs realizado" },
-      { tpl: "lista-icones", title: "Próximos passos" },
+      { tpl: "kpi-numeros", title: tr("tpl.relatorio-resultados.s3") },
+      { tpl: "grafico-destaque", title: tr("tpl.relatorio-resultados.s4") },
+      { tpl: "comparacao-2col", title: tr("tpl.relatorio-resultados.s5") },
+      { tpl: "lista-icones", title: tr("tpl.relatorio-resultados.s6") },
       { tpl: "encerramento" },
     ],
   },
@@ -56,13 +57,13 @@ export const DECK_TEMPLATES: DeckTemplate[] = [
     description: "Contexto, entrega, cronograma e investimento — 8 slides.",
     themeId: "elegante",
     slides: [
-      { tpl: "capa-editorial", title: "Proposta comercial" },
-      { tpl: "agenda", title: "O que você vai ver" },
-      { tpl: "pergunta", title: "Onde sua operação perde tempo hoje?" },
-      { tpl: "tres-cards", title: "O que entregamos" },
-      { tpl: "timeline", title: "Cronograma" },
-      { tpl: "numero-gigante", title: "R$ 30 mil" },
-      { tpl: "swot", title: "Riscos e oportunidades" },
+      { tpl: "capa-editorial", title: tr("tpl.proposta-comercial.s1") },
+      { tpl: "agenda", title: tr("tpl.proposta-comercial.s2") },
+      { tpl: "pergunta", title: tr("tpl.proposta-comercial.s3") },
+      { tpl: "tres-cards", title: tr("tpl.proposta-comercial.s4") },
+      { tpl: "timeline", title: tr("tpl.proposta-comercial.s5") },
+      { tpl: "numero-gigante", title: tr("tpl.proposta-comercial.s6") },
+      { tpl: "swot", title: tr("tpl.proposta-comercial.s7") },
       { tpl: "contato" },
     ],
   },
@@ -72,13 +73,13 @@ export const DECK_TEMPLATES: DeckTemplate[] = [
     description: "Estrutura didática com discussão e resumo — 7 slides.",
     themeId: "manuscrito",
     slides: [
-      { tpl: "capa-solida", title: "Nome da aula" },
-      { tpl: "agenda", title: "Plano de hoje" },
-      { tpl: "titulo-texto", title: "Conceito central" },
-      { tpl: "pergunta", title: "O que vocês fariam neste caso?" },
-      { tpl: "quatro-cards", title: "Quatro pontos para lembrar" },
+      { tpl: "capa-solida", title: tr("tpl.aula.s1") },
+      { tpl: "agenda", title: tr("tpl.aula.s2") },
+      { tpl: "titulo-texto", title: tr("tpl.aula.s3") },
+      { tpl: "pergunta", title: tr("tpl.aula.s4") },
+      { tpl: "quatro-cards", title: tr("tpl.aula.s5") },
       { tpl: "citacao" },
-      { tpl: "encerramento", title: "Até a próxima!" },
+      { tpl: "encerramento", title: tr("tpl.aula.s7") },
     ],
   },
   {
@@ -87,11 +88,11 @@ export const DECK_TEMPLATES: DeckTemplate[] = [
     description: "Foco em imagem: capa com foto, galeria e contato — 6 slides.",
     themeId: "ameixa",
     slides: [
-      { tpl: "capa-foto", title: "Seu nome aqui" },
-      { tpl: "titulo-texto", title: "Sobre mim" },
+      { tpl: "capa-foto", title: tr("tpl.portfolio.s1") },
+      { tpl: "titulo-texto", title: tr("tpl.portfolio.s2") },
       { tpl: "foto-fullbleed" },
       { tpl: "foto-fullbleed" },
-      { tpl: "citacao", title: '"Um depoimento de cliente vai aqui."' },
+      { tpl: "citacao", title: tr("tpl.portfolio.s5") },
       { tpl: "contato" },
     ],
   },
@@ -114,6 +115,16 @@ export function buildDeckTemplate(tpl: DeckTemplate, deck: Deck): Slide[] {
     slides.push({ id: makeId("slide"), elements, background });
   }
   return slides;
+}
+
+/** Localized display name for a full-deck template, keyed by its stable `id`. */
+export function deckTemplateName(id: string): string {
+  return tr(`tpl.${id}` as MessageKey);
+}
+
+/** Localized description for a full-deck template, keyed by its stable `id`. */
+export function deckTemplateDesc(id: string): string {
+  return tr(`tpl.${id}.desc` as MessageKey);
 }
 
 export function findDeckTemplate(id: string): DeckTemplate | undefined {

@@ -17,8 +17,10 @@ import { Color } from "@tiptap/extension-color";
 /** Curated font stacks offered in the toolbar. The first block is bundled with
  *  the app (OFL via @fontsource — see lib/embeddedFonts.ts); the second is
  *  system-safe fallbacks. */
+// The default entry's label is resolved at render time (see TextToolbar) so it
+// follows locale changes; an empty label here is the "use the theme font" option.
 export const FONT_FAMILIES: { label: string; value: string }[] = [
-  { label: "Padrão", value: "" },
+  { label: "", value: "" },
   // — Embutidas (sempre disponíveis, offline) —
   { label: "Inter", value: "Inter, system-ui, sans-serif" },
   { label: "Poppins", value: "Poppins, system-ui, sans-serif" },

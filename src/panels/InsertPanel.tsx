@@ -7,22 +7,25 @@ import { useEffect, useMemo, useState } from "react";
 import { useStore } from "../state/store";
 import { newIcon, newImage, newVideo } from "../model/deck";
 import { pickImageDataUri, pickVideoDataUri } from "../lib/media";
-import { INSERT_CATALOG, INSERT_MIME, type InsertItem, type InsertTab } from "../insert/catalog";
-import { ICONS, type IconDef } from "../model/icons";
-import { TEMPLATES } from "../templates";
-import { DECK_TEMPLATES, buildDeckTemplate, themeForDeckTemplate } from "../templates/decks";
+import { INSERT_CATALOG, INSERT_MIME, insertItemLabel, type InsertItem, type InsertTab } from "../insert/catalog";
+import { ICONS, iconLabel, type IconDef } from "../model/icons";
+import { t as tr, type MessageKey } from "../lib/i18n";
+import { TEMPLATES, templateName } from "../templates";
+import { DECK_TEMPLATES, buildDeckTemplate, themeForDeckTemplate, deckTemplateName, deckTemplateDesc } from "../templates/decks";
 import { SlideView } from "../render/SlideView";
 
 const TEMPLATE_THUMB_W = 220;
 
-const TABS: { id: InsertTab | "photos" | "templates"; label: string }[] = [
-  { id: "elements", label: "Elementos" },
-  { id: "text", label: "Texto" },
-  { id: "icons", label: "Ícones" },
-  { id: "photos", label: "Fotos" },
-  { id: "charts", label: "Gráficos" },
-  { id: "tables", label: "Tabelas" },
-  { id: "templates", label: "Templates" },
+// Rótulos das abas vêm do i18n em tempo de render (tr(`insert.tab.<id>`)); só o
+// `id` (estável) fica aqui.
+const TABS: { id: InsertTab | "photos" | "templates" }[] = [
+  { id: "elements" },
+  { id: "text" },
+  { id: "icons" },
+  { id: "photos" },
+  { id: "charts" },
+  { id: "tables" },
+  { id: "templates" },
 ];
 
 function IconGlyph({ item }: { item: InsertItem }) {
@@ -38,7 +41,7 @@ function IconGlyph({ item }: { item: InsertItem }) {
 
 function CatalogGrid({ items, onInsert }: { items: InsertItem[]; onInsert: (item: InsertItem) => void }) {
   if (items.length === 0) {
-    return <p className="insert-empty">Nada encontrado.</p>;
+    return <p className="insert-empty">{tr("insert.nothingFound")}</p>;
   }
   return (
     <div className="insert-grid">
@@ -46,7 +49,7 @@ function CatalogGrid({ items, onInsert }: { items: InsertItem[]; onInsert: (item
         <button
           key={item.id}
           className="insert-item"
-          title={item.label}
+          title={insertItemLabel(item)}
           draggable
           onDragStart={(e) => {
             e.dataTransfer.setData(INSERT_MIME, JSON.stringify({ kind: "catalog", id: item.id }));
@@ -57,7 +60,7 @@ function CatalogGrid({ items, onInsert }: { items: InsertItem[]; onInsert: (item
           <span className="insert-item-glyph">
             <IconGlyph item={item} />
           </span>
-          <span className="insert-item-label">{item.label}</span>
+          <span className="insert-item-label">{insertItemLabel(item)}</span>
         </button>
       ))}
     </div>
@@ -74,23 +77,23 @@ function PhotosTab() {
     try {
       const src = kind === "image" ? await pickImageDataUri() : await pickVideoDataUri();
       if (src) {
-        addAsset(kind, kind === "image" ? "Imagem" : "Vídeo", src);
+        addAsset(kind, kind === "image" ? tr("insert.imageName") : tr("insert.videoName"), src);
         addElement(kind === "image" ? newImage(useStore.getState().deck, src) : newVideo(useStore.getState().deck, src));
       }
     } catch (e) {
-      window.alert(`Não foi possível adicionar:\n${e}`);
+      window.alert(tr("insert.addError", { error: String(e) }));
     }
   };
 
   return (
     <div className="insert-photos">
       <div className="media-actions">
-        <button className="insp-mini" onClick={() => upload("image")}>＋ Imagem</button>
-        <button className="insp-mini" onClick={() => upload("video")}>＋ Vídeo</button>
+        <button className="insp-mini" onClick={() => upload("image")}>{tr("insert.addImage")}</button>
+        <button className="insp-mini" onClick={() => upload("video")}>{tr("insert.addVideo")}</button>
       </div>
       {assets.length === 0 ? (
         <p className="insert-empty">
-          Envie imagens/vídeos e arraste da biblioteca para o slide, ou clique numa miniatura para inserir.
+          {tr("insert.photosEmpty")}
         </p>
       ) : (
         <div className="media-grid">
@@ -98,7 +101,7 @@ function PhotosTab() {
             <button
               key={a.id}
               className="media-thumb"
-              title={`Inserir ${a.name}`}
+              title={tr("insert.insertAsset", { name: a.name })}
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData(
@@ -160,7 +163,7 @@ function IconsTab({ query }: { query: string }) {
     return all.filter(
       (ic) =>
         ic.name.includes(q) ||
-        ic.label.toLowerCase().includes(q) ||
+        iconLabel(ic).toLowerCase().includes(q) ||
         (ic.category ?? "").includes(q) ||
         (ic.tags ?? []).some((t) => t.includes(q))
     );
@@ -175,7 +178,7 @@ function IconsTab({ query }: { query: string }) {
           <button
             key={ic.name}
             className="insert-item"
-            title={ic.label}
+            title={iconLabel(ic)}
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData(INSERT_MIME, JSON.stringify({ kind: "iconPath", path: ic.path }));
@@ -188,17 +191,17 @@ function IconsTab({ query }: { query: string }) {
                 <path d={ic.path} />
               </svg>
             </span>
-            <span className="insert-item-label">{ic.label}</span>
+            <span className="insert-item-label">{iconLabel(ic)}</span>
           </button>
         ))}
       </div>
-      {!pack && <p className="insert-empty">Carregando pack completo de ícones…</p>}
+      {!pack && <p className="insert-empty">{tr("insert.loadingPack")}</p>}
       {filtered.length > ICONS_GRID_MAX && (
         <p className="insert-empty">
-          Mostrando {ICONS_GRID_MAX} de {filtered.length} ícones — refine a busca.
+          {tr("insert.showingIcons", { shown: ICONS_GRID_MAX, total: filtered.length })}
         </p>
       )}
-      {filtered.length === 0 && <p className="insert-empty">Nada encontrado.</p>}
+      {filtered.length === 0 && <p className="insert-empty">{tr("insert.nothingFound")}</p>}
     </div>
   );
 }
@@ -241,7 +244,7 @@ function TemplatesTab() {
     const { dirty } = useStore.getState();
     if (
       dirty &&
-      !window.confirm(`Criar a apresentação "${name}"?\nA apresentação atual será substituída (alterações não salvas serão perdidas).`)
+      !window.confirm(tr("insert.newDeckConfirm", { name }))
     ) {
       return;
     }
@@ -250,7 +253,7 @@ function TemplatesTab() {
 
   return (
     <div className="insert-templates">
-      <div className="template-section">Apresentações completas</div>
+      <div className="template-section">{tr("insert.fullDecks")}</div>
       {DECK_TEMPLATES.map((dt) => {
         const theme = themeForDeckTemplate(dt) ?? deck.theme;
         const previewDeck = { ...deck, theme };
@@ -259,12 +262,12 @@ function TemplatesTab() {
           <button
             key={dt.id}
             className="template-item"
-            title={dt.description}
-            onClick={() => startDeck(dt.id, dt.name)}
+            title={deckTemplateDesc(dt.id)}
+            onClick={() => startDeck(dt.id, deckTemplateName(dt.id))}
           >
             {first && <TemplateThumb elements={first.elements} background={first.background} deck={previewDeck} />}
             <span className="template-label">
-              {dt.name} · {dt.slides.length} slides
+              {deckTemplateName(dt.id)} · {tr("insert.slidesSuffix", { n: dt.slides.length })}
             </span>
           </button>
         );
@@ -275,18 +278,18 @@ function TemplatesTab() {
         if (!tpls.length) return null;
         return (
           <div key={cat} className="template-group">
-            <div className="template-section">{cat}</div>
+            <div className="template-section">{tr(`insert.tplCat.${cat}` as MessageKey)}</div>
             {tpls.map((tpl) => {
               const { elements, background } = tpl.build(deck);
               return (
                 <button
                   key={tpl.id}
                   className="template-item"
-                  title={`Inserir slide "${tpl.name}"`}
+                  title={tr("insert.insertSlide", { name: templateName(tpl.id) })}
                   onClick={() => addTemplateSlide(tpl.id)}
                 >
                   <TemplateThumb elements={elements} background={background} deck={deck} />
-                  <span className="template-label">{tpl.name}</span>
+                  <span className="template-label">{templateName(tpl.id)}</span>
                 </button>
               );
             })}
@@ -311,21 +314,21 @@ export function InsertPanel({ onClose }: { onClose: () => void }) {
     return INSERT_CATALOG.filter((it) => {
       if (it.tab !== tab) return false;
       if (!q) return true;
-      return it.label.toLowerCase().includes(q) || it.tags.some((t) => t.includes(q));
+      return insertItemLabel(it).toLowerCase().includes(q) || it.tags.some((t) => t.includes(q));
     });
   }, [tab, query]);
 
   return (
     <div className="insert-panel">
       <div className="insert-head">
-        <span>Inserir</span>
-        <button className="insp-mini" onClick={onClose} title="Fechar">✕</button>
+        <span>{tr("insert.title")}</span>
+        <button className="insp-mini" onClick={onClose} title={tr("insert.close")}>✕</button>
       </div>
 
       <input
         className="insert-search"
         type="text"
-        placeholder="Buscar…"
+        placeholder={tr("insert.search")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -337,7 +340,7 @@ export function InsertPanel({ onClose }: { onClose: () => void }) {
             className={"insert-tab" + (tab === t.id ? " active" : "")}
             onClick={() => setTab(t.id)}
           >
-            {t.label}
+            {tr(`insert.tab.${t.id}` as MessageKey)}
           </button>
         ))}
       </div>

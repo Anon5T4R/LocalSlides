@@ -6,6 +6,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Size, SlideGuides } from "../model/deck";
+import { t } from "../lib/i18n";
 
 const RULER = 18;
 
@@ -108,7 +109,7 @@ export function GuidesOverlay({
         className="ruler ruler-top"
         style={{ left: 0, top: -RULER, width: W, height: RULER, pointerEvents: "auto", cursor: "ew-resize" }}
         onPointerDown={(e) => startCreate("x", e)}
-        title="Arraste para criar uma guia vertical (Alt = guia do deck inteiro)"
+        title={t("guides.createV")}
       >
         <div className="ruler-margin-mark" style={{ left: size.w * MARGIN_FRAC * scale }} />
         <div className="ruler-margin-mark" style={{ left: size.w * (1 - MARGIN_FRAC) * scale }} />
@@ -117,7 +118,7 @@ export function GuidesOverlay({
         className="ruler ruler-left"
         style={{ left: -RULER, top: 0, width: RULER, height: H, pointerEvents: "auto", cursor: "ns-resize" }}
         onPointerDown={(e) => startCreate("y", e)}
-        title="Arraste para criar uma guia horizontal (Alt = guia do deck inteiro)"
+        title={t("guides.createH")}
       >
         <div className="ruler-margin-mark ruler-margin-mark-h" style={{ top: size.h * MARGIN_FRAC * scale }} />
         <div className="ruler-margin-mark ruler-margin-mark-h" style={{ top: size.h * (1 - MARGIN_FRAC) * scale }} />
@@ -131,7 +132,7 @@ export function GuidesOverlay({
           style={{ left: x * scale - 4, top: 0, width: 9, height: H, pointerEvents: "auto", cursor: "ew-resize" }}
           onPointerDown={(e) => startMove("x", i, false, e)}
           onDoubleClick={() => removeGuide("x", i)}
-          title="Arraste para mover · duplo-clique para remover"
+          title={t("guides.move")}
         >
           <div className="guide-line guide-line-v" />
         </div>
@@ -145,7 +146,7 @@ export function GuidesOverlay({
           style={{ left: 0, top: y * scale - 4, width: W, height: 9, pointerEvents: "auto", cursor: "ns-resize" }}
           onPointerDown={(e) => startMove("y", i, false, e)}
           onDoubleClick={() => removeGuide("y", i)}
-          title="Arraste para mover · duplo-clique para remover"
+          title={t("guides.move")}
         >
           <div className="guide-line guide-line-h" />
         </div>
@@ -159,7 +160,7 @@ export function GuidesOverlay({
           style={{ left: x * scale - 4, top: 0, width: 9, height: H, pointerEvents: "auto", cursor: "ew-resize" }}
           onPointerDown={(e) => startMove("x", i, true, e)}
           onDoubleClick={() => removeDeckGuide?.("x", i)}
-          title="Guia do deck inteiro · arraste para mover · duplo-clique para remover"
+          title={t("guides.moveDeck")}
         >
           <div className="guide-line guide-line-v guide-line-deck" />
         </div>
@@ -173,7 +174,7 @@ export function GuidesOverlay({
           style={{ left: 0, top: y * scale - 4, width: W, height: 9, pointerEvents: "auto", cursor: "ns-resize" }}
           onPointerDown={(e) => startMove("y", i, true, e)}
           onDoubleClick={() => removeDeckGuide?.("y", i)}
-          title="Guia do deck inteiro · arraste para mover · duplo-clique para remover"
+          title={t("guides.moveDeck")}
         >
           <div className="guide-line guide-line-h guide-line-deck" />
         </div>

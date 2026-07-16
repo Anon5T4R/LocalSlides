@@ -10,6 +10,8 @@
 // container; children keep logical coordinates. PPTX boundary: 1px(96dpi) = 9525 EMU.
 // ---------------------------------------------------------------------------
 
+import { t } from "../lib/i18n";
+
 /** A ProseMirror document (same serialization the Writer/Sheets use for TipTap). */
 export type ProseMirrorJSON = {
   type: string;
@@ -508,7 +510,7 @@ export function newTextBox(partial: Partial<TextBox> = {}): TextBox {
     type: "text",
     geom: { x: 160, y: 200, w: 960, h: 160, rotation: 0 },
     vAlign: "top",
-    content: plainTextToPM("Texto"),
+    content: plainTextToPM(t("deck.text")),
     ...partial,
   };
 }
@@ -520,7 +522,7 @@ export function newFreeTextBox(deck: Deck): TextBox {
   return newTextBox({
     geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
     vAlign: "top",
-    content: plainTextToPM("Texto"),
+    content: plainTextToPM(t("deck.text")),
   });
 }
 
@@ -606,10 +608,10 @@ export function newChart(deck: Deck, kind: ChartKind = "bar"): ChartEl {
     type: "chart",
     geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
     chart: kind,
-    categories: ["Jan", "Fev", "Mar", "Abr"],
+    categories: [t("deck.chartCat1"), t("deck.chartCat2"), t("deck.chartCat3"), t("deck.chartCat4")],
     series: [
-      { name: "Série 1", values: [12, 19, 9, 17] },
-      { name: "Série 2", values: [8, 11, 14, 6] },
+      { name: t("deck.series1"), values: [12, 19, 9, 17] },
+      { name: t("deck.series2"), values: [8, 11, 14, 6] },
     ],
     showLegend: true,
     showValues: false,
@@ -640,13 +642,13 @@ export function newSlide(withLayout = true): Slide {
           geom: { x: 96, y: 80, w: 1088, h: 130, rotation: 0 },
           placeholder: "title",
           vAlign: "middle",
-          content: plainTextToPM("Título do slide"),
+          content: plainTextToPM(t("deck.slideTitle")),
         }),
         newTextBox({
           geom: { x: 96, y: 250, w: 1088, h: 390, rotation: 0 },
           placeholder: "body",
           vAlign: "top",
-          content: plainTextToPM("Clique para editar"),
+          content: plainTextToPM(t("deck.clickToEdit")),
         }),
       ]
     : [];

@@ -4,6 +4,7 @@
 // animations (forced by a changing React key, so they restart on every visit).
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { t as tr } from "../lib/i18n";
 import { useStore } from "../state/store";
 import { pmToPlainText } from "../model/deck";
 import { SlideView } from "../render/SlideView";
@@ -91,7 +92,7 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
       if (!win) {
         win = new WebviewWindow("presenter", {
           url: "index.html",
-          title: "Apresentador — LocalSlides",
+          title: tr("present.windowTitle"),
           width: 900,
           height: 650,
         });
@@ -184,27 +185,27 @@ export function PresentMode({ onExit }: { onExit: () => void }) {
 
       {showNotes && (
         <div className="present-notes" onClick={(e) => e.stopPropagation()}>
-          <div className="present-notes-head">Notas — slide {index + 1}</div>
+          <div className="present-notes-head">{tr("present.notesHead", { n: index + 1 })}</div>
           <div className="present-notes-body">
-            {notesText ? notesText : <span className="present-notes-empty">Sem notas para este slide.</span>}
+            {notesText ? notesText : <span className="present-notes-empty">{tr("present.noNotes")}</span>}
           </div>
         </div>
       )}
 
       <div className="present-hud" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => go(-1)} disabled={index === 0} title="Anterior">‹</button>
+        <button onClick={() => go(-1)} disabled={index === 0} title={tr("present.prev")}>‹</button>
         <span>
           {index + 1} / {deck.slides.length}
         </span>
-        <button onClick={() => go(1)} disabled={index === deck.slides.length - 1} title="Próximo">›</button>
+        <button onClick={() => go(1)} disabled={index === deck.slides.length - 1} title={tr("present.next")}>›</button>
         <button
           className={showNotes ? "active" : ""}
           onClick={() => setShowNotes((v) => !v)}
-          title="Notas do apresentador (N)"
+          title={tr("present.notesToggle")}
         >
           🗒
         </button>
-        <button onClick={onExit} title="Sair (Esc)">✕</button>
+        <button onClick={onExit} title={tr("present.exit")}>✕</button>
       </div>
     </div>
   );

@@ -12,7 +12,8 @@ import {
 } from "../lib/ai";
 import { Settings } from "../lib/settings";
 import { useStore } from "../state/store";
-import { DECKGEN_SYSTEM, parseDeckSpec, specToSlides } from "./deckgen";
+import { deckgenSystem, parseDeckSpec, specToSlides } from "./deckgen";
+import { t } from "../lib/i18n";
 
 export type Status = "stopped" | "loading" | "ready" | "error";
 
@@ -100,12 +101,12 @@ export function useLocalAi(
 
   const start = useCallback(async () => {
     if (!modelPath) {
-      setStatusMsg("Escolha um modelo primeiro.");
+      setStatusMsg(t("ai.pickModelFirst"));
       return;
     }
     onPersist({ modelsDir: dir, lastModelPath: modelPath, ngl, ctx });
     setStatus("loading");
-    setStatusMsg("Iniciando llama-server e carregando o modelo…");
+    setStatusMsg(t("ai.startingServer"));
     try {
       const p = await startLlm(modelPath, ngl, ctx);
       await waitHealthy(p);
@@ -141,7 +142,7 @@ export function useLocalAi(
         .filter((m) => !m.error)
         .map((m) => ({ role: m.role, content: m.content }) as ChatMsg);
       const convo: ChatMsg[] = [
-        { role: "system", content: "Você é um assistente útil para criação de apresentações de slides. Responda em português, de forma concisa." },
+        { role: "system", content: t("ai.chatSystem") },
         ...history,
         { role: "user", content: text },
       ];
@@ -185,8 +186,8 @@ export function useLocalAi(
       if (status !== "ready" || streaming || !prompt.trim()) return;
       setMessages((m) => [
         ...m,
-        { role: "user", content: `🪄 Gerar apresentação: ${prompt}` },
-        { role: "assistant", content: "Gerando estrutura dos slides…" },
+        { role: "user", content: t("ai.genUserPrefix", { prompt }) },
+        { role: "assistant", content: t("ai.genThinking") },
       ]);
       const ac = new AbortController();
       abortRef.current = ac;
@@ -195,7 +196,7 @@ export function useLocalAi(
         const raw = await completeChat(
           portRef.current,
           [
-            { role: "system", content: DECKGEN_SYSTEM },
+            { role: "system", content: deckgenSystem() },
             { role: "user", content: prompt },
           ],
           { temperature: 0.6, signal: ac.signal }
@@ -216,7 +217,10 @@ export function useLocalAi(
           const copy = [...m];
           copy[copy.length - 1] = {
             role: "assistant",
-            content: `✓ ${slides.length} slide(s) ${mode === "replace" ? "criados" : "adicionados"}.`,
+            content:
+              mode === "replace"
+                ? t("ai.genResultReplace", { n: slides.length })
+                : t("ai.genResultAppend", { n: slides.length }),
           };
           return copy;
         });

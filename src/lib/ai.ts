@@ -4,6 +4,7 @@
 // so we always read the real port back from start_llm / llm_status.
 
 import { invoke } from "@tauri-apps/api/core";
+import { t } from "./i18n";
 
 export interface ModelInfo {
   name: string;
@@ -48,7 +49,7 @@ export async function waitHealthy(port: number, timeoutMs = 180000): Promise<voi
     } catch {
       /* server still warming up */
     }
-    if (Date.now() - start > timeoutMs) throw new Error("o modelo demorou demais para carregar");
+    if (Date.now() - start > timeoutMs) throw new Error(t("ai.err.loadTimeout"));
     await new Promise((res) => setTimeout(res, 500));
   }
 }
@@ -79,7 +80,7 @@ export async function streamChat(
     }),
     signal: opts.signal,
   });
-  if (!res.ok || !res.body) throw new Error(`a IA respondeu ${res.status}`);
+  if (!res.ok || !res.body) throw new Error(t("ai.err.status", { status: res.status }));
 
   let inThink = false;
   const routeContent = (text: string) => {

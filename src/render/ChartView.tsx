@@ -2,6 +2,7 @@
 // works in the editor, thumbnails, present mode, and html-to-image exports alike.
 
 import type { ChartEl, Theme } from "../model/deck";
+import { t } from "../lib/i18n";
 
 function resolvePalette(el: ChartEl, theme: Theme): string[] {
   const base = [
@@ -35,7 +36,7 @@ export function ChartView({ el, theme }: { el: ChartEl; theme: Theme }) {
   const fontFamily = theme.fonts.body;
 
   const isPieLike = el.chart === "pie" || el.chart === "donut";
-  const labels = isPieLike ? el.categories : el.series.map((s, i) => s.name || `Série ${i + 1}`);
+  const labels = isPieLike ? el.categories : el.series.map((s, i) => s.name || t("chart.series", { n: i + 1 }));
   const legend = el.showLegend ? (
     <g>
       {labels.map((lab, i) => {

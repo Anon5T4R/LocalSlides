@@ -4,6 +4,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { t } from "./i18n";
 
 const IMAGE_MIME: Record<string, string> = {
   png: "image/png",
@@ -44,7 +45,7 @@ async function pickAsDataUrl(
 }
 
 export function pickImageDataUri(): Promise<string | null> {
-  return pickAsDataUrl("Imagens", Object.keys(IMAGE_MIME), IMAGE_MIME);
+  return pickAsDataUrl(t("lib.imagesFilter"), Object.keys(IMAGE_MIME), IMAGE_MIME);
 }
 
 /** Build an image data URL from a file path (used by OS drag-and-drop in Tauri). */
@@ -56,5 +57,5 @@ export async function imageDataUrlFromPath(path: string): Promise<string | null>
 }
 
 export function pickVideoDataUri(): Promise<string | null> {
-  return pickAsDataUrl("Vídeos", Object.keys(VIDEO_MIME), VIDEO_MIME);
+  return pickAsDataUrl(t("lib.videosFilter"), Object.keys(VIDEO_MIME), VIDEO_MIME);
 }

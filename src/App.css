@@ -108,6 +108,23 @@ body {
 .zoom {
   display: flex;
   gap: 4px;
+  align-items: center;
+}
+
+/* Language picker (top bar, next to zoom controls) */
+.lang-select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.lang-select:hover {
+  background: var(--border);
 }
 
 /* ---- Workspace ---- */

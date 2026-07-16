@@ -11,6 +11,7 @@ import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import type { Deck } from "../model/deck";
 import { slideToPngDataUrl } from "./png";
 import { inTauri } from "../lib/env";
+import { t } from "../lib/i18n";
 
 export interface VideoExportOptions {
   /** Seconds each slide stays on screen. Default 3. */
@@ -43,15 +44,15 @@ function pickMimeType(withAudio: boolean): string {
 export async function exportDeckVideo(deck: Deck, opts: VideoExportOptions = {}): Promise<Blob> {
   const { secondsPerSlide = 3, fps = 30, onProgress } = opts;
   if (typeof MediaRecorder === "undefined") {
-    throw new Error("Gravação de vídeo não é suportada neste ambiente.");
+    throw new Error(t("export.videoUnsupported"));
   }
-  if (deck.slides.length === 0) throw new Error("A apresentação não tem slides.");
+  if (deck.slides.length === 0) throw new Error(t("export.noSlides"));
 
   const canvas = document.createElement("canvas");
   canvas.width = deck.size.w;
   canvas.height = deck.size.h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Não foi possível criar o contexto 2D do canvas.");
+  if (!ctx) throw new Error(t("export.noCanvas2d"));
 
   const videoStream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(fps);
   const tracks: MediaStreamTrack[] = [...videoStream.getVideoTracks()];
@@ -120,7 +121,7 @@ export async function saveVideoBlob(blob: Blob, suggestedName: string): Promise<
   if (inTauri()) {
     const path = await saveDialog({
       defaultPath: suggestedName,
-      filters: [{ name: "Vídeo WEBM", extensions: ["webm"] }],
+      filters: [{ name: t("export.webmFilter"), extensions: ["webm"] }],
     });
     if (!path) return;
     const buf = new Uint8Array(await blob.arrayBuffer());

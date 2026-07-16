@@ -25,6 +25,7 @@ import type {
 } from "../model/deck";
 import { pmToPlainText } from "../model/deck";
 import { inTauri } from "../lib/env";
+import { t } from "../lib/i18n";
 
 const PX_PER_IN = 96;
 const px = (v: number) => v / PX_PER_IN;
@@ -275,7 +276,7 @@ function addVideoEl(s: AnySlide, el: { type: "video"; src: string; geom: Element
     s.addMedia({ type: "video", data: el.src, x: px(x), y: px(y), w: px(w), h: px(h) } as never);
   } catch {
     // Some data URLs / codecs aren't embeddable — leave a labeled placeholder.
-    s.addText("[vídeo]", { x: px(x), y: px(y), w: px(w), h: px(h), align: "center", valign: "middle", fill: { color: "1E293B" }, color: "FFFFFF" });
+    s.addText(t("export.videoPlaceholder"), { x: px(x), y: px(y), w: px(w), h: px(h), align: "center", valign: "middle", fill: { color: "1E293B" }, color: "FFFFFF" });
   }
 }
 
@@ -287,7 +288,7 @@ function addChartEl(s: AnySlide, el: ChartEl) {
   const type =
     el.chart === "line" ? "line" : el.chart === "area" ? "area" : el.chart === "donut" ? "doughnut" : isPieLike ? "pie" : "bar";
   const data = isPieLike
-    ? [{ name: el.series[0]?.name ?? "Série 1", labels: el.categories, values: el.series[0]?.values ?? [] }]
+    ? [{ name: el.series[0]?.name ?? t("export.series1"), labels: el.categories, values: el.series[0]?.values ?? [] }]
     : el.series.map((se) => ({ name: se.name, labels: el.categories, values: se.values }));
   const colors = el.palette && el.palette.length ? el.palette.map((c) => hex(c)) : CHART_PALETTE;
   const opts: Record<string, unknown> = {
@@ -341,7 +342,7 @@ const PPTX_MIME =
   "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 /** Export the deck as a .pptx, saving via native dialog (Tauri) or download. */
-export async function exportDeckPptx(deck: Deck, suggestedName = "apresentacao.pptx"): Promise<void> {
+export async function exportDeckPptx(deck: Deck, suggestedName = t("export.defaultPptxName")): Promise<void> {
   const b64 = await deckToPptxBase64(deck);
   if (inTauri()) {
     const path = await saveDialog({

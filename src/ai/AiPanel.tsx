@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { LocalAi } from "./useLocalAi";
+import { t } from "../lib/i18n";
 
 interface AiPanelProps {
   ai: LocalAi;
@@ -24,25 +25,25 @@ export function AiPanel({ ai, onClose }: AiPanelProps) {
     <aside className="ai-panel">
       <div className="ai-header">
         <span className="ai-dot" style={{ background: statusDot }} />
-        <strong>IA local</strong>
+        <strong>{t("aip.title")}</strong>
         <span className="ai-spacer" />
-        <button className="tb-btn" onClick={ai.clear} disabled={!ai.messages.length} title="Limpar conversa">🗑</button>
-        <button className="tb-btn" onClick={onClose} title="Fechar painel">✕</button>
+        <button className="tb-btn" onClick={ai.clear} disabled={!ai.messages.length} title={t("aip.clearTitle")}>🗑</button>
+        <button className="tb-btn" onClick={onClose} title={t("aip.closeTitle")}>✕</button>
       </div>
 
       <div className="ai-config">
         <label className="ai-field">
-          <span>Pasta de modelos</span>
+          <span>{t("aip.modelsFolder")}</span>
           <div className="ai-row">
             <input value={ai.dir} onChange={(e) => ai.setDir(e.target.value)} spellCheck={false} />
-            <button className="tb-btn" onClick={ai.scan}>Escanear</button>
+            <button className="tb-btn" onClick={ai.scan}>{t("aip.scan")}</button>
           </div>
         </label>
 
         <label className="ai-field">
-          <span>Modelo ({ai.models.filter((m) => !m.is_projector).length} encontrados)</span>
+          <span>{t("aip.modelCount", { n: ai.models.filter((m) => !m.is_projector).length })}</span>
           <select value={ai.modelPath} onChange={(e) => ai.setModelPath(e.target.value)} disabled={configDisabled}>
-            <option value="">— escolher —</option>
+            <option value="">{t("aip.choose")}</option>
             {ai.models.filter((m) => !m.is_projector).map((m) => (
               <option key={m.path} value={m.path}>{m.name} · {m.size_gb.toFixed(2)} GB</option>
             ))}
@@ -50,33 +51,33 @@ export function AiPanel({ ai, onClose }: AiPanelProps) {
         </label>
 
         <div className="ai-row ai-tune">
-          <label title="Camadas na GPU (0 = só CPU)">
-            GPU layers
+          <label title={t("aip.gpuTitle")}>
+            {t("aip.gpuLayers")}
             <input type="number" min={0} max={999} value={ai.ngl} onChange={(e) => ai.setNgl(Number(e.target.value))} disabled={configDisabled} />
           </label>
-          <label title="Tamanho do contexto">
-            Contexto
+          <label title={t("aip.ctxTitle")}>
+            {t("aip.ctx")}
             <input type="number" min={512} step={512} value={ai.ctx} onChange={(e) => ai.setCtx(Number(e.target.value))} disabled={configDisabled} />
           </label>
           {ai.status === "ready" ? (
-            <button className="tb-btn ai-stop" onClick={ai.stop}>Parar</button>
+            <button className="tb-btn ai-stop" onClick={ai.stop}>{t("aip.stop")}</button>
           ) : (
             <button className="tb-btn ai-start" onClick={ai.start} disabled={ai.status === "loading"}>
-              {ai.status === "loading" ? "Carregando…" : "Iniciar"}
+              {ai.status === "loading" ? t("aip.loading") : t("aip.start")}
             </button>
           )}
         </div>
 
-        {ai.status === "ready" && ai.port > 0 && <div className="ai-status-msg">Servidor na porta {ai.port}.</div>}
+        {ai.status === "ready" && ai.port > 0 && <div className="ai-status-msg">{t("aip.serverPort", { port: ai.port })}</div>}
         {ai.statusMsg && <div className="ai-status-msg">{ai.statusMsg}</div>}
       </div>
 
       <div className="ai-gen">
-        <span className="ai-gen-title">🪄 Gerar apresentação</span>
+        <span className="ai-gen-title">{t("aip.genTitle")}</span>
         <textarea
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          placeholder="Tema/assunto (ex.: 'Introdução à fotossíntese para o ensino médio')"
+          placeholder={t("aip.topicPlaceholder")}
           disabled={!ai.ready || ai.streaming}
           rows={2}
         />
@@ -85,17 +86,17 @@ export function AiPanel({ ai, onClose }: AiPanelProps) {
             className="tb-btn ai-start"
             onClick={() => ai.generateDeck(topic, "replace")}
             disabled={!ai.ready || ai.streaming || !topic.trim()}
-            title="Substitui o deck atual pelos slides gerados"
+            title={t("aip.replaceTitle")}
           >
-            Gerar (novo deck)
+            {t("aip.genNew")}
           </button>
           <button
             className="tb-btn"
             onClick={() => ai.generateDeck(topic, "append")}
             disabled={!ai.ready || ai.streaming || !topic.trim()}
-            title="Adiciona os slides gerados ao deck atual"
+            title={t("aip.appendTitle")}
           >
-            Adicionar ao deck
+            {t("aip.genAppend")}
           </button>
         </div>
       </div>
@@ -103,14 +104,14 @@ export function AiPanel({ ai, onClose }: AiPanelProps) {
       <div className="ai-messages" ref={scrollRef}>
         {ai.messages.length === 0 && (
           <div className="ai-empty">
-            Inicie um modelo, depois gere uma apresentação a partir de um tema ou converse com a IA.
+            {t("aip.empty")}
           </div>
         )}
         {ai.messages.map((m, i) => (
           <div key={i} className={`ai-msg ai-${m.role}`}>
             {m.role === "assistant" && m.reasoning && (
               <details className="ai-reasoning" open={!m.content}>
-                <summary>💭 Raciocínio</summary>
+                <summary>{t("aip.reasoning")}</summary>
                 <div className="ai-reasoning-body">{m.reasoning}</div>
               </details>
             )}
@@ -132,14 +133,14 @@ export function AiPanel({ ai, onClose }: AiPanelProps) {
               setInput("");
             }
           }}
-          placeholder={ai.ready ? "Pergunte algo… (Enter envia, Shift+Enter quebra linha)" : "Inicie um modelo para conversar"}
+          placeholder={ai.ready ? t("aip.inputReady") : t("aip.inputIdle")}
           disabled={!ai.ready}
           rows={2}
         />
         {ai.streaming ? (
-          <button type="button" className="tb-btn" onClick={ai.abort}>Parar</button>
+          <button type="button" className="tb-btn" onClick={ai.abort}>{t("aip.stop")}</button>
         ) : (
-          <button type="submit" className="tb-btn ai-start" disabled={!ai.ready || !input.trim()}>Enviar</button>
+          <button type="submit" className="tb-btn ai-start" disabled={!ai.ready || !input.trim()}>{t("aip.send")}</button>
         )}
       </form>
     </aside>

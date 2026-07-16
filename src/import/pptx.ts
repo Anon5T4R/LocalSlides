@@ -32,6 +32,7 @@ import {
   makeId,
   plainTextToPM,
 } from "../model/deck";
+import { t as tr } from "../lib/i18n";
 
 const EMU = 9525; // EMU per logical px (914400/in ÷ 96 px/in)
 const R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -53,7 +54,7 @@ const EXT_MIME: Record<string, string> = {
 
 function parseXml(text: string): Document {
   const doc = new DOMParser().parseFromString(text, "application/xml");
-  if (doc.getElementsByTagName("parsererror").length) throw new Error("XML inválido");
+  if (doc.getElementsByTagName("parsererror").length) throw new Error(tr("import.xmlInvalid"));
   return doc;
 }
 
@@ -529,7 +530,7 @@ async function parseSlide(zip: JSZip, slidePath: string, size: { w: number; h: n
 async function slideOrder(zip: JSZip): Promise<string[]> {
   const presPath = "ppt/presentation.xml";
   const presFile = zip.file(presPath);
-  if (!presFile) throw new Error("presentation.xml ausente — arquivo PPTX inválido.");
+  if (!presFile) throw new Error(tr("import.presMissing"));
   const doc = parseXml(await presFile.async("string"));
   const rels = await readRels(zip, presPath);
   const ids = Array.from(doc.getElementsByTagName("*")).filter((e) => e.localName === "sldId");
@@ -556,7 +557,7 @@ function readSlideSize(doc: Document): { w: number; h: number } {
 export async function importPptxToDeck(bytes: Uint8Array): Promise<Deck> {
   const zip = await JSZip.loadAsync(bytes);
   const presFile = zip.file("ppt/presentation.xml");
-  if (!presFile) throw new Error("Não parece um arquivo PowerPoint (.pptx) válido.");
+  if (!presFile) throw new Error(tr("import.notPptx"));
 
   const presDoc = parseXml(await presFile.async("string"));
   const size = readSlideSize(presDoc);
@@ -579,7 +580,7 @@ export async function importPptxToDeck(bytes: Uint8Array): Promise<Deck> {
 
   // If every slide failed, the import is effectively blank — surface why.
   if (errors.length && errors.length === order.length) {
-    throw new Error(`Falha ao importar os slides:\n${errors.slice(0, 3).join("\n")}`);
+    throw new Error(tr("import.importFailed", { details: errors.slice(0, 3).join("\n") }));
   }
 
   // Case (b): slides parsed without error but produced nothing. Tell the user
@@ -587,10 +588,7 @@ export async function importPptxToDeck(bytes: Uint8Array): Promise<Deck> {
   const totalEls = slides.reduce((n, s) => n + s.elements.length, 0);
   if (totalEls === 0) {
     console.warn("[pptx import] nenhum elemento reconhecido em", order.length, "slide(s)");
-    throw new Error(
-      "O PPTX foi lido, mas nenhum conteúdo de slide foi reconhecido " +
-        "(formas/textos podem estar herdados do layout ou em formato não suportado)."
-    );
+    throw new Error(tr("import.nothingRecognized"));
   }
 
   return {

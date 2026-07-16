@@ -31,6 +31,7 @@ import { CropOverlay } from "./CropOverlay";
 import { DrawLayer } from "./DrawLayer";
 import { CommentsLayer } from "./CommentsLayer";
 import { GuidesOverlay } from "./GuidesOverlay";
+import { t } from "../lib/i18n";
 
 const FIT_MARGIN = 48;
 
@@ -753,14 +754,14 @@ export function EditorStage() {
 
         if (count > 0) {
           items.push(
-            { kind: "item", label: "Duplicar", shortcut: "Ctrl+D", onClick: () => duplicateElements(sel) },
-            { kind: "item", label: "Copiar", shortcut: "Ctrl+C", onClick: copySelection },
-            { kind: "item", label: "Recortar", shortcut: "Ctrl+X", onClick: cutSelection },
+            { kind: "item", label: t("stage.duplicate"), shortcut: "Ctrl+D", onClick: () => duplicateElements(sel) },
+            { kind: "item", label: t("stage.copy"), shortcut: "Ctrl+C", onClick: copySelection },
+            { kind: "item", label: t("stage.cut"), shortcut: "Ctrl+X", onClick: cutSelection },
           );
         }
         items.push({
           kind: "item",
-          label: "Colar",
+          label: t("stage.paste"),
           shortcut: "Ctrl+V",
           disabled: clipboardSize === 0,
           onClick: pasteFromClipboard,
@@ -771,14 +772,14 @@ export function EditorStage() {
           const el = slideRef.current?.elements.find((x) => x.id === elId);
           items.push(
             { kind: "sep" },
-            { kind: "item", label: "Trazer para frente", onClick: () => reorder(elId, "front") },
-            { kind: "item", label: "Enviar para trás", onClick: () => reorder(elId, "back") },
+            { kind: "item", label: t("stage.bringToFront"), onClick: () => reorder(elId, "front") },
+            { kind: "item", label: t("stage.sendToBack"), onClick: () => reorder(elId, "back") },
           );
           if (el) {
             items.push(
               { kind: "sep" },
-              { kind: "item", label: el.locked ? "Desbloquear" : "Bloquear", onClick: () => updateElement(elId, (x) => { x.locked = !x.locked; }) },
-              { kind: "item", label: el.hidden ? "Mostrar" : "Ocultar", onClick: () => updateElement(elId, (x) => { x.hidden = !x.hidden; }) },
+              { kind: "item", label: el.locked ? t("stage.unlock") : t("stage.lock"), onClick: () => updateElement(elId, (x) => { x.locked = !x.locked; }) },
+              { kind: "item", label: el.hidden ? t("stage.show") : t("stage.hide"), onClick: () => updateElement(elId, (x) => { x.hidden = !x.hidden; }) },
             );
           }
         }
@@ -786,7 +787,7 @@ export function EditorStage() {
         if (count > 0) {
           items.push(
             { kind: "sep" },
-            { kind: "item", label: count === 1 ? "Excluir" : `Excluir (${count})`, danger: true, onClick: () => deleteElements(sel) },
+            { kind: "item", label: count === 1 ? t("stage.delete") : t("stage.deleteCount", { count }), danger: true, onClick: () => deleteElements(sel) },
           );
         }
 

@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import App from "./App";
 import { PresenterWindow } from "./present/PresenterWindow";
 import { inTauri } from "./lib/env";
+import { useLocale } from "./lib/i18n";
 import "./lib/embeddedFonts";
 import "./App.css";
 
@@ -19,8 +20,14 @@ function isPresenterWindow(): boolean {
   }
 }
 
+// Remount the whole tree when the locale changes so every t() re-evaluates.
+function Root() {
+  const locale = useLocale();
+  return isPresenterWindow() ? <PresenterWindow key={locale} /> : <App key={locale} />;
+}
+
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    {isPresenterWindow() ? <PresenterWindow /> : <App />}
+    <Root />
   </React.StrictMode>,
 );

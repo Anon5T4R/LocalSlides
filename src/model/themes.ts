@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 
 import type { Theme } from "./deck";
+import { t, type MessageKey } from "../lib/i18n";
 
 export interface ThemePreset {
   id: string;
@@ -130,6 +131,11 @@ export const THEME_PRESETS: ThemePreset[] = [
     },
   },
 ];
+
+/** Localized display name for a theme preset, keyed by its stable `id`. */
+export function themeName(id: string): string {
+  return t(`dtheme.${id}` as MessageKey);
+}
 
 export function findThemePreset(theme: Theme): ThemePreset | undefined {
   return THEME_PRESETS.find(

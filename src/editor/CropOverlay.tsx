@@ -9,6 +9,7 @@ import { useStore } from "../state/store";
 import type { ImageEl } from "../model/deck";
 import { SelectionLayer } from "../render/SelectionLayer";
 import { resizeGeom, type Handle } from "../interactions/geometry";
+import { t } from "../lib/i18n";
 
 interface Rect {
   x: number;
@@ -218,20 +219,20 @@ export function CropOverlay({ el, scale, onDone }: { el: ImageEl; scale: number;
         onPointerDown={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
       >
-        <button onClick={() => zoomTo(dispW / 1.15)} title="Reduzir zoom">−</button>
+        <button onClick={() => zoomTo(dispW / 1.15)} title={t("crop.zoomOut")}>−</button>
         <input
           type="range"
           min={100}
           max={800}
           value={Math.min(800, zoomPct)}
           onChange={(e) => zoomTo(coverW * (Number(e.target.value) / 100))}
-          title={`Zoom ${zoomPct}%`}
+          title={t("crop.zoom", { pct: zoomPct })}
           style={{ width: 90 }}
         />
-        <button onClick={() => zoomTo(dispW * 1.15)} title="Aumentar zoom">＋</button>
-        <button onClick={reset} title="Reenquadrar">Reenquadrar</button>
-        <button onClick={onDone} title="Cancelar (Esc)">Cancelar</button>
-        <button className="crop-apply" onClick={apply} title="Concluir">Concluir</button>
+        <button onClick={() => zoomTo(dispW * 1.15)} title={t("crop.zoomIn")}>＋</button>
+        <button onClick={reset} title={t("crop.reframe")}>{t("crop.reframe")}</button>
+        <button onClick={onDone} title={t("crop.cancelTitle")}>{t("crop.cancel")}</button>
+        <button className="crop-apply" onClick={apply} title={t("crop.done")}>{t("crop.done")}</button>
       </div>
     </>
   );

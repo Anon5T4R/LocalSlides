@@ -5,6 +5,7 @@
 import { useStore } from "../state/store";
 import { newImage, newVideo } from "../model/deck";
 import { pickImageDataUri, pickVideoDataUri } from "../lib/media";
+import { t } from "../lib/i18n";
 
 export function MediaPanel({ onClose }: { onClose: () => void }) {
   const deck = useStore((s) => s.deck);
@@ -16,9 +17,9 @@ export function MediaPanel({ onClose }: { onClose: () => void }) {
   const upload = async (kind: "image" | "video") => {
     try {
       const src = kind === "image" ? await pickImageDataUri() : await pickVideoDataUri();
-      if (src) addAsset(kind, kind === "image" ? "Imagem" : "Vídeo", src);
+      if (src) addAsset(kind, kind === "image" ? t("media.imageName") : t("media.videoName"), src);
     } catch (e) {
-      window.alert(`Não foi possível adicionar:\n${e}`);
+      window.alert(t("media.addError", { error: String(e) }));
     }
   };
 
@@ -30,23 +31,23 @@ export function MediaPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="media-panel">
       <div className="media-head">
-        <span>Mídia</span>
-        <button className="insp-mini" onClick={onClose} title="Fechar">✕</button>
+        <span>{t("media.title")}</span>
+        <button className="insp-mini" onClick={onClose} title={t("media.close")}>✕</button>
       </div>
 
       <div className="media-actions">
-        <button className="insp-mini" onClick={() => upload("image")}>＋ Imagem</button>
-        <button className="insp-mini" onClick={() => upload("video")}>＋ Vídeo</button>
+        <button className="insp-mini" onClick={() => upload("image")}>{t("media.addImage")}</button>
+        <button className="insp-mini" onClick={() => upload("video")}>{t("media.addVideo")}</button>
       </div>
 
       {assets.length === 0 ? (
         <p className="media-empty">
-          Envie imagens/vídeos uma vez e reutilize em qualquer slide. Clique numa miniatura para inserir.
+          {t("media.empty")}
         </p>
       ) : (
         <div className="media-grid">
           {assets.map((a) => (
-            <div key={a.id} className="media-item" title={`Inserir ${a.name}`}>
+            <div key={a.id} className="media-item" title={t("media.insertAsset", { name: a.name })}>
               <button className="media-thumb" onClick={() => insert(a.kind, a.src)}>
                 {a.kind === "image" ? (
                   <img src={a.src} alt={a.name} draggable={false} />
@@ -57,7 +58,7 @@ export function MediaPanel({ onClose }: { onClose: () => void }) {
               </button>
               <button
                 className="media-del"
-                title="Remover da biblioteca"
+                title={t("media.removeFromLibrary")}
                 onClick={() => removeAsset(a.id)}
               >
                 🗑

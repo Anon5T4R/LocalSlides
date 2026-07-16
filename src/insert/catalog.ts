@@ -18,6 +18,7 @@ import {
   type ShapeKind,
 } from "../model/deck";
 import { ICONS } from "../model/icons";
+import { t, type MessageKey } from "../lib/i18n";
 
 export type InsertTab = "elements" | "text" | "charts" | "tables" | "icons";
 
@@ -84,8 +85,20 @@ function newFrame(deck: Deck, kind: ShapeKind, w: number, h: number): ShapeEl {
     shape: kind,
     fill: { kind: "solid", color: "#e2e8f0" },
     stroke: { color: "#94a3b8", width: 2, style: "dash" },
-    text: plainTextToPM("Arraste uma foto aqui"),
+    text: plainTextToPM(t("cat.newFramePrompt")),
   };
+}
+
+/**
+ * Rótulo de exibição de um item do catálogo, resolvido no idioma atual em tempo
+ * de render (o App remonta na troca de locale). O `id`/`kind` persistido fica
+ * intacto — a chave i18n é derivada dele: `cat.<id>` (ex.: `cat.shape:rect`),
+ * ou `icon.<name>` para ícones. Os campos `label` das arrays permanecem em PT
+ * como fonte/fallback (também lidos pelo menu do topo em App.tsx).
+ */
+export function insertItemLabel(item: InsertItem): string {
+  if (item.id.startsWith("icon:")) return t(("icon." + item.id.slice("icon:".length)) as MessageKey);
+  return t(("cat." + item.id) as MessageKey);
 }
 
 export const INSERT_CATALOG: InsertItem[] = [
@@ -110,7 +123,7 @@ export const INSERT_CATALOG: InsertItem[] = [
         geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
         placeholder: "title",
         vAlign: "middle",
-        content: plainTextToPM("Adicione um título"),
+        content: plainTextToPM(t("cat.newTitle")),
       });
     },
   },
@@ -126,7 +139,7 @@ export const INSERT_CATALOG: InsertItem[] = [
       return newTextBox({
         geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
         vAlign: "top",
-        content: plainTextToPM("Adicione um subtítulo"),
+        content: plainTextToPM(t("cat.newSubtitle")),
       });
     },
   },
@@ -143,7 +156,7 @@ export const INSERT_CATALOG: InsertItem[] = [
         geom: { x: (deck.size.w - w) / 2, y: (deck.size.h - h) / 2, w, h, rotation: 0 },
         placeholder: "body",
         vAlign: "top",
-        content: plainTextToPM("Adicione um pouco de texto ao seu design."),
+        content: plainTextToPM(t("cat.newBody")),
       });
     },
   },

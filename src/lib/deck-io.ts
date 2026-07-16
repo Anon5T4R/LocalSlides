@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import type { Deck } from "../model/deck";
 import { packDeck, unpackDeck } from "../model/serialize";
+import { t } from "./i18n";
 
 export interface DeckFile {
   path: string;
@@ -43,7 +44,7 @@ export async function openDeckPath(path: string): Promise<DeckFile> {
 export async function openDeck(): Promise<DeckFile | null> {
   const selected = await openDialog({
     multiple: false,
-    filters: [{ name: "Apresentação LocalSlides", extensions: ["tslides"] }],
+    filters: [{ name: t("lib.tslidesFilter"), extensions: ["tslides"] }],
   });
   if (!selected || Array.isArray(selected)) return null;
   return openDeckPath(selected);
@@ -56,10 +57,10 @@ export async function saveDeckTo(path: string, deck: Deck): Promise<void> {
 }
 
 /** Show a native save dialog and write there. Returns the new path, or null. */
-export async function saveDeckAs(deck: Deck, suggestedName = "apresentacao.tslides"): Promise<string | null> {
+export async function saveDeckAs(deck: Deck, suggestedName = t("lib.defaultDeckName")): Promise<string | null> {
   const path = await saveDialog({
     defaultPath: suggestedName,
-    filters: [{ name: "Apresentação LocalSlides", extensions: ["tslides"] }],
+    filters: [{ name: t("lib.tslidesFilter"), extensions: ["tslides"] }],
   });
   if (!path) return null;
   await saveDeckTo(path, deck);

@@ -4,6 +4,7 @@
 // flows through the store, so all of it is undoable.
 
 import { useState } from "react";
+import { t as tr } from "../lib/i18n";
 import { useStore } from "../state/store";
 import {
   findSlide,
@@ -22,91 +23,91 @@ import {
   type TableEl,
   type TransitionKind,
 } from "../model/deck";
-import { THEME_PRESETS, findThemePreset } from "../model/themes";
-import { LAYOUTS } from "../model/layouts";
+import { THEME_PRESETS, findThemePreset, themeName } from "../model/themes";
+import { LAYOUTS, layoutName } from "../model/layouts";
 import { ColorPicker } from "../ui/ColorPicker";
 import { TEXT_EFFECT_PRESETS } from "../render/textEffects";
 import { loadBrandKits, saveBrandKit, removeBrandKit, type BrandKit } from "../lib/brandKit";
 import { ensureModelLoaded, removeBackground } from "../lib/backgroundRemoval";
 import { expandRectToWholeCells, isMergedMaster, mergeCells, splitCell } from "../model/tableOps";
 
-const ANIMS: { value: AnimKind; label: string }[] = [
-  { value: "none", label: "Nenhuma" },
-  { value: "fadeIn", label: "Surgir (fade)" },
-  { value: "slideUp", label: "Subir" },
-  { value: "slideLeft", label: "Entrar da direita" },
-  { value: "zoomIn", label: "Zoom" },
-  { value: "bounceIn", label: "Saltar" },
-  { value: "flipIn", label: "Girar" },
+const ANIMS = (): { value: AnimKind; label: string }[] => [
+  { value: "none", label: tr("insp.none") },
+  { value: "fadeIn", label: tr("insp.anim.fadeIn") },
+  { value: "slideUp", label: tr("insp.anim.slideUp") },
+  { value: "slideLeft", label: tr("insp.anim.slideLeft") },
+  { value: "zoomIn", label: tr("insp.anim.zoomIn") },
+  { value: "bounceIn", label: tr("insp.anim.bounceIn") },
+  { value: "flipIn", label: tr("insp.anim.flipIn") },
 ];
 
 /** Onda 12 — "Animar página": apply one preset to every element on the slide
  * at once, with an automatic stagger so they cascade in during Present mode. */
-const PAGE_ANIM_PRESETS: { id: string; label: string; kind: AnimKind; duration: number; stagger: number }[] = [
-  { id: "dissolve", label: "Dissolver", kind: "fadeIn", duration: 0.6, stagger: 0.08 },
-  { id: "slide", label: "Deslizar", kind: "slideLeft", duration: 0.5, stagger: 0.1 },
-  { id: "cascade", label: "Subir em cascata", kind: "slideUp", duration: 0.5, stagger: 0.15 },
+const PAGE_ANIM_PRESETS = (): { id: string; label: string; kind: AnimKind; duration: number; stagger: number }[] => [
+  { id: "dissolve", label: tr("insp.pageAnim.dissolve"), kind: "fadeIn", duration: 0.6, stagger: 0.08 },
+  { id: "slide", label: tr("insp.slide"), kind: "slideLeft", duration: 0.5, stagger: 0.1 },
+  { id: "cascade", label: tr("insp.pageAnim.cascade"), kind: "slideUp", duration: 0.5, stagger: 0.15 },
 ];
 
-const TRANSITIONS: { value: TransitionKind; label: string }[] = [
-  { value: "none", label: "Nenhuma" },
-  { value: "fade", label: "Fade" },
-  { value: "slide", label: "Deslizar" },
-  { value: "push", label: "Empurrar" },
+const TRANSITIONS = (): { value: TransitionKind; label: string }[] => [
+  { value: "none", label: tr("insp.none") },
+  { value: "fade", label: tr("insp.transition.fade") },
+  { value: "slide", label: tr("insp.slide") },
+  { value: "push", label: tr("insp.transition.push") },
 ];
 
-const STROKE_STYLES: { value: StrokeStyle; label: string }[] = [
-  { value: "solid", label: "Normal" },
-  { value: "dash", label: "Tracejado" },
-  { value: "dot", label: "Pontilhado" },
-  { value: "chalk", label: "Giz" },
-  { value: "smudge", label: "Esfumaçado" },
+const STROKE_STYLES = (): { value: StrokeStyle; label: string }[] => [
+  { value: "solid", label: tr("insp.stroke.solid") },
+  { value: "dash", label: tr("insp.stroke.dash") },
+  { value: "dot", label: tr("insp.stroke.dot") },
+  { value: "chalk", label: tr("insp.stroke.chalk") },
+  { value: "smudge", label: tr("insp.stroke.smudge") },
 ];
 
-const ADJUST_SLIDERS: {
+const ADJUST_SLIDERS = (): {
   k: keyof ImageAdjust;
   label: string;
   min: number;
   max: number;
   neutral: number;
   suffix: string;
-}[] = [
-  { k: "brightness", label: "Brilho", min: 0, max: 200, neutral: 100, suffix: "%" },
-  { k: "contrast", label: "Contraste", min: 0, max: 200, neutral: 100, suffix: "%" },
-  { k: "saturate", label: "Saturação", min: 0, max: 200, neutral: 100, suffix: "%" },
-  { k: "hueRotate", label: "Matiz", min: 0, max: 360, neutral: 0, suffix: "°" },
-  { k: "grayscale", label: "P&B", min: 0, max: 100, neutral: 0, suffix: "%" },
-  { k: "sepia", label: "Sépia", min: 0, max: 100, neutral: 0, suffix: "%" },
-  { k: "blur", label: "Desfoque", min: 0, max: 20, neutral: 0, suffix: "px" },
+}[] => [
+  { k: "brightness", label: tr("insp.adjust.brightness"), min: 0, max: 200, neutral: 100, suffix: "%" },
+  { k: "contrast", label: tr("insp.adjust.contrast"), min: 0, max: 200, neutral: 100, suffix: "%" },
+  { k: "saturate", label: tr("insp.adjust.saturate"), min: 0, max: 200, neutral: 100, suffix: "%" },
+  { k: "hueRotate", label: tr("insp.adjust.hueRotate"), min: 0, max: 360, neutral: 0, suffix: "°" },
+  { k: "grayscale", label: tr("insp.adjust.grayscale"), min: 0, max: 100, neutral: 0, suffix: "%" },
+  { k: "sepia", label: tr("insp.adjust.sepia"), min: 0, max: 100, neutral: 0, suffix: "%" },
+  { k: "blur", label: tr("insp.adjust.blur"), min: 0, max: 20, neutral: 0, suffix: "px" },
 ];
 
 /** Shapes that can be used as an image mask silhouette (clip-path). */
-const MASK_SHAPES: { value: "" | ShapeKind; label: string }[] = [
-  { value: "", label: "Nenhuma" },
-  { value: "ellipse", label: "Círculo / elipse" },
-  { value: "roundRect", label: "Arredondado" },
-  { value: "triangle", label: "Triângulo" },
-  { value: "diamond", label: "Losango" },
-  { value: "pentagon", label: "Pentágono" },
-  { value: "hexagon", label: "Hexágono" },
-  { value: "star", label: "Estrela" },
+const MASK_SHAPES = (): { value: "" | ShapeKind; label: string }[] => [
+  { value: "", label: tr("insp.none") },
+  { value: "ellipse", label: tr("insp.mask.ellipse") },
+  { value: "roundRect", label: tr("insp.roundRect") },
+  { value: "triangle", label: tr("insp.triangle") },
+  { value: "diamond", label: tr("insp.diamond") },
+  { value: "pentagon", label: tr("insp.pentagon") },
+  { value: "hexagon", label: tr("insp.hexagon") },
+  { value: "star", label: tr("insp.star") },
 ];
 
-const SHAPES: { value: ShapeKind; label: string }[] = [
-  { value: "rect", label: "Retângulo" },
-  { value: "roundRect", label: "Arredondado" },
-  { value: "ellipse", label: "Elipse" },
-  { value: "triangle", label: "Triângulo" },
-  { value: "diamond", label: "Losango" },
-  { value: "pentagon", label: "Pentágono" },
-  { value: "hexagon", label: "Hexágono" },
-  { value: "star", label: "Estrela" },
-  { value: "arrow", label: "Seta" },
-  { value: "doubleArrow", label: "Seta dupla" },
-  { value: "chevron", label: "Chevron" },
-  { value: "line", label: "Linha" },
-  { value: "speech", label: "Balão de fala" },
-  { value: "thought", label: "Balão de pensamento" },
+const SHAPES = (): { value: ShapeKind; label: string }[] => [
+  { value: "rect", label: tr("insp.shape.rect") },
+  { value: "roundRect", label: tr("insp.roundRect") },
+  { value: "ellipse", label: tr("insp.shape.ellipse") },
+  { value: "triangle", label: tr("insp.triangle") },
+  { value: "diamond", label: tr("insp.diamond") },
+  { value: "pentagon", label: tr("insp.pentagon") },
+  { value: "hexagon", label: tr("insp.hexagon") },
+  { value: "star", label: tr("insp.star") },
+  { value: "arrow", label: tr("insp.shape.arrow") },
+  { value: "doubleArrow", label: tr("insp.shape.doubleArrow") },
+  { value: "chevron", label: tr("insp.shape.chevron") },
+  { value: "line", label: tr("insp.shape.line") },
+  { value: "speech", label: tr("insp.shape.speech") },
+  { value: "thought", label: tr("insp.shape.thought") },
 ];
 
 /** Open a file picker and resolve to an image data URL (works in browser + Tauri). */
@@ -186,37 +187,37 @@ function FillEditor({
 
   return (
     <>
-      <Row label="Preenchimento">
+      <Row label={tr("insp.fill")}>
         <select value={kind} onChange={(e) => onKind(e.target.value)}>
           {themeLabel && <option value="theme">{themeLabel}</option>}
-          {allowNone && <option value="none">Nenhum</option>}
-          <option value="solid">Sólido</option>
-          <option value="gradient">Gradiente</option>
-          {allowImage && <option value="image">Imagem</option>}
+          {allowNone && <option value="none">{tr("insp.fillNone")}</option>}
+          <option value="solid">{tr("insp.fillSolid")}</option>
+          <option value="gradient">{tr("insp.fillGradient")}</option>
+          {allowImage && <option value="image">{tr("insp.image")}</option>}
         </select>
       </Row>
 
       {value?.kind === "solid" && (
-        <Row label="Cor">
+        <Row label={tr("insp.color")}>
           <ColorPicker value={value.color} themeColors={themeColors} onChange={(c) => onChange({ kind: "solid", color: c })} />
         </Row>
       )}
 
       {value?.kind === "gradient" && (
         <>
-          <Row label="Tipo">
+          <Row label={tr("insp.type")}>
             <select value={value.radial ? "radial" : "linear"} onChange={(e) => setGradient({ radial: e.target.value === "radial" })}>
-              <option value="linear">Linear</option>
-              <option value="radial">Radial</option>
+              <option value="linear">{tr("insp.linear")}</option>
+              <option value="radial">{tr("insp.radial")}</option>
             </select>
           </Row>
           {!value.radial && (
-            <Row label="Ângulo (°)">
+            <Row label={tr("insp.angleDeg")}>
               <input type="number" min={0} max={360} value={value.angle} onChange={(e) => setGradient({ angle: Number(e.target.value) })} />
             </Row>
           )}
           {gradientStops(value).map((stop, i, arr) => (
-            <Row key={i} label={i === 0 ? "Cores" : ""}>
+            <Row key={i} label={i === 0 ? tr("insp.colors") : ""}>
               <span className="insp-stop">
                 <ColorPicker
                   value={stop.color}
@@ -240,7 +241,7 @@ function FillEditor({
                 {arr.length > 2 && (
                   <button
                     className="insp-mini"
-                    title="Remover cor"
+                    title={tr("insp.removeColor")}
                     onClick={() => setStops(gradientStops(value).filter((_, j) => j !== i))}
                   >
                     −
@@ -257,20 +258,20 @@ function FillEditor({
               setStops([...stops, mid]);
             }}
           >
-            ＋ Cor
+            {tr("insp.addColor")}
           </button>
         </>
       )}
 
       {value?.kind === "image" && (
         <>
-          <Row label="Ajuste">
+          <Row label={tr("insp.fit")}>
             <select value={value.fit ?? "cover"} onChange={(e) => onChange({ ...value, fit: e.target.value as "cover" | "contain" })}>
-              <option value="cover">Preencher</option>
-              <option value="contain">Conter</option>
+              <option value="cover">{tr("insp.fitCover")}</option>
+              <option value="contain">{tr("insp.fitContain")}</option>
             </select>
           </Row>
-          <Row label="Imagem">
+          <Row label={tr("insp.image")}>
             <button
               className="insp-mini"
               onClick={async () => {
@@ -278,7 +279,7 @@ function FillEditor({
                 if (src) onChange({ kind: "image", src, fit: value.fit ?? "cover" });
               }}
             >
-              Trocar…
+              {tr("insp.replace")}
             </button>
           </Row>
         </>
@@ -320,29 +321,29 @@ function Section({
 
 function typeLabel(el: Element): string {
   return el.type === "text"
-    ? "Texto"
+    ? tr("insp.typeText")
     : el.type === "image"
-    ? "Imagem"
+    ? tr("insp.image")
     : el.type === "video"
-    ? "Vídeo"
+    ? tr("insp.typeVideo")
     : el.type === "table"
-    ? "Tabela"
+    ? tr("insp.typeTable")
     : el.type === "ink"
-    ? "Desenho"
+    ? tr("insp.typeInk")
     : el.type === "chart"
-    ? "Gráfico"
+    ? tr("insp.typeChart")
     : el.type === "icon"
-    ? "Ícone"
-    : "Forma";
+    ? tr("insp.typeIcon")
+    : tr("insp.typeShape");
 }
 
-const CHART_KINDS: { value: ChartKind; label: string }[] = [
-  { value: "bar", label: "Barras" },
-  { value: "stackedBar", label: "Barras empilhadas" },
-  { value: "line", label: "Linhas" },
-  { value: "area", label: "Área" },
-  { value: "pie", label: "Pizza" },
-  { value: "donut", label: "Rosca" },
+const CHART_KINDS = (): { value: ChartKind; label: string }[] => [
+  { value: "bar", label: tr("insp.chart.bar") },
+  { value: "stackedBar", label: tr("insp.chart.stackedBar") },
+  { value: "line", label: tr("insp.chart.line") },
+  { value: "area", label: tr("insp.chart.area") },
+  { value: "pie", label: tr("insp.chart.pie") },
+  { value: "donut", label: tr("insp.chart.donut") },
 ];
 
 const isPieLikeChart = (k: ChartKind) => k === "pie" || k === "donut";
@@ -374,10 +375,10 @@ function BackgroundRemoveRow({
   };
 
   return (
-    <Row label="Fundo">
+    <Row label={tr("insp.background")}>
       <div className="insp-zorder">
-        <button className="insp-mini" onClick={run} disabled={busy} title="Remover o fundo da imagem (modelo ONNX local)">
-          {busy ? "Processando…" : "Remover fundo"}
+        <button className="insp-mini" onClick={run} disabled={busy} title={tr("insp.removeBgTitle")}>
+          {busy ? tr("insp.processing") : tr("insp.removeBg")}
         </button>
       </div>
       {error && <p className="insp-bgremove-error">{error}</p>}
@@ -445,7 +446,7 @@ function TableStructureEditor({
 
   return (
     <>
-      <Row label="Células">
+      <Row label={tr("insp.cells")}>
         <div
           style={{
             display: "grid",
@@ -464,7 +465,7 @@ function TableStructureEditor({
                 <div
                   key={`${r}-${c}`}
                   onClick={(e) => clickCell(r, c, e.shiftKey)}
-                  title={`Linha ${r + 1}, coluna ${c + 1}`}
+                  title={tr("insp.cellPos", { row: r + 1, col: c + 1 })}
                   style={{
                     gridColumn: `${c + 1} / span ${cs}`,
                     gridRow: `${r + 1} / span ${rs}`,
@@ -479,47 +480,47 @@ function TableStructureEditor({
           )}
         </div>
       </Row>
-      <Row label="Mesclar/dividir">
+      <Row label={tr("insp.mergeSplit")}>
         <div className="insp-zorder">
           <button className="insp-mini" disabled={!canMerge} onClick={() => set((e) => e.type === "table" && mergeCells(e, minR, minC, maxR, maxC))}>
-            Mesclar
+            {tr("insp.merge")}
           </button>
           <button className="insp-mini" disabled={!canSplit} onClick={() => set((e) => e.type === "table" && splitCell(e, minR, minC))}>
-            Dividir
+            {tr("insp.split")}
           </button>
         </div>
       </Row>
       {rect && (
         <>
-          <Row label="Preenchimento da célula">
+          <Row label={tr("insp.cellFill")}>
             <ColorPicker
               value={selCell?.style?.fill ?? "#ffffff"}
               themeColors={[]}
               onChange={(c) => applyCellStyle({ fill: c })}
             />
           </Row>
-          <Row label="Cor do texto">
+          <Row label={tr("insp.textColor")}>
             <ColorPicker
               value={selCell?.style?.color ?? "#000000"}
               themeColors={[]}
               onChange={(c) => applyCellStyle({ color: c })}
             />
           </Row>
-          <Row label="Negrito">
+          <Row label={tr("insp.bold")}>
             <input
               type="checkbox"
               checked={!!selCell?.style?.bold}
               onChange={(e) => applyCellStyle({ bold: e.target.checked })}
             />
           </Row>
-          <Row label="Alinhar">
+          <Row label={tr("insp.align")}>
             <select
               value={selCell?.style?.align ?? "left"}
               onChange={(e) => applyCellStyle({ align: e.target.value as TableCellStyle["align"] })}
             >
-              <option value="left">Esquerda</option>
-              <option value="center">Centro</option>
-              <option value="right">Direita</option>
+              <option value="left">{tr("insp.alignLeft")}</option>
+              <option value="center">{tr("insp.alignCenter")}</option>
+              <option value="right">{tr("insp.alignRight")}</option>
             </select>
           </Row>
         </>
@@ -546,21 +547,21 @@ function ElementInspector({ el }: { el: Element }) {
       <div className="insp-head">{typeLabel(el)}</div>
 
       <div className="insp-zorder">
-        <button className="insp-mini" onClick={copyStyle} title="Copiar estilo (Ctrl+Shift+C)">
-          Copiar estilo
+        <button className="insp-mini" onClick={copyStyle} title={tr("insp.copyStyleTitle")}>
+          {tr("insp.copyStyle")}
         </button>
         <button
           className="insp-mini"
           onClick={pasteStyle}
           disabled={!styleClipboardSize}
-          title="Colar estilo (Ctrl+Shift+V)"
+          title={tr("insp.pasteStyleTitle")}
         >
-          Colar estilo
+          {tr("insp.pasteStyle")}
         </button>
       </div>
 
       {/* Position & size */}
-      <Section title="Posição e tamanho" defaultOpen>
+      <Section title={tr("insp.posSize")} defaultOpen>
         <div className="insp-geom-grid">
           <label className="insp-geom-cell">
             <span className="insp-geom-label">X</span>
@@ -583,7 +584,7 @@ function ElementInspector({ el }: { el: Element }) {
             />
           </label>
           <label className="insp-geom-cell">
-            <span className="insp-geom-label">L</span>
+            <span className="insp-geom-label">{tr("insp.geomW")}</span>
             <input
               type="number"
               className="insp-geom-input"
@@ -594,7 +595,7 @@ function ElementInspector({ el }: { el: Element }) {
             />
           </label>
           <label className="insp-geom-cell">
-            <span className="insp-geom-label">A</span>
+            <span className="insp-geom-label">{tr("insp.geomH")}</span>
             <input
               type="number"
               className="insp-geom-input"
@@ -617,7 +618,7 @@ function ElementInspector({ el }: { el: Element }) {
         </div>
       </Section>
 
-      <Row label="Opacidade">
+      <Row label={tr("insp.opacity")}>
         <input
           type="range"
           min={0}
@@ -628,17 +629,17 @@ function ElementInspector({ el }: { el: Element }) {
         <span className="insp-num">{Math.round((el.opacity ?? 1) * 100)}%</span>
       </Row>
 
-      <Row label="Texto alternativo">
+      <Row label={tr("insp.altText")}>
         <input
           type="text"
           value={el.alt ?? ""}
-          placeholder="Descrição para acessibilidade"
+          placeholder={tr("insp.altPlaceholder")}
           onChange={(e) => set((x) => (x.alt = e.target.value || undefined))}
         />
       </Row>
 
       {/* Outline ("contorno") */}
-      <Row label="Contorno">
+      <Row label={tr("insp.outline")}>
         <input
           type="checkbox"
           checked={!!el.outline}
@@ -649,14 +650,14 @@ function ElementInspector({ el }: { el: Element }) {
       </Row>
       {el.outline && (
         <>
-          <Row label="Cor do contorno">
+          <Row label={tr("insp.outlineColor")}>
             <ColorPicker
               value={el.outline.color}
               themeColors={themeColors}
               onChange={(c) => set((x) => x.outline && (x.outline.color = c))}
             />
           </Row>
-          <Row label="Espessura">
+          <Row label={tr("insp.thickness")}>
             <input
               type="range"
               min={1}
@@ -666,12 +667,12 @@ function ElementInspector({ el }: { el: Element }) {
             />
             <span className="insp-num">{el.outline.width}px</span>
           </Row>
-          <Row label="Estilo">
+          <Row label={tr("insp.style")}>
             <select
               value={el.outline.style ?? el.outline.dash ?? "solid"}
               onChange={(e) => set((x) => x.outline && (x.outline.style = e.target.value as StrokeStyle))}
             >
-              {STROKE_STYLES.map((s) => (
+              {STROKE_STYLES().map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
@@ -682,7 +683,7 @@ function ElementInspector({ el }: { el: Element }) {
       )}
 
       {/* Shadow */}
-      <Row label="Sombra">
+      <Row label={tr("insp.shadow")}>
         <input
           type="checkbox"
           checked={!!el.shadow}
@@ -693,14 +694,14 @@ function ElementInspector({ el }: { el: Element }) {
       </Row>
       {el.shadow && (
         <>
-          <Row label="Cor da sombra">
+          <Row label={tr("insp.shadowColor")}>
             <ColorPicker
               value={el.shadow.color}
               themeColors={themeColors}
               onChange={(c) => set((x) => x.shadow && (x.shadow.color = c))}
             />
           </Row>
-          <Row label="Desfoque">
+          <Row label={tr("insp.shadowBlur")}>
             <input
               type="range"
               min={0}
@@ -710,7 +711,7 @@ function ElementInspector({ el }: { el: Element }) {
             />
             <span className="insp-num">{el.shadow.blur}px</span>
           </Row>
-          <Row label="Deslocamento X">
+          <Row label={tr("insp.shadowOffsetX")}>
             <input
               type="range"
               min={-40}
@@ -720,7 +721,7 @@ function ElementInspector({ el }: { el: Element }) {
             />
             <span className="insp-num">{el.shadow.x}px</span>
           </Row>
-          <Row label="Deslocamento Y">
+          <Row label={tr("insp.shadowOffsetY")}>
             <input
               type="range"
               min={-40}
@@ -746,7 +747,7 @@ function ElementInspector({ el }: { el: Element }) {
 
       {/* Text effects (Onda 10) */}
       {el.type === "text" && (
-        <Section title="Efeitos">
+        <Section title={tr("insp.effects")}>
           <div className="insp-effect-grid">
             {TEXT_EFFECT_PRESETS.map((p) => (
               <button
@@ -766,7 +767,7 @@ function ElementInspector({ el }: { el: Element }) {
           </div>
           {el.effect && el.effect.kind !== "none" && (
             <>
-              <Row label={el.effect.kind === "gradient" ? "Ângulo" : "Intensidade"}>
+              <Row label={el.effect.kind === "gradient" ? tr("insp.angle") : tr("insp.intensity")}>
                 <input
                   type="range"
                   min={0}
@@ -778,7 +779,7 @@ function ElementInspector({ el }: { el: Element }) {
                 />
               </Row>
               {["splice", "echo", "neon", "glow"].includes(el.effect.kind) && (
-                <Row label="Cor">
+                <Row label={tr("insp.color")}>
                   <ColorPicker
                     value={el.effect.color ?? theme.colors.accent1}
                     themeColors={themeColors}
@@ -788,14 +789,14 @@ function ElementInspector({ el }: { el: Element }) {
               )}
               {el.effect.kind === "gradient" && (
                 <>
-                  <Row label="Cor inicial">
+                  <Row label={tr("insp.colorStart")}>
                     <ColorPicker
                       value={el.effect.color ?? theme.colors.accent1}
                       themeColors={themeColors}
                       onChange={(c) => set((x) => x.type === "text" && x.effect && (x.effect.color = c))}
                     />
                   </Row>
-                  <Row label="Cor final">
+                  <Row label={tr("insp.colorEnd")}>
                     <ColorPicker
                       value={el.effect.color2 ?? theme.colors.accent2}
                       themeColors={themeColors}
@@ -806,7 +807,7 @@ function ElementInspector({ el }: { el: Element }) {
               )}
             </>
           )}
-          <Row label="Curvar">
+          <Row label={tr("insp.curve")}>
             <input
               type="range"
               min={-100}
@@ -823,7 +824,7 @@ function ElementInspector({ el }: { el: Element }) {
       )}
 
       {/* Animation */}
-      <Row label="Animação">
+      <Row label={tr("insp.animation")}>
         <select
           value={el.anim?.kind ?? "none"}
           onChange={(e) => {
@@ -831,7 +832,7 @@ function ElementInspector({ el }: { el: Element }) {
             set((x) => (x.anim = kind === "none" ? undefined : { kind, duration: 0.5, delay: 0 }));
           }}
         >
-          {ANIMS.map((a) => (
+          {ANIMS().map((a) => (
             <option key={a.value} value={a.value}>
               {a.label}
             </option>
@@ -839,7 +840,7 @@ function ElementInspector({ el }: { el: Element }) {
         </select>
       </Row>
       {el.anim && (
-        <Row label="Atraso (s)">
+        <Row label={tr("insp.delaySeconds")}>
           <input
             type="number"
             min={0}
@@ -853,19 +854,19 @@ function ElementInspector({ el }: { el: Element }) {
       {/* Per-type options */}
       {el.type === "text" && (
         <>
-          <Row label="Alinhar vert.">
+          <Row label={tr("insp.vAlign")}>
             <select
               value={el.vAlign ?? "top"}
               onChange={(e) =>
                 set((x) => x.type === "text" && (x.vAlign = e.target.value as "top" | "middle" | "bottom"))
               }
             >
-              <option value="top">Topo</option>
-              <option value="middle">Meio</option>
-              <option value="bottom">Base</option>
+              <option value="top">{tr("insp.vAlignTop")}</option>
+              <option value="middle">{tr("insp.vAlignMiddle")}</option>
+              <option value="bottom">{tr("insp.vAlignBottom")}</option>
             </select>
           </Row>
-          <Row label="Ajustar à caixa">
+          <Row label={tr("insp.autoFit")}>
             <input
               type="checkbox"
               checked={el.autoFit !== false}
@@ -876,32 +877,32 @@ function ElementInspector({ el }: { el: Element }) {
       )}
 
       {(el.type === "image" || el.type === "video") && (
-        <Row label="Ajuste">
+        <Row label={tr("insp.fit")}>
           <select
             value={el.fit ?? "contain"}
             onChange={(e) =>
               set((x) => (x.type === "image" || x.type === "video") && (x.fit = e.target.value as "contain" | "cover"))
             }
           >
-            <option value="contain">Conter</option>
-            <option value="cover">Preencher</option>
+            <option value="contain">{tr("insp.fitContain")}</option>
+            <option value="cover">{tr("insp.fitCover")}</option>
           </select>
         </Row>
       )}
 
       {el.type === "image" && (
-        <Row label="Cortar">
+        <Row label={tr("insp.crop")}>
           <div className="insp-zorder">
-            <button className="insp-mini" onClick={() => setCropping(el.id)} title="Recortar imagem">
-              Recortar
+            <button className="insp-mini" onClick={() => setCropping(el.id)} title={tr("insp.cropTitle")}>
+              {tr("insp.cropBtn")}
             </button>
             {el.crop && (
               <button
                 className="insp-mini"
                 onClick={() => set((x) => x.type === "image" && (x.crop = undefined))}
-                title="Remover corte"
+                title={tr("insp.removeCropTitle")}
               >
-                Remover
+                {tr("insp.remove")}
               </button>
             )}
           </div>
@@ -911,14 +912,14 @@ function ElementInspector({ el }: { el: Element }) {
       {el.type === "image" && <BackgroundRemoveRow el={el} set={set} />}
 
       {el.type === "image" && (
-        <Row label="Máscara">
+        <Row label={tr("insp.mask")}>
           <select
             value={el.maskShape ?? ""}
             onChange={(e) =>
               set((x) => x.type === "image" && (x.maskShape = (e.target.value || undefined) as ShapeKind | undefined))
             }
           >
-            {MASK_SHAPES.map((s) => (
+            {MASK_SHAPES().map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
@@ -928,8 +929,8 @@ function ElementInspector({ el }: { el: Element }) {
       )}
 
       {el.type === "image" && (
-        <Section title="Ajustes de imagem">
-          {ADJUST_SLIDERS.map((s) => {
+        <Section title={tr("insp.imageAdjust")}>
+          {ADJUST_SLIDERS().map((s) => {
             const v = el.adjust?.[s.k] ?? s.neutral;
             return (
               <Row key={s.k} label={s.label}>
@@ -955,7 +956,7 @@ function ElementInspector({ el }: { el: Element }) {
           })}
           {el.adjust && (
             <button className="insp-mini" onClick={() => set((x) => x.type === "image" && (x.adjust = undefined))}>
-              Redefinir ajustes
+              {tr("insp.resetAdjust")}
             </button>
           )}
         </Section>
@@ -963,21 +964,21 @@ function ElementInspector({ el }: { el: Element }) {
 
       {el.type === "video" && (
         <>
-          <Row label="Autoplay">
+          <Row label={tr("insp.autoplay")}>
             <input
               type="checkbox"
               checked={!!el.autoplay}
               onChange={(e) => set((x) => x.type === "video" && (x.autoplay = e.target.checked))}
             />
           </Row>
-          <Row label="Repetir">
+          <Row label={tr("insp.loop")}>
             <input
               type="checkbox"
               checked={!!el.loop}
               onChange={(e) => set((x) => x.type === "video" && (x.loop = e.target.checked))}
             />
           </Row>
-          <Row label="Mudo">
+          <Row label={tr("insp.muted")}>
             <input
               type="checkbox"
               checked={!!el.muted}
@@ -989,12 +990,12 @@ function ElementInspector({ el }: { el: Element }) {
 
       {el.type === "shape" && (
         <>
-          <Row label="Forma">
+          <Row label={tr("insp.shapeLabel")}>
             <select
               value={el.shape}
               onChange={(e) => set((x) => x.type === "shape" && (x.shape = e.target.value as ShapeKind))}
             >
-              {SHAPES.map((s) => (
+              {SHAPES().map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
@@ -1008,7 +1009,7 @@ function ElementInspector({ el }: { el: Element }) {
             allowNone
             allowImage
           />
-          <Row label="Traço">
+          <Row label={tr("insp.stroke")}>
             <input
               type="checkbox"
               checked={!!el.stroke}
@@ -1019,14 +1020,14 @@ function ElementInspector({ el }: { el: Element }) {
           </Row>
           {el.stroke && (
             <>
-              <Row label="Cor do traço">
+              <Row label={tr("insp.strokeColor")}>
                 <ColorPicker
                   value={el.stroke.color}
                   themeColors={themeColors}
                   onChange={(c) => set((x) => x.type === "shape" && x.stroke && (x.stroke.color = c))}
                 />
               </Row>
-              <Row label="Espessura">
+              <Row label={tr("insp.thickness")}>
                 <input
                   type="range"
                   min={1}
@@ -1036,12 +1037,12 @@ function ElementInspector({ el }: { el: Element }) {
                 />
                 <span className="insp-num">{el.stroke.width}px</span>
               </Row>
-              <Row label="Estilo">
+              <Row label={tr("insp.style")}>
                 <select
                   value={el.stroke.style ?? el.stroke.dash ?? "solid"}
                   onChange={(e) => set((x) => x.type === "shape" && x.stroke && (x.stroke.style = e.target.value as StrokeStyle))}
                 >
-                  {STROKE_STYLES.map((s) => (
+                  {STROKE_STYLES().map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
                     </option>
@@ -1055,8 +1056,8 @@ function ElementInspector({ el }: { el: Element }) {
 
       {el.type === "table" && (
         <>
-          <div className="insp-head">Tabela</div>
-          <Row label="Linhas">
+          <div className="insp-head">{tr("insp.tableHead")}</div>
+          <Row label={tr("insp.rows")}>
             <div className="insp-zorder">
               <button
                 onClick={() =>
@@ -1076,7 +1077,7 @@ function ElementInspector({ el }: { el: Element }) {
               </button>
             </div>
           </Row>
-          <Row label="Colunas">
+          <Row label={tr("insp.columns")}>
             <div className="insp-zorder">
               <button
                 onClick={() =>
@@ -1099,14 +1100,14 @@ function ElementInspector({ el }: { el: Element }) {
               </button>
             </div>
           </Row>
-          <Row label="Cabeçalho">
+          <Row label={tr("insp.header")}>
             <ColorPicker
               value={el.headerFill ?? "#2563eb"}
               themeColors={themeColors}
               onChange={(c) => set((x) => x.type === "table" && (x.headerFill = c))}
             />
           </Row>
-          <Row label="Linhas zebradas">
+          <Row label={tr("insp.zebra")}>
             <input
               type="checkbox"
               checked={!!el.zebra}
@@ -1118,7 +1119,7 @@ function ElementInspector({ el }: { el: Element }) {
       )}
 
       {el.type === "icon" && (
-        <Row label="Cor do ícone">
+        <Row label={tr("insp.iconColor")}>
           <ColorPicker
             value={el.color ?? themeColors[2] ?? "#2563eb"}
             themeColors={themeColors}
@@ -1129,33 +1130,33 @@ function ElementInspector({ el }: { el: Element }) {
 
       {el.type === "chart" && (
         <>
-          <div className="insp-head">Gráfico</div>
-          <Row label="Tipo">
+          <div className="insp-head">{tr("insp.chartHead")}</div>
+          <Row label={tr("insp.type")}>
             <select
               value={el.chart}
               onChange={(e) => set((x) => x.type === "chart" && (x.chart = e.target.value as ChartKind))}
             >
-              {CHART_KINDS.map((c) => (
+              {CHART_KINDS().map((c) => (
                 <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
           </Row>
-          <Row label="Título">
+          <Row label={tr("insp.title")}>
             <input
               type="text"
               value={el.title ?? ""}
-              placeholder="(sem título)"
+              placeholder={tr("insp.titlePlaceholder")}
               onChange={(e) => set((x) => x.type === "chart" && (x.title = e.target.value))}
             />
           </Row>
-          <Row label="Legenda">
+          <Row label={tr("insp.legend")}>
             <input
               type="checkbox"
               checked={el.showLegend !== false}
               onChange={(e) => set((x) => x.type === "chart" && (x.showLegend = e.target.checked))}
             />
           </Row>
-          <Row label="Mostrar valores">
+          <Row label={tr("insp.showValues")}>
             <input
               type="checkbox"
               checked={!!el.showValues}
@@ -1163,31 +1164,29 @@ function ElementInspector({ el }: { el: Element }) {
             />
           </Row>
           {!isPieLikeChart(el.chart) && (
-            <Row label="Eixo de valores">
+            <Row label={tr("insp.valueAxis")}>
               <input
                 type="checkbox"
                 checked={el.showAxis !== false}
                 onChange={(e) => set((x) => x.type === "chart" && (x.showAxis = e.target.checked))}
-                title="Números de referência à esquerda (0, 25%, 50%…), calculados automaticamente a partir dos dados"
+                title={tr("insp.valueAxisTitle")}
               />
             </Row>
           )}
 
-          <Section title="Dados" defaultOpen>
+          <Section title={tr("insp.data")} defaultOpen>
             <button
               className="insp-mini"
-              title="Colar dados CSV (1a linha = categorias, 1 linha por série)"
+              title={tr("insp.pasteCsvTitle")}
               onClick={() => {
-                const text = window.prompt(
-                  "Cole os dados CSV — primeira linha = categorias, demais linhas = 1 série cada:\n\n,Cat 1,Cat 2\nSérie 1,10,20"
-                );
+                const text = window.prompt(tr("insp.pasteCsvPrompt"));
                 if (!text) return;
                 const lines = text.trim().split(/\r?\n/).filter(Boolean);
                 if (lines.length < 2) return;
                 const categories = lines[0].split(",").slice(1).map((c) => c.trim());
                 const parsedSeries = lines.slice(1).map((line) => {
                   const cells = line.split(",");
-                  return { name: cells[0]?.trim() || "Série", values: cells.slice(1).map((v) => Number(v.trim()) || 0) };
+                  return { name: cells[0]?.trim() || tr("insp.seriesName"), values: cells.slice(1).map((v) => Number(v.trim()) || 0) };
                 });
                 set((x) => {
                   if (x.type !== "chart") return;
@@ -1196,7 +1195,7 @@ function ElementInspector({ el }: { el: Element }) {
                 });
               }}
             >
-              📋 Colar dados (CSV)
+              {tr("insp.pasteCsv")}
             </button>
             <div className="chart-grid">
               {/* Category header row */}
@@ -1212,11 +1211,11 @@ function ElementInspector({ el }: { el: Element }) {
                 ))}
                 <button
                   className="insp-mini"
-                  title="Adicionar categoria"
+                  title={tr("insp.addCategory")}
                   onClick={() =>
                     set((x) => {
                       if (x.type !== "chart") return;
-                      x.categories.push(`Cat ${x.categories.length + 1}`);
+                      x.categories.push(tr("insp.catName", { n: x.categories.length + 1 }));
                       x.series.forEach((s) => s.values.push(0));
                     })
                   }
@@ -1247,7 +1246,7 @@ function ElementInspector({ el }: { el: Element }) {
                   {el.series.length > 1 && !isPieLikeChart(el.chart) && (
                     <button
                       className="insp-mini"
-                      title="Remover série"
+                      title={tr("insp.removeSeries")}
                       onClick={() => set((x) => x.type === "chart" && x.series.splice(si, 1))}
                     >
                       −
@@ -1262,17 +1261,17 @@ function ElementInspector({ el }: { el: Element }) {
                 onClick={() =>
                   set((x) => {
                     if (x.type !== "chart") return;
-                    x.series.push({ name: `Série ${x.series.length + 1}`, values: x.categories.map(() => 0) });
+                    x.series.push({ name: tr("insp.seriesNameN", { n: x.series.length + 1 }), values: x.categories.map(() => 0) });
                   })
                 }
               >
-                ＋ Série
+                {tr("insp.addSeries")}
               </button>
             )}
             {el.categories.length > 1 && (
               <button
                 className="insp-mini"
-                title="Remover última categoria"
+                title={tr("insp.removeLastCategory")}
                 onClick={() =>
                   set((x) => {
                     if (x.type !== "chart") return;
@@ -1281,12 +1280,12 @@ function ElementInspector({ el }: { el: Element }) {
                   })
                 }
               >
-                − Categoria
+                {tr("insp.removeCategory")}
               </button>
             )}
           </Section>
 
-          <Section title="Cores">
+          <Section title={tr("insp.colors")}>
             {(isPieLikeChart(el.chart) ? el.categories : el.series.map((s) => s.name)).map((lab, i) => {
               const fallback = ["#2563eb", "#0ea5e9", "#f59e0b", "#ef4444", "#10b981", "#8b5cf6", "#ec4899", "#14b8a6"];
               const color = el.palette?.[i] ?? fallback[i % fallback.length];
@@ -1313,35 +1312,35 @@ function ElementInspector({ el }: { el: Element }) {
       )}
 
       {/* Transform: flip + quick rotate */}
-      <div className="insp-head">Transformar</div>
+      <div className="insp-head">{tr("insp.transform")}</div>
       <div className="insp-zorder">
-        <button onClick={() => set((x) => (x.flipH = !x.flipH))} title="Espelhar horizontal">⇋</button>
-        <button onClick={() => set((x) => (x.flipV = !x.flipV))} title="Espelhar vertical">⥮</button>
+        <button onClick={() => set((x) => (x.flipH = !x.flipH))} title={tr("insp.flipH")}>⇋</button>
+        <button onClick={() => set((x) => (x.flipV = !x.flipV))} title={tr("insp.flipV")}>⥮</button>
         <button
           onClick={() => set((x) => (x.geom.rotation = ((x.geom.rotation ?? 0) + 90) % 360))}
-          title="Girar 90°"
+          title={tr("insp.rotate90")}
         >
           ⟳
         </button>
         <button
           onClick={() => set((x) => (x.geom.rotation = ((x.geom.rotation ?? 0) + 270) % 360))}
-          title="Girar -90°"
+          title={tr("insp.rotateNeg90")}
         >
           ⟲
         </button>
       </div>
 
       {/* Z-order */}
-      <div className="insp-head">Camadas</div>
+      <div className="insp-head">{tr("insp.layers")}</div>
       <div className="insp-zorder">
-        <button onClick={() => reorder(el.id, "front")} title="Trazer para frente">⤒</button>
-        <button onClick={() => reorder(el.id, "forward")} title="Avançar">↑</button>
-        <button onClick={() => reorder(el.id, "backward")} title="Recuar">↓</button>
-        <button onClick={() => reorder(el.id, "back")} title="Enviar para trás">⤓</button>
+        <button onClick={() => reorder(el.id, "front")} title={tr("insp.bringFront")}>⤒</button>
+        <button onClick={() => reorder(el.id, "forward")} title={tr("insp.bringForward")}>↑</button>
+        <button onClick={() => reorder(el.id, "backward")} title={tr("insp.sendBackward")}>↓</button>
+        <button onClick={() => reorder(el.id, "back")} title={tr("insp.sendBack")}>⤓</button>
       </div>
 
       <button className="insp-delete" onClick={() => deleteElements([el.id])}>
-        Excluir elemento
+        {tr("insp.deleteElement")}
       </button>
     </>
   );
@@ -1364,16 +1363,16 @@ function DeckAudioSection() {
 
   return (
     <>
-      <div className="insp-head">Áudio de fundo (export de vídeo)</div>
+      <div className="insp-head">{tr("insp.deckAudio")}</div>
       {deckAudio ? (
         <>
-          <Row label="Faixa">
+          <Row label={tr("insp.track")}>
             <span className="insp-audio-name" title={deckAudio.name}>{deckAudio.name}</span>
             <button className="insp-mini" onClick={() => apply((d) => (d.audio = undefined))}>
-              Remover
+              {tr("insp.remove")}
             </button>
           </Row>
-          <Row label="Volume">
+          <Row label={tr("insp.volume")}>
             <input
               type="range"
               min={0}
@@ -1389,9 +1388,9 @@ function DeckAudioSection() {
           </Row>
         </>
       ) : (
-        <Row label="Faixa">
+        <Row label={tr("insp.track")}>
           <label className="insp-mini insp-file-label">
-            Escolher arquivo…
+            {tr("insp.chooseFile")}
             <input
               type="file"
               accept="audio/*"
@@ -1421,27 +1420,27 @@ function SlideInspector() {
 
   return (
     <>
-      <Section title="Tema da apresentação">
+      <Section title={tr("insp.presentationTheme")}>
       <div className="insp-themes">
         {THEME_PRESETS.map((p) => (
           <button
             key={p.id}
             className={"theme-swatch" + (activeTheme?.id === p.id ? " active" : "")}
-            title={p.name}
+            title={themeName(p.id)}
             onClick={() => setTheme(p.theme)}
             style={{ background: p.theme.colors.bg, color: p.theme.colors.text }}
           >
             <span className="theme-dot" style={{ background: p.theme.colors.accent1 }} />
             <span className="theme-dot" style={{ background: p.theme.colors.accent2 }} />
             <span className="theme-name" style={{ fontFamily: p.theme.fonts.heading }}>
-              {p.name}
+              {themeName(p.id)}
             </span>
           </button>
         ))}
       </div>
       </Section>
 
-      <Section title="Kit de marca">
+      <Section title={tr("insp.brandKit")}>
       <div className="insp-themes">
         {brandKits.map((k) => (
           <div key={k.id} className="brand-kit-row">
@@ -1457,7 +1456,7 @@ function SlideInspector() {
             </button>
             <button
               className="insp-mini"
-              title="Remover deste kit de marca"
+              title={tr("insp.removeBrandKit")}
               onClick={() => setBrandKits(removeBrandKit(k.id))}
             >
               🗑
@@ -1467,27 +1466,27 @@ function SlideInspector() {
       </div>
       <button
         className="insp-mini"
-        title="Salvar as cores e fontes atuais como um kit de marca reutilizável"
+        title={tr("insp.saveBrandTitle")}
         onClick={() => {
-          const name = window.prompt("Nome do kit de marca:", "Minha marca");
+          const name = window.prompt(tr("insp.brandKitNamePrompt"), tr("insp.brandKitDefaultName"));
           if (name) setBrandKits(saveBrandKit(name, deck.theme));
         }}
       >
-        ＋ Salvar marca atual
+        {tr("insp.saveBrand")}
       </button>
       </Section>
 
-      <Section title="Layout do slide">
+      <Section title={tr("insp.slideLayout")}>
       <div className="insp-layouts">
         {LAYOUTS.map((l) => (
           <div key={l.id} className="insp-layout-row">
-            <button className="insp-mini" onClick={() => applyLayout(l.id)} title={`Aplicar "${l.name}" a este slide`}>
-              {l.name}
+            <button className="insp-mini" onClick={() => applyLayout(l.id)} title={tr("insp.applyLayout", { name: layoutName(l.id) })}>
+              {layoutName(l.id)}
             </button>
             <button
               className="insp-mini insp-layout-add"
               onClick={() => addSlide(l.id)}
-              title={`Novo slide "${l.name}"`}
+              title={tr("insp.newSlideLayout", { name: layoutName(l.id) })}
             >
               ＋
             </button>
@@ -1496,18 +1495,18 @@ function SlideInspector() {
       </div>
       </Section>
 
-      <div className="insp-head">Fundo do slide</div>
+      <div className="insp-head">{tr("insp.slideBackground")}</div>
       <FillEditor
         value={slide.background}
         onChange={(f) => updateCurrentSlide((s) => (s.background = f))}
         themeColors={themeColors}
         allowNone={false}
         allowImage
-        themeLabel="Tema"
+        themeLabel={tr("insp.themeLabel")}
       />
 
-      <div className="insp-head">Transição de entrada</div>
-      <Row label="Tipo">
+      <div className="insp-head">{tr("insp.entryTransition")}</div>
+      <Row label={tr("insp.type")}>
         <select
           value={slide.transition?.kind ?? "none"}
           onChange={(e) => {
@@ -1517,7 +1516,7 @@ function SlideInspector() {
             );
           }}
         >
-          {TRANSITIONS.map((t) => (
+          {TRANSITIONS().map((t) => (
             <option key={t.value} value={t.value}>
               {t.label}
             </option>
@@ -1525,7 +1524,7 @@ function SlideInspector() {
         </select>
       </Row>
       {slide.transition && (
-        <Row label="Duração (s)">
+        <Row label={tr("insp.durationSeconds")}>
           <input
             type="number"
             min={0.1}
@@ -1538,13 +1537,13 @@ function SlideInspector() {
         </Row>
       )}
 
-      <div className="insp-head">Animar página</div>
+      <div className="insp-head">{tr("insp.animatePage")}</div>
       <div className="insp-zorder">
-        {PAGE_ANIM_PRESETS.map((p) => (
+        {PAGE_ANIM_PRESETS().map((p) => (
           <button
             key={p.id}
             className="insp-mini"
-            title={`Aplicar "${p.label}" a todos os elementos, em cascata`}
+            title={tr("insp.applyPageAnim", { label: p.label })}
             onClick={() =>
               updateCurrentSlide((s) => {
                 s.elements.forEach((el, i) => {
@@ -1558,23 +1557,23 @@ function SlideInspector() {
         ))}
         <button
           className="insp-mini"
-          title="Remover animação de todos os elementos"
+          title={tr("insp.clearPageAnimTitle")}
           onClick={() =>
             updateCurrentSlide((s) => {
               s.elements.forEach((el) => (el.anim = undefined));
             })
           }
         >
-          Limpar
+          {tr("insp.clear")}
         </button>
       </div>
 
       <DeckAudioSection />
 
-      <div className="insp-head">Notas do apresentador</div>
+      <div className="insp-head">{tr("insp.presenterNotes")}</div>
       <textarea
         className="insp-notes"
-        placeholder="Notas visíveis só para você ao apresentar (tecla N)."
+        placeholder={tr("insp.notesPlaceholder")}
         value={pmToPlainText(slide.notes)}
         onChange={(e) => {
           const text = e.target.value;
@@ -1595,32 +1594,32 @@ function MultiInspector({ count }: { count: number }) {
 
   return (
     <>
-      <div className="insp-head">{count} elementos</div>
+      <div className="insp-head">{tr("insp.elementsCount", { count })}</div>
       {styleClipboardSize > 0 && (
         <div className="insp-zorder">
-          <button className="insp-mini" onClick={pasteStyle} title="Colar estilo (Ctrl+Shift+V)">
-            Colar estilo nos {count}
+          <button className="insp-mini" onClick={pasteStyle} title={tr("insp.pasteStyleTitle")}>
+            {tr("insp.pasteStyleInto", { count })}
           </button>
         </div>
       )}
-      <div className="insp-head">Alinhar</div>
+      <div className="insp-head">{tr("insp.align")}</div>
       <div className="insp-align">
-        <button onClick={() => align("left")} title="Esquerda">⫷</button>
-        <button onClick={() => align("hcenter")} title="Centro horizontal">⊟</button>
-        <button onClick={() => align("right")} title="Direita">⫸</button>
-        <button onClick={() => align("top")} title="Topo">⫶</button>
-        <button onClick={() => align("vcenter")} title="Centro vertical">⊞</button>
-        <button onClick={() => align("bottom")} title="Base">⫶</button>
+        <button onClick={() => align("left")} title={tr("insp.alignLeft")}>⫷</button>
+        <button onClick={() => align("hcenter")} title={tr("insp.alignHCenter")}>⊟</button>
+        <button onClick={() => align("right")} title={tr("insp.alignRight")}>⫸</button>
+        <button onClick={() => align("top")} title={tr("insp.alignTop")}>⫶</button>
+        <button onClick={() => align("vcenter")} title={tr("insp.alignVCenter")}>⊞</button>
+        <button onClick={() => align("bottom")} title={tr("insp.alignBottom")}>⫶</button>
       </div>
-      <div className="insp-head">Distribuir</div>
+      <div className="insp-head">{tr("insp.distribute")}</div>
       <div className="insp-zorder">
-        <button onClick={() => distribute("h")} title="Horizontal">↔</button>
-        <button onClick={() => distribute("v")} title="Vertical">↕</button>
+        <button onClick={() => distribute("h")} title={tr("insp.horizontal")}>↔</button>
+        <button onClick={() => distribute("v")} title={tr("insp.vertical")}>↕</button>
       </div>
-      <div className="insp-head">Grupo</div>
+      <div className="insp-head">{tr("insp.group")}</div>
       <div className="insp-zorder">
-        <button onClick={group} title="Agrupar (Ctrl+G)">Agrupar</button>
-        <button onClick={ungroup} title="Desagrupar (Ctrl+Shift+G)">Desagrupar</button>
+        <button onClick={group} title={tr("insp.groupTitle")}>{tr("insp.groupBtn")}</button>
+        <button onClick={ungroup} title={tr("insp.ungroupTitle")}>{tr("insp.ungroupBtn")}</button>
       </div>
     </>
   );

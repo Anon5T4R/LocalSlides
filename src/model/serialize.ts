@@ -9,6 +9,7 @@
 
 import JSZip from "jszip";
 import type { Deck, Element } from "./deck";
+import { t } from "../lib/i18n";
 
 const DECK_ENTRY = "deck.json";
 const MEDIA_DIR = "media/";
@@ -138,7 +139,7 @@ export async function packDeck(deck: Deck): Promise<Uint8Array> {
 export async function unpackDeck(bytes: Uint8Array): Promise<Deck> {
   const zip = await JSZip.loadAsync(bytes);
   const entry = zip.file(DECK_ENTRY);
-  if (!entry) throw new Error("Arquivo .tslides inválido: deck.json ausente.");
+  if (!entry) throw new Error(t("lib.tslidesInvalid"));
   const deck = JSON.parse(await entry.async("string")) as Deck;
 
   // Inline any media/ references back into data URLs.

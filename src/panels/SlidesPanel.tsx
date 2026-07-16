@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useStore } from "../state/store";
 import type { Deck, Slide } from "../model/deck";
 import { SlideView } from "../render/SlideView";
+import { t } from "../lib/i18n";
 
 const THUMB_W = 168;
 
@@ -52,8 +53,8 @@ export function SlidesPanel() {
   return (
     <div className="slides-panel">
       <div className="slides-panel-head">
-        <span>Slides</span>
-        <button className="icon-btn" title="Novo slide" onClick={() => addSlide()}>
+        <span>{t("slides.title")}</span>
+        <button className="icon-btn" title={t("slides.newSlide")} onClick={() => addSlide()}>
           ＋
         </button>
       </div>
@@ -89,14 +90,14 @@ export function SlidesPanel() {
             <span className="slide-index">{i + 1}</span>
             <Thumbnail slide={slide} deck={deck} />
             {!!slide.comments?.length && (
-              <span className="slide-cmt-badge" title={`${slide.comments.length} comentário(s)`}>
+              <span className="slide-cmt-badge" title={t("slides.commentsCount", { n: slide.comments.length })}>
                 💬 {slide.comments.length}
               </span>
             )}
             <div className="slide-thumb-actions">
               <button
                 className="icon-btn sm"
-                title="Duplicar"
+                title={t("slides.duplicate")}
                 onClick={(e) => {
                   e.stopPropagation();
                   duplicateSlide(slide.id);
@@ -106,7 +107,7 @@ export function SlidesPanel() {
               </button>
               <button
                 className="icon-btn sm"
-                title="Excluir"
+                title={t("slides.delete")}
                 disabled={deck.slides.length <= 1}
                 onClick={(e) => {
                   e.stopPropagation();

@@ -2,6 +2,7 @@
 // Shows selection actions when elements are selected, or ink controls
 // when the draw tool is active. Hidden when nothing is selected and not drawing.
 
+import { t } from "../lib/i18n";
 import { useStore } from "../state/store";
 import type { StrokeStyle } from "../model/deck";
 
@@ -44,27 +45,27 @@ export function ContextBar({
           <button
             className={"ctx-btn ctx-icon" + (inkMode === "pen" ? " active" : "")}
             onClick={() => setInkMode("pen")}
-            title="Caneta"
+            title={t("ctxbar.pen")}
           >
             ✏
           </button>
           <button
             className={"ctx-btn ctx-icon" + (inkMode === "eraser" ? " active" : "")}
             onClick={() => setInkMode("eraser")}
-            title="Borracha (apaga traços inteiros)"
+            title={t("ctxbar.eraser")}
           >
             🧽
           </button>
           <span className="ctx-sep" />
           {inkMode === "pen" ? (
             <>
-              <span className="ctx-label">Traço</span>
+              <span className="ctx-label">{t("ctxbar.stroke")}</span>
               <input
                 type="color"
                 className="ctx-color"
                 value={inkColor}
                 onChange={(e) => onInkColor(e.target.value)}
-                title="Cor do traço"
+                title={t("ctxbar.strokeColor")}
               />
               <input
                 type="range"
@@ -73,76 +74,76 @@ export function ContextBar({
                 value={inkWidth}
                 onChange={(e) => onInkWidth(Number(e.target.value))}
                 style={{ width: 70 }}
-                title={`Espessura: ${inkWidth}px`}
+                title={t("ctxbar.thickness", { n: inkWidth })}
               />
               <span className="ctx-label">{inkWidth}px</span>
               <select
                 value={inkStyle}
                 onChange={(e) => onInkStyle(e.target.value as StrokeStyle)}
                 className="ctx-select"
-                title="Estilo do traço"
+                title={t("ctxbar.strokeStyle")}
               >
-                <option value="solid">Normal</option>
-                <option value="dash">Tracejado</option>
-                <option value="dot">Pontilhado</option>
-                <option value="chalk">Giz</option>
-                <option value="smudge">Esfumaçado</option>
+                <option value="solid">{t("ctxbar.styleSolid")}</option>
+                <option value="dash">{t("ctxbar.styleDash")}</option>
+                <option value="dot">{t("ctxbar.styleDot")}</option>
+                <option value="chalk">{t("ctxbar.styleChalk")}</option>
+                <option value="smudge">{t("ctxbar.styleSmudge")}</option>
               </select>
             </>
           ) : (
-            <span className="ctx-label">Arraste sobre os traços para apagar</span>
+            <span className="ctx-label">{t("ctxbar.eraseHint")}</span>
           )}
         </>
       )}
 
       {count > 0 && !drawing && (
         <>
-          <button className="ctx-btn" onClick={() => duplicateElements(selection)} title="Duplicar (Ctrl+D)">
-            Duplicar
+          <button className="ctx-btn" onClick={() => duplicateElements(selection)} title={t("ctxbar.duplicateTitle")}>
+            {t("ctxbar.duplicate")}
           </button>
-          <button className="ctx-btn" onClick={copySelection} title="Copiar (Ctrl+C)">
-            Copiar
+          <button className="ctx-btn" onClick={copySelection} title={t("ctxbar.copyTitle")}>
+            {t("ctxbar.copy")}
           </button>
-          <button className="ctx-btn" onClick={cutSelection} title="Recortar (Ctrl+X)">
-            Recortar
+          <button className="ctx-btn" onClick={cutSelection} title={t("ctxbar.cutTitle")}>
+            {t("ctxbar.cut")}
           </button>
           <button
             className="ctx-btn"
             onClick={pasteFromClipboard}
             disabled={clipboardSize === 0}
-            title="Colar (Ctrl+V)"
+            title={t("ctxbar.pasteTitle")}
           >
-            Colar
+            {t("ctxbar.paste")}
           </button>
 
           {count === 1 && (
             <>
               <span className="ctx-sep" />
-              <button className="ctx-btn ctx-icon" onClick={() => reorder(selection[0], "front")} title="Trazer para frente">⤒</button>
-              <button className="ctx-btn ctx-icon" onClick={() => reorder(selection[0], "forward")} title="Avançar um nível">↑</button>
-              <button className="ctx-btn ctx-icon" onClick={() => reorder(selection[0], "backward")} title="Recuar um nível">↓</button>
-              <button className="ctx-btn ctx-icon" onClick={() => reorder(selection[0], "back")} title="Enviar para trás">⤓</button>
+              <button className="ctx-btn ctx-icon" onClick={() => reorder(selection[0], "front")} title={t("ctxbar.bringFront")}>⤒</button>
+              <button className="ctx-btn ctx-icon" onClick={() => reorder(selection[0], "forward")} title={t("ctxbar.forward")}>↑</button>
+              <button className="ctx-btn ctx-icon" onClick={() => reorder(selection[0], "backward")} title={t("ctxbar.backward")}>↓</button>
+              <button className="ctx-btn ctx-icon" onClick={() => reorder(selection[0], "back")} title={t("ctxbar.sendBack")}>⤓</button>
             </>
           )}
 
           {count >= 2 && (
             <>
               <span className="ctx-sep" />
-              <button className="ctx-btn ctx-icon" onClick={() => align("left")} title="Alinhar à esquerda">⫷</button>
-              <button className="ctx-btn ctx-icon" onClick={() => align("hcenter")} title="Centralizar horizontalmente">⊟</button>
-              <button className="ctx-btn ctx-icon" onClick={() => align("right")} title="Alinhar à direita">⫸</button>
-              <button className="ctx-btn ctx-icon" onClick={() => align("top")} title="Alinhar ao topo">⫶</button>
-              <button className="ctx-btn ctx-icon" onClick={() => align("vcenter")} title="Centralizar verticalmente">⊞</button>
-              <button className="ctx-btn ctx-icon" onClick={() => align("bottom")} title="Alinhar à base">⫵</button>
+              <button className="ctx-btn ctx-icon" onClick={() => align("left")} title={t("ctxbar.alignLeft")}>⫷</button>
+              <button className="ctx-btn ctx-icon" onClick={() => align("hcenter")} title={t("ctxbar.alignHCenter")}>⊟</button>
+              <button className="ctx-btn ctx-icon" onClick={() => align("right")} title={t("ctxbar.alignRight")}>⫸</button>
+              <button className="ctx-btn ctx-icon" onClick={() => align("top")} title={t("ctxbar.alignTop")}>⫶</button>
+              <button className="ctx-btn ctx-icon" onClick={() => align("vcenter")} title={t("ctxbar.alignVCenter")}>⊞</button>
+              <button className="ctx-btn ctx-icon" onClick={() => align("bottom")} title={t("ctxbar.alignBottom")}>⫵</button>
               {count >= 3 && (
                 <>
-                  <button className="ctx-btn ctx-icon" onClick={() => distribute("h")} title="Distribuir horizontalmente">↔</button>
-                  <button className="ctx-btn ctx-icon" onClick={() => distribute("v")} title="Distribuir verticalmente">↕</button>
+                  <button className="ctx-btn ctx-icon" onClick={() => distribute("h")} title={t("ctxbar.distributeH")}>↔</button>
+                  <button className="ctx-btn ctx-icon" onClick={() => distribute("v")} title={t("ctxbar.distributeV")}>↕</button>
                 </>
               )}
               <span className="ctx-sep" />
-              <button className="ctx-btn" onClick={group} title="Agrupar (Ctrl+G)">Agrupar</button>
-              <button className="ctx-btn" onClick={ungroup} title="Desagrupar (Ctrl+Shift+G)">Desagrupar</button>
+              <button className="ctx-btn" onClick={group} title={t("ctxbar.groupTitle")}>{t("ctxbar.group")}</button>
+              <button className="ctx-btn" onClick={ungroup} title={t("ctxbar.ungroupTitle")}>{t("ctxbar.ungroup")}</button>
             </>
           )}
 
@@ -150,9 +151,9 @@ export function ContextBar({
           <button
             className="ctx-btn ctx-danger"
             onClick={() => deleteElements(selection)}
-            title="Excluir (Delete)"
+            title={t("ctxbar.deleteTitle")}
           >
-            Excluir
+            {t("ctxbar.delete")}
           </button>
         </>
       )}

@@ -5,6 +5,8 @@
 // Onda 8: grew from 16 to ~50 icons with category/tags for the InsertPanel
 // search. Full 150–300 curated pack is future work (see PLANO.md 8.1).
 
+import { t, type MessageKey } from "../lib/i18n";
+
 export interface IconDef {
   name: string;
   label: string;
@@ -73,3 +75,15 @@ export const ICONS: IconDef[] = [
   { name: "sunny", label: "Sol", category: "natureza", tags: ["clima", "verão"], path: "M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z" },
   { name: "umbrella", label: "Guarda-chuva", category: "natureza", tags: ["chuva", "proteção"], path: "M12 2C6.48 2 2 6.48 2 12h4c0-1.1.9-2 2-2s2 .9 2 2h2c0-1.1.9-2 2-2s2 .9 2 2h4c0-5.52-4.48-10-10-10zm-1 11v6.5c0 1.38-1.12 2.5-2.5 2.5S6 20.88 6 19.5h1.5c0 .55.45 1 1 1s1-.45 1-1V13h1.5z" },
 ];
+
+/** Nomes dos ícones core (icon.<name> existe no i18n). Estável — a partir do id. */
+const CORE_ICON_NAMES = new Set(ICONS.map((ic) => ic.name));
+
+/**
+ * Rótulo de exibição de um ícone, resolvido no idioma atual em tempo de render.
+ * Core (icons.ts) traduz via `t("icon.<name>")`; ícones do pack lazy
+ * (iconsPack.ts, ~7k rótulos gerados) caem no `label` original (inglês).
+ */
+export function iconLabel(ic: IconDef): string {
+  return CORE_ICON_NAMES.has(ic.name) ? t(("icon." + ic.name) as MessageKey) : ic.label;
+}

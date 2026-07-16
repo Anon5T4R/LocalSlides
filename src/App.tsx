@@ -8,7 +8,7 @@ import { SlidesPanel } from "./panels/SlidesPanel";
 import { Inspector } from "./panels/Inspector";
 import { PresentMode } from "./present/PresentMode";
 import { newChart, newFreeTextBox, newIcon, newImage, newShape, newTable, newVideo, SLIDE_SIZES, type AspectRatio, type ChartKind, type ShapeKind } from "./model/deck";
-import { ICONS } from "./model/icons";
+import { ICONS, iconLabel } from "./model/icons";
 import { SHAPE_PICKER, CHART_PICKER } from "./insert/catalog";
 import { InsertPanel } from "./panels/InsertPanel";
 import { pickImageDataUri, pickVideoDataUri, imageDataUrlFromPath } from "./lib/media";
@@ -37,13 +37,16 @@ import { Menu, type MenuItemDef } from "./ui/Menu";
 import { ContextBar } from "./ui/ContextBar";
 import { ShortcutsModal } from "./ui/ShortcutsModal";
 import { VersionsModal } from "./ui/VersionsModal";
+import { LocalePicker } from "./components/LocalePicker";
+import { t as tr, localeTag, type MessageKey } from "./lib/i18n";
 import "./App.css";
 
-const ASPECT_PICKER: { kind: AspectRatio; label: string; size: { w: number; h: number } }[] = [
-  { kind: "16:9", label: "16:9 (widescreen)", size: SLIDE_SIZES["16:9"] },
-  { kind: "4:3", label: "4:3 (clássico)", size: SLIDE_SIZES["4:3"] },
-  { kind: "1:1", label: "1:1 (quadrado)", size: SLIDE_SIZES["1:1"] },
-  { kind: "9:16", label: "9:16 (story/reels)", size: SLIDE_SIZES["9:16"] },
+const ASPECT_PICKER: { kind: AspectRatio; labelKey:
+  "aspect.16:9" | "aspect.4:3" | "aspect.1:1" | "aspect.9:16"; size: { w: number; h: number } }[] = [
+  { kind: "16:9", labelKey: "aspect.16:9", size: SLIDE_SIZES["16:9"] },
+  { kind: "4:3", labelKey: "aspect.4:3", size: SLIDE_SIZES["4:3"] },
+  { kind: "1:1", labelKey: "aspect.1:1", size: SLIDE_SIZES["1:1"] },
+  { kind: "9:16", labelKey: "aspect.9:16", size: SLIDE_SIZES["9:16"] },
 ];
 
 function App() {
@@ -136,7 +139,7 @@ function App() {
   );
 
   const handleNew = useCallback(() => {
-    if (dirty && !window.confirm("Há alterações não salvas. Criar uma nova apresentação mesmo assim?"))
+    if (dirty && !window.confirm(tr("app.confirm.newDeck")))
       return;
     resetDeck();
   }, [dirty, resetDeck]);
@@ -147,15 +150,15 @@ function App() {
       const f = await openDeck();
       if (f) applyOpened(f);
     } catch (e) {
-      window.alert(`Não foi possível abrir:\n${e}`);
+      window.alert(tr("app.err.open", { e: String(e) }));
     }
   }, [applyOpened]);
 
   const handleSaveAs = useCallback(async () => {
     if (!inTauri()) return;
-    const suggested = filePath ? baseName(filePath) : "apresentacao.tslides";
+    const suggested = filePath ? baseName(filePath) : tr("app.defaultDeckName");
     try {
-      setBusy("Salvando…");
+      setBusy(tr("app.busy.saving"));
       const path = await saveDeckAs(useStore.getState().deck, suggested);
       if (path) {
         markSaved(path);
@@ -163,7 +166,7 @@ function App() {
         clearRecovery();
       }
     } catch (e) {
-      window.alert(`Não foi possível salvar:\n${e}`);
+      window.alert(tr("app.err.save", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -174,13 +177,13 @@ function App() {
     const path = useStore.getState().filePath;
     if (!path) return handleSaveAs();
     try {
-      setBusy("Salvando…");
+      setBusy(tr("app.busy.saving"));
       await saveDeckTo(path, useStore.getState().deck);
       markSaved(path);
       remember(path);
       clearRecovery();
     } catch (e) {
-      window.alert(`Não foi possível salvar:\n${e}`);
+      window.alert(tr("app.err.save", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -221,11 +224,11 @@ function App() {
     try {
       const src = await pickImageDataUri();
       if (src) {
-        addAsset("image", "Imagem", src); // also keep it in the reusable library
+        addAsset("image", tr("app.assetImage"), src); // also keep it in the reusable library
         addElement(newImage(useStore.getState().deck, src));
       }
     } catch (e) {
-      window.alert(`Não foi possível inserir a imagem:\n${e}`);
+      window.alert(tr("app.err.insertImage", { e: String(e) }));
     }
   }, [addElement, addAsset]);
 
@@ -234,11 +237,11 @@ function App() {
     try {
       const src = await pickVideoDataUri();
       if (src) {
-        addAsset("video", "Vídeo", src);
+        addAsset("video", tr("app.assetVideo"), src);
         addElement(newVideo(useStore.getState().deck, src));
       }
     } catch (e) {
-      window.alert(`Não foi possível inserir o vídeo:\n${e}`);
+      window.alert(tr("app.err.insertVideo", { e: String(e) }));
     }
   }, [addElement, addAsset]);
 
@@ -276,10 +279,10 @@ function App() {
     if (!slide) return;
     const idx = st.deck.slides.findIndex((s) => s.id === slide.id);
     try {
-      setBusy("Exportando PNG…");
+      setBusy(tr("app.busy.exportPng"));
       await exportSlidePng(slide, st.deck, idx, transparentBg);
     } catch (e) {
-      window.alert(`Não foi possível exportar PNG:\n${e}`);
+      window.alert(tr("app.err.exportPng", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -291,10 +294,10 @@ function App() {
     if (!slide) return;
     const idx = st.deck.slides.findIndex((s) => s.id === slide.id);
     try {
-      setBusy("Exportando JPG…");
+      setBusy(tr("app.busy.exportJpg"));
       await exportSlideJpeg(slide, st.deck, idx);
     } catch (e) {
-      window.alert(`Não foi possível exportar JPG:\n${e}`);
+      window.alert(tr("app.err.exportJpg", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -306,10 +309,10 @@ function App() {
     if (!slide) return;
     const idx = st.deck.slides.findIndex((s) => s.id === slide.id);
     try {
-      setBusy("Exportando SVG…");
+      setBusy(tr("app.busy.exportSvg"));
       await exportSlideSvg(slide, st.deck, idx);
     } catch (e) {
-      window.alert(`Não foi possível exportar SVG:\n${e}`);
+      window.alert(tr("app.err.exportSvg", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -320,25 +323,25 @@ function App() {
     try {
       const blob = await exportDeckVideo(st.deck, {
         secondsPerSlide: 3,
-        onProgress: (done, total) => setBusy(`Exportando vídeo… ${done}/${total} slides`),
+        onProgress: (done, total) => setBusy(tr("app.busy.exportVideo", { done, total })),
       });
-      setBusy("Salvando vídeo…");
-      await saveVideoBlob(blob, "apresentacao.webm");
+      setBusy(tr("app.busy.savingVideo"));
+      await saveVideoBlob(blob, tr("app.defaultVideoName"));
     } catch (e) {
-      window.alert(`Não foi possível exportar o vídeo:\n${e}`);
+      window.alert(tr("app.err.exportVideo", { e: String(e) }));
     } finally {
       setBusy("");
     }
   }, []);
 
   const handleImportPptx = useCallback(async () => {
-    if (dirty && !window.confirm("Há alterações não salvas. Importar um PPTX mesmo assim?")) return;
+    if (dirty && !window.confirm(tr("app.confirm.importPptx"))) return;
     try {
-      setBusy("Importando PPTX…");
+      setBusy(tr("app.busy.importPptx"));
       const res = await importPptx();
       if (res) loadDeck(res.deck, null);
     } catch (e) {
-      window.alert(`Não foi possível importar o PPTX:\n${e}`);
+      window.alert(tr("app.err.importPptx", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -346,10 +349,10 @@ function App() {
 
   const handleExportPptx = useCallback(async () => {
     try {
-      setBusy("Exportando PPTX…");
+      setBusy(tr("app.busy.exportPptx"));
       await exportDeckPptx(useStore.getState().deck);
     } catch (e) {
-      window.alert(`Não foi possível exportar PPTX:\n${e}`);
+      window.alert(tr("app.err.exportPptx", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -400,8 +403,8 @@ function App() {
     const t = window.setTimeout(() => {
       const st = useStore.getState();
       if (st.filePath || st.dirty) return;
-      const when = new Date(rec.savedAt).toLocaleString();
-      if (window.confirm(`Restaurar a apresentação não salva da sessão anterior?\n(salva em ${when})`)) {
+      const when = new Date(rec.savedAt).toLocaleString(localeTag());
+      if (window.confirm(tr("app.confirm.restore", { when }))) {
         loadDeck(rec.deck, null);
       } else {
         clearRecovery();
@@ -415,8 +418,8 @@ function App() {
     if (!inTauri()) return;
     const un = listen("close-requested", async () => {
       if (useStore.getState().dirty) {
-        const ok = await ask("Há alterações não salvas.\nSair mesmo assim?", {
-          title: "Sair do LocalSlides",
+        const ok = await ask(tr("app.confirm.exit"), {
+          title: tr("app.exitTitle"),
           kind: "warning",
         }).catch(() => true);
         if (!ok) return;
@@ -650,27 +653,27 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [showShortcuts, showVersions]);
 
-  const title = (filePath ? baseName(filePath) : "Sem título") + (dirty ? " •" : "");
+  const title = (filePath ? baseName(filePath) : tr("app.untitled")) + (dirty ? " •" : "");
   const zoomPct = zoom > 0 ? Math.round(zoom * 100) : 0;
 
   const arquivoItems: MenuItemDef[] = [
-    { kind: "item", label: "Nova apresentação", shortcut: "Ctrl+N", onClick: handleNew },
-    { kind: "item", label: "Abrir…", shortcut: "Ctrl+O", onClick: handleOpen },
+    { kind: "item", label: tr("menu.file.new"), shortcut: "Ctrl+N", onClick: handleNew },
+    { kind: "item", label: tr("menu.file.open"), shortcut: "Ctrl+O", onClick: handleOpen },
     { kind: "sep" },
-    { kind: "item", label: "Salvar", shortcut: "Ctrl+S", onClick: handleSave },
-    { kind: "item", label: "Salvar como…", shortcut: "Ctrl+Shift+S", onClick: handleSaveAs },
+    { kind: "item", label: tr("menu.file.save"), shortcut: "Ctrl+S", onClick: handleSave },
+    { kind: "item", label: tr("menu.file.saveAs"), shortcut: "Ctrl+Shift+S", onClick: handleSaveAs },
     { kind: "sep" },
-    { kind: "item", label: "Importar PPTX…", onClick: handleImportPptx },
+    { kind: "item", label: tr("menu.file.importPptx"), onClick: handleImportPptx },
     { kind: "sep" },
     {
       kind: "sub",
-      label: "Redimensionar (mágico)",
+      label: tr("menu.file.resize"),
       items: ASPECT_PICKER.map((a) => ({
         kind: "item" as const,
-        label: a.label,
+        label: tr(a.labelKey),
         onClick: () => {
           if (deck.size.w === a.size.w && deck.size.h === a.size.h) return;
-          if (window.confirm(`Redimensionar a apresentação para ${a.label}?\nCada elemento é reposicionado proporcionalmente.`)) {
+          if (window.confirm(tr("app.confirm.resize", { label: tr(a.labelKey) }))) {
             resizeDeck(a.kind);
           }
         },
@@ -679,54 +682,54 @@ function App() {
     { kind: "sep" },
     {
       kind: "sub",
-      label: "Exportar",
+      label: tr("menu.file.export"),
       items: [
-        { kind: "item", label: "PDF (todos os slides)", onClick: handleExportPdf },
-        { kind: "item", label: "PNG (slide atual)", onClick: () => handleExportPng(false) },
-        { kind: "item", label: "PNG transparente (slide atual)", onClick: () => handleExportPng(true) },
-        { kind: "item", label: "JPG (slide atual)", onClick: handleExportJpg },
-        { kind: "item", label: "SVG (slide atual)", onClick: handleExportSvg },
-        { kind: "item", label: "PPTX (PowerPoint)", onClick: handleExportPptx },
-        { kind: "item", label: "Vídeo (WEBM)…", onClick: handleExportVideo },
+        { kind: "item", label: tr("menu.export.pdf"), onClick: handleExportPdf },
+        { kind: "item", label: tr("menu.export.png"), onClick: () => handleExportPng(false) },
+        { kind: "item", label: tr("menu.export.pngTransparent"), onClick: () => handleExportPng(true) },
+        { kind: "item", label: tr("menu.export.jpg"), onClick: handleExportJpg },
+        { kind: "item", label: tr("menu.export.svg"), onClick: handleExportSvg },
+        { kind: "item", label: tr("menu.export.pptx"), onClick: handleExportPptx },
+        { kind: "item", label: tr("menu.export.video"), onClick: handleExportVideo },
       ],
     },
   ];
 
   const inserirItems: MenuItemDef[] = [
-    { kind: "item", label: "Caixa de texto", icon: "T", onClick: insertText },
-    { kind: "item", label: "Imagem…", icon: "🖼", onClick: insertImage },
-    { kind: "item", label: "Vídeo…", icon: "▶", onClick: insertVideo },
+    { kind: "item", label: tr("menu.insert.text"), icon: "T", onClick: insertText },
+    { kind: "item", label: tr("menu.insert.image"), icon: "🖼", onClick: insertImage },
+    { kind: "item", label: tr("menu.insert.video"), icon: "▶", onClick: insertVideo },
     { kind: "sep" },
     {
       kind: "sub",
-      label: "Forma",
+      label: tr("menu.insert.shape"),
       icon: "◻",
       items: SHAPE_PICKER.map((s) => ({
         kind: "item" as const,
-        label: s.label,
+        label: tr(("cat.shape:" + s.kind) as MessageKey),
         icon: s.glyph,
         onClick: () => insertShape(s.kind),
       })),
     },
-    { kind: "item", label: "Tabela", icon: "⊞", onClick: insertTable },
+    { kind: "item", label: tr("menu.insert.table"), icon: "⊞", onClick: insertTable },
     {
       kind: "sub",
-      label: "Gráfico",
+      label: tr("menu.insert.chart"),
       icon: "📊",
       items: CHART_PICKER.map((c) => ({
         kind: "item" as const,
-        label: c.label,
+        label: tr(("cat.chart:" + c.kind) as MessageKey),
         icon: c.glyph,
         onClick: () => insertChart(c.kind),
       })),
     },
     {
       kind: "sub",
-      label: "Ícone",
+      label: tr("menu.insert.icon"),
       icon: "★",
       items: ICONS.map((ic) => ({
         kind: "item" as const,
-        label: ic.label,
+        label: iconLabel(ic),
         onClick: () => insertIcon(ic.path),
       })),
     },
@@ -746,18 +749,18 @@ function App() {
         <div className="brand">LocalSlides</div>
         <div className="toolbar">
           {/* Arquivo */}
-          <Menu trigger="Arquivo ▾" items={arquivoItems} />
+          <Menu trigger={tr("menu.file")} items={arquivoItems} />
 
           <span className="sep" />
 
           {/* Histórico */}
-          <button onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)" className="tb-icon">↶</button>
-          <button onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)" className="tb-icon">↷</button>
+          <button onClick={undo} disabled={!canUndo} title={tr("tb.undo")} className="tb-icon">↶</button>
+          <button onClick={redo} disabled={!canRedo} title={tr("tb.redo")} className="tb-icon">↷</button>
 
           <span className="sep" />
 
           {/* Novo slide */}
-          <button onClick={() => addSlide()} title="Novo slide (Ctrl+M)">＋ Slide</button>
+          <button onClick={() => addSlide()} title={tr("tb.newSlide")}>{tr("tb.slide")}</button>
 
           <span className="sep" />
 
@@ -766,12 +769,12 @@ function App() {
             <button
               className={"tool-btn" + (showInsert ? " active" : "")}
               onClick={() => setShowInsert((v) => !v)}
-              title="Painel Inserir (formas, ícones, gráficos, tabelas)"
+              title={tr("tb.insertPanel")}
             >
               🧩
             </button>
           </div>
-          <Menu trigger="Inserir ▾" items={inserirItems} />
+          <Menu trigger={tr("menu.insert")} items={inserirItems} />
 
           <span className="sep" />
 
@@ -780,17 +783,17 @@ function App() {
             <button
               className={"tool-btn" + (!drawing && !commenting ? " active" : "")}
               onClick={() => { setDrawing(false); setCommenting(false); }}
-              title="Selecionar / mover"
+              title={tr("tb.select")}
             >↖</button>
             <button
               className={"tool-btn" + (drawing ? " active" : "")}
               onClick={() => setDrawing(!drawing)}
-              title="Desenhar à mão livre"
+              title={tr("tb.draw")}
             >✏</button>
             <button
               className={"tool-btn" + (commenting ? " active" : "")}
               onClick={() => setCommenting(!commenting)}
-              title="Adicionar comentário"
+              title={tr("tb.comment")}
             >💬</button>
           </div>
 
@@ -801,42 +804,43 @@ function App() {
             <button
               className={"tool-btn" + (showLayers ? " active" : "")}
               onClick={() => togglePanel("layers")}
-              title="Camadas"
+              title={tr("tb.layers")}
             >▤</button>
             <button
               className={"tool-btn" + (showMedia ? " active" : "")}
               onClick={() => togglePanel("media")}
-              title="Biblioteca de mídia"
+              title={tr("tb.mediaLib")}
             >⬚</button>
             <button
               className={"tool-btn" + (showAi ? " active" : "")}
               onClick={() => togglePanel("ai")}
-              title="IA local"
+              title={tr("tb.localAi")}
             >✦</button>
           </div>
 
           <span className="sep" />
 
-          <button className="present-btn" onClick={() => setPresenting(true)} title="Apresentar (F5)">
-            ▶ Apresentar
+          <button className="present-btn" onClick={() => setPresenting(true)} title={tr("tb.present")}>
+            {tr("tb.presentBtn")}
           </button>
         </div>
         <div className="doc-title">{title}</div>
         <div className="zoom">
-          <button onClick={() => setZoom(Math.max(0.1, (zoom || 0.5) - 0.1))} title="Reduzir">−</button>
-          <button onClick={() => setZoom(0)} title="Ajustar à tela">{zoomPct ? `${zoomPct}%` : "Ajustar"}</button>
-          <button onClick={() => setZoom((zoom || 0.5) + 0.1)} title="Ampliar">+</button>
-          <button onClick={() => setShowShortcuts(true)} title="Atalhos de teclado (?)">?</button>
-          <button onClick={() => setShowVersions(true)} title="Histórico de versões">🕘</button>
+          <button onClick={() => setZoom(Math.max(0.1, (zoom || 0.5) - 0.1))} title={tr("tb.zoomOut")}>−</button>
+          <button onClick={() => setZoom(0)} title={tr("tb.zoomFit")}>{zoomPct ? `${zoomPct}%` : tr("tb.zoomFitShort")}</button>
+          <button onClick={() => setZoom((zoom || 0.5) + 0.1)} title={tr("tb.zoomIn")}>+</button>
+          <button onClick={() => setShowShortcuts(true)} title={tr("tb.shortcuts")}>?</button>
+          <button onClick={() => setShowVersions(true)} title={tr("tb.versions")}>🕘</button>
+          <LocalePicker />
         </div>
       </div>
       {showOnboarding && (
         <div className="onboarding-banner">
           <span>
-            👋 Bem-vindo(a)! Clique em <strong>Inserir</strong> para adicionar elementos, ou pressione{" "}
-            <kbd>?</kbd> para ver todos os atalhos.
+            {tr("app.onboarding.pre")}<strong>{tr("app.onboarding.insert")}</strong>{tr("app.onboarding.mid")}
+            <kbd>?</kbd>{tr("app.onboarding.post")}
           </span>
-          <button className="insp-mini" onClick={dismissOnboarding}>Entendi</button>
+          <button className="insp-mini" onClick={dismissOnboarding}>{tr("app.onboarding.gotIt")}</button>
         </div>
       )}
       <ContextBar
@@ -852,14 +856,14 @@ function App() {
           <button
             className="right-reopen"
             onClick={() => setRightCollapsed(false)}
-            title="Mostrar painel (Inspetor / IA)"
+            title={tr("app.showPanel")}
           >
             ‹
           </button>
         ) : (
           <div className="right-pane" style={{ width: rightWidth }}>
-            <div className="right-resize" onPointerDown={startRightResize} title="Arraste para redimensionar" />
-            <button className="right-collapse" onClick={() => setRightCollapsed(true)} title="Recolher painel">
+            <div className="right-resize" onPointerDown={startRightResize} title={tr("app.resizeDrag")} />
+            <button className="right-collapse" onClick={() => setRightCollapsed(true)} title={tr("app.collapsePanel")}>
               ⟩
             </button>
             {showLayers ? (

@@ -15,6 +15,7 @@ import {
   newTextBox,
   plainTextToPM,
 } from "../model/deck";
+import { t } from "../lib/i18n";
 
 export type SlideLayout = "title" | "bullets" | "section";
 
@@ -29,24 +30,11 @@ export interface DeckSpec {
   slides: SlideSpec[];
 }
 
-/** The JSON contract handed to the model. Kept tiny on purpose. */
-export const DECKGEN_SYSTEM = `Você é um gerador de apresentações de slides. Responda APENAS com um objeto JSON válido, sem texto antes ou depois, sem cercas de código.
-
-Formato:
-{
-  "slides": [
-    { "layout": "title", "title": "Título da apresentação", "subtitle": "Subtítulo opcional" },
-    { "layout": "section", "title": "Nome de uma seção" },
-    { "layout": "bullets", "title": "Título do slide", "bullets": ["ponto 1", "ponto 2", "ponto 3"] }
-  ]
-}
-
-Regras:
-- "layout" deve ser "title", "section" ou "bullets".
-- O primeiro slide normalmente é "title".
-- Slides "bullets" têm de 3 a 6 itens curtos (uma linha cada).
-- Escreva no mesmo idioma do pedido do usuário.
-- Gere de 5 a 8 slides, salvo se o usuário pedir outra quantidade.`;
+/**
+ * The JSON contract handed to the model. Resolved at call time so the prose is
+ * in the UI language while the JSON contract (keys/enum values) stays intact.
+ */
+export const deckgenSystem = () => t("ai.deckgen.system");
 
 /** Pull the first balanced JSON object out of arbitrary model output. */
 export function extractJsonObject(text: string): string | null {
@@ -79,16 +67,16 @@ const LAYOUTS: SlideLayout[] = ["title", "bullets", "section"];
 /** Validate + normalize raw parsed JSON into a DeckSpec, or throw. */
 export function parseDeckSpec(text: string): DeckSpec {
   const json = extractJsonObject(text);
-  if (!json) throw new Error("a IA não retornou um JSON reconhecível");
+  if (!json) throw new Error(t("ai.deckgen.err.noJson"));
   let raw: unknown;
   try {
     raw = JSON.parse(json);
   } catch (e) {
-    throw new Error(`JSON inválido da IA: ${e}`);
+    throw new Error(t("ai.deckgen.err.badJson", { e: String(e) }));
   }
   const slidesRaw = (raw as { slides?: unknown }).slides;
   if (!Array.isArray(slidesRaw) || slidesRaw.length === 0) {
-    throw new Error("a IA não retornou nenhum slide");
+    throw new Error(t("ai.deckgen.err.noSlides"));
   }
   const slides: SlideSpec[] = [];
   for (const s of slidesRaw) {
@@ -105,7 +93,7 @@ export function parseDeckSpec(text: string): DeckSpec {
     if (!title && !(bullets && bullets.length)) continue;
     slides.push({ layout, title, subtitle, bullets });
   }
-  if (!slides.length) throw new Error("a IA não retornou slides válidos");
+  if (!slides.length) throw new Error(t("ai.deckgen.err.noValidSlides"));
   return { slides };
 }
 
