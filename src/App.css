@@ -1,84 +1,96 @@
+/* Superfícies suavizadas: branco puro rouba o foco do accent, então o painel
+   vira off-white tingido com o matiz do próprio --bg (L* ~98) e o --bg desce
+   ~3 L*. Só o L* muda; a/b (matiz) intactos, escada bg < panel-2 < panel mantida.
+   --stage-bg é a mesa atrás do slide (superfície recuada, um degrau abaixo do
+   --bg): desce junto pra manter a recessão. Não é palco escuro de mídia. */
 :root {
-  --bg: #f1f5f9;
-  --panel: #ffffff;
-  --panel-2: #f8fafc;
-  --border: #e2e8f0;
+  --bg: #e8ecf0;
+  --panel: #f5f9fd;
+  --panel-2: #eff1f3;
+  --border: #d9dfe7;
   --text: #1e293b;
-  --muted: #64748b;
+  /* Escurecido 0.7 L* (matiz preservado): o painel saiu do branco puro e o
+     secundário caiu pra 4.50:1 — isto o traz de volta pra 4.63:1 (AA). */
+  --muted: #627289;
   --accent: #2563eb;
-  --stage-bg: #e2e8f0;
+  --stage-bg: #d9dfe7;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
+/* Escuro: quase-preto (L* 8) sobe ~4.5 L* mantendo matiz; a mesa sobe junto
+   pra manter a mesma recessão relativa ao --bg. */
 :root[data-theme="dark"] {
-  --bg: #0f172a;
-  --panel: #1e293b;
-  --panel-2: #172033;
-  --border: #334155;
+  --bg: #192034;
+  --panel: #283345;
+  --panel-2: #21293d;
+  --border: #3d4b60;
   --text: #e2e8f0;
   --muted: #94a3b8;
   --accent: #3b82f6;
-  --stage-bg: #0b1220;
+  --stage-bg: #151b29;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 :root[data-theme="nature"] {
-  --bg: #f5f7f2;
-  --panel: #ffffff;
-  --panel-2: #eef2ea;
-  --border: #e2e8dd;
+  --bg: #eef1e9;
+  --panel: #f8faf5;
+  --panel-2: #e4eade;
+  --border: #dbe3d4;
   --text: #2e3a2e;
-  --muted: #6f7d6f;
+  --muted: #697669;
   --accent: #7a9e7e;
-  --stage-bg: #eef1ea;
+  /* A mesa tem que ficar um degrau ABAIXO do --bg; o §1 baixou o --bg e
+     achatou a recessão (mesa ≈ fundo), então ela desce junto. */
+  --stage-bg: #e8ebe4;
   --shadow: 0 10px 30px rgba(60, 70, 60, 0.14);
 }
 
 :root[data-theme="darkblue"] {
-  --bg: #0d1520;
-  --panel: #131f30;
-  --panel-2: #1a2942;
-  --border: #223049;
+  --bg: #16202e;
+  --panel: #1d2a3c;
+  --panel-2: #26374e;
+  --border: #2d3f59;
   --text: #e2e8f0;
   --muted: #8595ad;
   --accent: #3b82f6;
-  --stage-bg: #0a1019;
+  /* Mesa sobe junto com o --bg do §1, mantendo a mesma recessão relativa. */
+  --stage-bg: #171c24;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
 }
 
 :root[data-theme="calmgreen"] {
-  --bg: #f2f5f1;
-  --panel: #ffffff;
-  --panel-2: #e9efe7;
-  --border: #dde6dc;
+  --bg: #eaf0e9;
+  --panel: #f7faf6;
+  --panel-2: #dfe8dd;
+  --border: #d5e0d3;
   --text: #24302a;
-  --muted: #6a7a6f;
+  --muted: #67776c;
   --accent: #4f7d5e;
-  --stage-bg: #eaf0e8;
+  --stage-bg: #e4eae2;
   --shadow: 0 10px 30px rgba(60, 70, 60, 0.14);
 }
 
 :root[data-theme="pastelpink"] {
-  --bg: #fdf4f7;
-  --panel: #ffffff;
-  --panel-2: #f9eaf0;
-  --border: #f2dfe7;
+  --bg: #f8ebf0;
+  --panel: #fdf6f9;
+  --panel-2: #f2dde6;
+  --border: #ecd3de;
   --text: #3a2a30;
-  --muted: #8a7580;
+  --muted: #806d77;
   --accent: #e8799f;
-  --stage-bg: #f7ebf1;
+  --stage-bg: #efe3e9;
   --shadow: 0 10px 30px rgba(60, 70, 60, 0.14);
 }
 
 :root[data-theme="punkprincess"] {
-  --bg: #120a1a;
-  --panel: #1a0f26;
-  --panel-2: #241533;
-  --border: #2c1c3d;
+  --bg: #1c1228;
+  --panel: #251733;
+  --panel-2: #32204a;
+  --border: #3a2850;
   --text: #f0e6ff;
   --muted: #9a86b5;
   --accent: #ff2d95;
-  --stage-bg: #0c0512;
+  --stage-bg: #16111a;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
 }
 
