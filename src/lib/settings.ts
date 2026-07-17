@@ -1,7 +1,27 @@
 // Local, persisted preferences (theme, recents, AI model dir for Fase 5).
 // Same shape and localStorage approach as the Writer/Sheets.
 
-export type Theme = "auto" | "light" | "dark";
+export type Theme =
+  | "auto"
+  | "light"
+  | "dark"
+  | "nature"
+  | "darkblue"
+  | "calmgreen"
+  | "pastelpink"
+  | "punkprincess";
+
+/** All selectable themes, in UI order ("auto" first). */
+export const THEMES: Theme[] = [
+  "auto",
+  "light",
+  "dark",
+  "nature",
+  "darkblue",
+  "calmgreen",
+  "pastelpink",
+  "punkprincess",
+];
 
 export interface Settings {
   theme: Theme;
@@ -28,7 +48,9 @@ const MAX_RECENTS = 10;
 
 export function loadSettings(): Settings {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+    const s: Settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+    if (!THEMES.includes(s.theme)) s.theme = DEFAULTS.theme;
+    return s;
   } catch {
     return { ...DEFAULTS };
   }

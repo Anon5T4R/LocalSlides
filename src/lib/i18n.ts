@@ -33,6 +33,17 @@ const LOCALE_KEY = "localslides.locale";
 const pt = {
   "lang.title": "Idioma",
 
+  // --- Tema da interface (barra superior) ---
+  "uitheme.title": "Tema da interface",
+  "uitheme.auto": "Automático",
+  "uitheme.light": "Claro",
+  "uitheme.dark": "Escuro",
+  "uitheme.nature": "Natureza",
+  "uitheme.darkblue": "Azul escuro",
+  "uitheme.calmgreen": "Verde calmo",
+  "uitheme.pastelpink": "Rosa pastel",
+  "uitheme.punkprincess": "PunkPrincess",
+
   // --- App: barra superior, menus, diálogos ---
   "app.untitled": "Sem título",
   "app.busy.saving": "Salvando…",
@@ -942,6 +953,16 @@ export type MessageKey = keyof typeof pt;
 const en: Record<MessageKey, string> = {
   "lang.title": "Language",
 
+  "uitheme.title": "Interface theme",
+  "uitheme.auto": "Automatic",
+  "uitheme.light": "Light",
+  "uitheme.dark": "Dark",
+  "uitheme.nature": "Nature",
+  "uitheme.darkblue": "Dark blue",
+  "uitheme.calmgreen": "Calm green",
+  "uitheme.pastelpink": "Pastel pink",
+  "uitheme.punkprincess": "PunkPrincess",
+
   "app.untitled": "Untitled",
   "app.busy.saving": "Saving…",
   "app.busy.exportPng": "Exporting PNG…",
@@ -1833,6 +1854,16 @@ const en: Record<MessageKey, string> = {
 
 const es: Record<MessageKey, string> = {
   "lang.title": "Idioma",
+
+  "uitheme.title": "Tema de la interfaz",
+  "uitheme.auto": "Automático",
+  "uitheme.light": "Claro",
+  "uitheme.dark": "Oscuro",
+  "uitheme.nature": "Naturaleza",
+  "uitheme.darkblue": "Azul oscuro",
+  "uitheme.calmgreen": "Verde tranquilo",
+  "uitheme.pastelpink": "Rosa pastel",
+  "uitheme.punkprincess": "PunkPrincess",
 
   "app.untitled": "Sin título",
   "app.busy.saving": "Guardando…",

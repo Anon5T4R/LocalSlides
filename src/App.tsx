@@ -38,6 +38,7 @@ import { ContextBar } from "./ui/ContextBar";
 import { ShortcutsModal } from "./ui/ShortcutsModal";
 import { VersionsModal } from "./ui/VersionsModal";
 import { LocalePicker } from "./components/LocalePicker";
+import { ThemePicker } from "./components/ThemePicker";
 import { t as tr, localeTag, type MessageKey } from "./lib/i18n";
 import "./App.css";
 
@@ -831,6 +832,7 @@ function App() {
           <button onClick={() => setZoom((zoom || 0.5) + 0.1)} title={tr("tb.zoomIn")}>+</button>
           <button onClick={() => setShowShortcuts(true)} title={tr("tb.shortcuts")}>?</button>
           <button onClick={() => setShowVersions(true)} title={tr("tb.versions")}>🕘</button>
+          <ThemePicker />
           <LocalePicker />
         </div>
       </div>
