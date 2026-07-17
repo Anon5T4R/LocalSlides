@@ -11,7 +11,7 @@
   --text: #1e293b;
   /* Escurecido 0.7 L* (matiz preservado): o painel saiu do branco puro e o
      secundário caiu pra 4.50:1 — isto o traz de volta pra 4.63:1 (AA). */
-  --muted: #627289;
+  --muted: #5d6c81;
   --accent: #2563eb;
   --stage-bg: #d9dfe7;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -37,7 +37,7 @@
   --panel-2: #e4eade;
   --border: #dbe3d4;
   --text: #2e3a2e;
-  --muted: #697669;
+  --muted: #647064;
   --accent: #7a9e7e;
   /* A mesa tem que ficar um degrau ABAIXO do --bg; o §1 baixou o --bg e
      achatou a recessão (mesa ≈ fundo), então ela desce junto. */
@@ -64,7 +64,7 @@
   --panel-2: #dfe8dd;
   --border: #d5e0d3;
   --text: #24302a;
-  --muted: #67776c;
+  --muted: #617066;
   --accent: #4f7d5e;
   --stage-bg: #e4eae2;
   --shadow: 0 10px 30px rgba(60, 70, 60, 0.14);
@@ -76,7 +76,7 @@
   --panel-2: #f2dde6;
   --border: #ecd3de;
   --text: #3a2a30;
-  --muted: #806d77;
+  --muted: #796771;
   --accent: #e8799f;
   --stage-bg: #efe3e9;
   --shadow: 0 10px 30px rgba(60, 70, 60, 0.14);
