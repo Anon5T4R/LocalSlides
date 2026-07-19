@@ -34,7 +34,13 @@ export function DrawLayer({ size, scale }: { size: Size; scale: number }) {
 
   const onDown = (e: ReactPointerEvent) => {
     e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    // O `?.` não basta: com pointer não-ativo (evento sintético, caneta em
+    // transição) o setPointerCapture LANÇA NotFoundError e mataria o gesto.
+    try {
+      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch {
+      /* sem captura: o traço segue, só perde o "seguir fora da janela" */
+    }
     drawing.current = true;
     const [x, y] = toLocal(e.clientX, e.clientY);
     if (mode === "eraser") {

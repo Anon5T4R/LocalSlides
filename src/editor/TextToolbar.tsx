@@ -8,6 +8,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { FONT_FAMILIES, FONT_SIZES } from "./tiptapExtensions";
 import { ColorPicker } from "../ui/ColorPicker";
 import { useStore } from "../state/store";
+import { pushToast } from "../state/ui";
 import { pickAndLoadFont } from "../lib/fonts";
 import type { EmbeddedFont } from "../model/deck";
 import { t } from "../lib/i18n";
@@ -118,7 +119,7 @@ export function TextToolbar({ editor, scale, themeColors }: { editor: Editor; sc
           setStyle("fontFamily", font.value);
         }
       } catch (e) {
-        window.alert(t("ttb.fontLoadError", { error: String(e) }));
+        pushToast("error", t("ttb.fontLoadError", { error: String(e) }));
       }
       return;
     }

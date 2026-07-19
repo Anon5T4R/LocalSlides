@@ -3,6 +3,7 @@
 // and are externalized/deduped in the .tslides zip, so reuse costs no extra bytes.
 
 import { useStore } from "../state/store";
+import { pushToast } from "../state/ui";
 import { newImage, newVideo } from "../model/deck";
 import { pickImageDataUri, pickVideoDataUri } from "../lib/media";
 import { t } from "../lib/i18n";
@@ -19,7 +20,7 @@ export function MediaPanel({ onClose }: { onClose: () => void }) {
       const src = kind === "image" ? await pickImageDataUri() : await pickVideoDataUri();
       if (src) addAsset(kind, kind === "image" ? t("media.imageName") : t("media.videoName"), src);
     } catch (e) {
-      window.alert(t("media.addError", { error: String(e) }));
+      pushToast("error", t("media.addError", { error: String(e) }));
     }
   };
 

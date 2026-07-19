@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "../state/store";
+import { pushToast } from "../state/ui";
 import { newIcon, newImage, newVideo } from "../model/deck";
 import { pickImageDataUri, pickVideoDataUri } from "../lib/media";
 import { INSERT_CATALOG, INSERT_MIME, insertItemLabel, type InsertItem, type InsertTab } from "../insert/catalog";
@@ -81,7 +82,7 @@ function PhotosTab() {
         addElement(kind === "image" ? newImage(useStore.getState().deck, src) : newVideo(useStore.getState().deck, src));
       }
     } catch (e) {
-      window.alert(tr("insert.addError", { error: String(e) }));
+      pushToast("error", tr("insert.addError", { error: String(e) }));
     }
   };
 

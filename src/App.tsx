@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { useStore } from "./state/store";
+import { pushToast } from "./state/ui";
+import { Toasts } from "./components/Toasts";
 import { EditorStage } from "./editor/EditorStage";
 import { SlidesPanel } from "./panels/SlidesPanel";
 import { Inspector } from "./panels/Inspector";
@@ -151,7 +153,7 @@ function App() {
       const f = await openDeck();
       if (f) applyOpened(f);
     } catch (e) {
-      window.alert(tr("app.err.open", { e: String(e) }));
+      pushToast("error", tr("app.err.open", { e: String(e) }));
     }
   }, [applyOpened]);
 
@@ -167,7 +169,7 @@ function App() {
         clearRecovery();
       }
     } catch (e) {
-      window.alert(tr("app.err.save", { e: String(e) }));
+      pushToast("error", tr("app.err.save", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -184,7 +186,7 @@ function App() {
       remember(path);
       clearRecovery();
     } catch (e) {
-      window.alert(tr("app.err.save", { e: String(e) }));
+      pushToast("error", tr("app.err.save", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -229,7 +231,7 @@ function App() {
         addElement(newImage(useStore.getState().deck, src));
       }
     } catch (e) {
-      window.alert(tr("app.err.insertImage", { e: String(e) }));
+      pushToast("error", tr("app.err.insertImage", { e: String(e) }));
     }
   }, [addElement, addAsset]);
 
@@ -242,7 +244,7 @@ function App() {
         addElement(newVideo(useStore.getState().deck, src));
       }
     } catch (e) {
-      window.alert(tr("app.err.insertVideo", { e: String(e) }));
+      pushToast("error", tr("app.err.insertVideo", { e: String(e) }));
     }
   }, [addElement, addAsset]);
 
@@ -283,7 +285,7 @@ function App() {
       setBusy(tr("app.busy.exportPng"));
       await exportSlidePng(slide, st.deck, idx, transparentBg);
     } catch (e) {
-      window.alert(tr("app.err.exportPng", { e: String(e) }));
+      pushToast("error", tr("app.err.exportPng", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -298,7 +300,7 @@ function App() {
       setBusy(tr("app.busy.exportJpg"));
       await exportSlideJpeg(slide, st.deck, idx);
     } catch (e) {
-      window.alert(tr("app.err.exportJpg", { e: String(e) }));
+      pushToast("error", tr("app.err.exportJpg", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -313,7 +315,7 @@ function App() {
       setBusy(tr("app.busy.exportSvg"));
       await exportSlideSvg(slide, st.deck, idx);
     } catch (e) {
-      window.alert(tr("app.err.exportSvg", { e: String(e) }));
+      pushToast("error", tr("app.err.exportSvg", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -329,7 +331,7 @@ function App() {
       setBusy(tr("app.busy.savingVideo"));
       await saveVideoBlob(blob, tr("app.defaultVideoName"));
     } catch (e) {
-      window.alert(tr("app.err.exportVideo", { e: String(e) }));
+      pushToast("error", tr("app.err.exportVideo", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -342,7 +344,7 @@ function App() {
       const res = await importPptx();
       if (res) loadDeck(res.deck, null);
     } catch (e) {
-      window.alert(tr("app.err.importPptx", { e: String(e) }));
+      pushToast("error", tr("app.err.importPptx", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -353,7 +355,7 @@ function App() {
       setBusy(tr("app.busy.exportPptx"));
       await exportDeckPptx(useStore.getState().deck);
     } catch (e) {
-      window.alert(tr("app.err.exportPptx", { e: String(e) }));
+      pushToast("error", tr("app.err.exportPptx", { e: String(e) }));
     } finally {
       setBusy("");
     }
@@ -881,6 +883,7 @@ function App() {
         )}
       </div>
       {busy && <div className="busy">{busy}</div>}
+      <Toasts />
       {presenting && <PresentMode onExit={() => setPresenting(false)} />}
       {printing && <PrintView deck={deck} />}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}

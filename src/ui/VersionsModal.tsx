@@ -3,6 +3,7 @@
 
 import { t, localeTag } from "../lib/i18n";
 import { useStore } from "../state/store";
+import { pushToast } from "../state/ui";
 import type { DeckVersion } from "../model/deck";
 
 // Stable reference: a selector returning a fresh `[]` on every call breaks
@@ -26,7 +27,7 @@ export function VersionsModal({ onClose }: { onClose: () => void }) {
     try {
       saveVersion(name);
     } catch (e) {
-      window.alert(t("ver.saveError", { error: String(e) }));
+      pushToast("error", t("ver.saveError", { error: String(e) }));
     }
   };
 
@@ -36,7 +37,7 @@ export function VersionsModal({ onClose }: { onClose: () => void }) {
       restoreVersion(id);
       onClose();
     } catch (e) {
-      window.alert(t("ver.restoreError", { error: String(e) }));
+      pushToast("error", t("ver.restoreError", { error: String(e) }));
     }
   };
 

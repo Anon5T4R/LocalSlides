@@ -28,7 +28,13 @@ export function TableColResizer({ el, scale }: { el: TableEl; scale: number }) {
   const onDown = (index: number) => (e: ReactPointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
     e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Blindada: com pointer não-ativo (evento sintético) o setPointerCapture
+    // lança NotFoundError e mataria o resize inteiro.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* segue sem captura */
+    }
     beginTx();
     dragRef.current = { index, startX: e.clientX, widths: [...widths] };
   };
