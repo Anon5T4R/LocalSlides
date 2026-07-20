@@ -1678,6 +1678,16 @@ body {
   gap: 6px;
   padding-bottom: 10px;
 }
+/* O `hidden` do corpo precisa VENCER o `display` daqui.
+   Achado medindo o app: `[hidden]` é só uma regra da folha do navegador
+   (`display: none`), e QUALQUER `display` de autor tem mais peso — então o
+   corpo fechado continuava `display: flex` e cada seção recolhida deixava
+   ~14px de padding vazio na coluna. Com 5 fechadas, 70px de nada. Não dava pra
+   ver "errado", só parecia frouxo — que é como esse tipo de bug sobrevive. */
+.insp-sec-body[hidden] {
+  display: none;
+}
+
 
 /* --- Text effect presets (Onda 10) --- */
 .insp-effect-grid {
