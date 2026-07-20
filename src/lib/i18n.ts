@@ -462,6 +462,11 @@ const pt = {
   "insp.copyStyle": "Copiar estilo",
   "insp.pasteStyleTitle": "Colar estilo (Ctrl+Shift+V)",
   "insp.pasteStyle": "Colar estilo",
+  /* Texto do ponto "em uso" numa seção recolhida — o ponto sozinho é invisível
+     pra leitor de tela, e é justamente a informação que o padrão B9 existe pra
+     NÃO esconder. */
+  "sec.inUse": "em uso",
+
   "insp.posSize": "Posição e tamanho",
   "insp.geomW": "L",
   "insp.geomH": "A",
@@ -1368,6 +1373,8 @@ const en: Record<MessageKey, string> = {
   "insp.copyStyle": "Copy style",
   "insp.pasteStyleTitle": "Paste style (Ctrl+Shift+V)",
   "insp.pasteStyle": "Paste style",
+  "sec.inUse": "in use",
+
   "insp.posSize": "Position and size",
   "insp.geomW": "W",
   "insp.geomH": "H",
@@ -2270,6 +2277,8 @@ const es: Record<MessageKey, string> = {
   "insp.copyStyle": "Copiar estilo",
   "insp.pasteStyleTitle": "Pegar estilo (Ctrl+Shift+V)",
   "insp.pasteStyle": "Pegar estilo",
+  "sec.inUse": "en uso",
+
   "insp.posSize": "Posición y tamaño",
   "insp.geomW": "An",
   "insp.geomH": "Al",

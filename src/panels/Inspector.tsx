@@ -6,6 +6,9 @@
 import { useState } from "react";
 import { t as tr } from "../lib/i18n";
 import { useStore } from "../state/store";
+import { useUi } from "../state/ui";
+import { sectionOpen } from "../lib/sections";
+import { Section as BaseSection } from "../components/Section";
 import {
   findSlide,
   plainTextToPM,
@@ -297,25 +300,54 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** Collapsible section with a clickable header + chevron. */
+/**
+ * Uma seção do inspetor — adaptador entre o `Section` genérico (padrão B9 da
+ * suíte, `components/Section.tsx`, cópia literal do LocalVideo) e este app.
+ *
+ * O que existia aqui antes já recolhia, mas tinha três furos:
+ *
+ * 1. **`useState` local.** O estado morria a cada troca de seleção: as seções
+ *    de texto (Efeitos) e de imagem (Ajustes) são condicionais ao tipo do
+ *    elemento, então clicar num elemento de outro tipo REMONTA a seção e ela
+ *    volta ao padrão. Quem organiza o painel do jeito que gosta via tudo
+ *    desmanchar ao trocar de slide.
+ * 2. **Nada persistia** entre sessões.
+ * 3. **Zero ARIA.** O cabeçalho era `<button>` (isso estava certo), mas sem
+ *    `aria-expanded` um leitor de tela anuncia "botão Efeitos" e não tem como
+ *    saber se aquilo está aberto ou fechado — nem que é um controle de
+ *    expansão.
+ *
+ * `active` = a propriedade desta seção saiu do neutro. É o que faz a seção
+ * nascer aberta e ganhar o ponto "em uso", que continua visível com ela
+ * FECHADA — é isso que torna seguro persistir a escolha do usuário sem
+ * esconder estado.
+ */
 function Section({
+  id,
   title,
-  defaultOpen = false,
+  active,
+  summary,
   children,
 }: {
+  id: string;
   title: string;
-  defaultOpen?: boolean;
+  active?: boolean;
+  summary?: string;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const sections = useUi((s) => s.sections);
+  const toggleSection = useUi((s) => s.toggleSection);
   return (
-    <div className="insp-section">
-      <button className="insp-section-head" onClick={() => setOpen((v) => !v)}>
-        <span className={"insp-chevron" + (open ? " open" : "")}>▸</span>
-        {title}
-      </button>
-      {open && <div className="insp-section-body">{children}</div>}
-    </div>
+    <BaseSection
+      id={id}
+      title={title}
+      active={active}
+      summary={summary}
+      open={sectionOpen(sections, id, !!active)}
+      onToggle={toggleSection}
+    >
+      {children}
+    </BaseSection>
   );
 }
 
@@ -561,7 +593,9 @@ function ElementInspector({ el }: { el: Element }) {
       </div>
 
       {/* Position & size */}
-      <Section title={tr("insp.posSize")} defaultOpen>
+      {/* O miolo do elemento selecionado: nasce SEMPRE aberta (o B9 é
+          explícito em não colapsar o miolo da tarefa). */}
+      <Section id="posSize" title={tr("insp.posSize")} active>
         <div className="insp-geom-grid">
           <label className="insp-geom-cell">
             <span className="insp-geom-label">X</span>
@@ -745,9 +779,15 @@ function ElementInspector({ el }: { el: Element }) {
         />
       )}
 
-      {/* Text effects (Onda 10) */}
+      {/* Text effects (Onda 10).
+          Fora do neutro = tem efeito aplicado. Um efeito ligado muda como o
+          texto aparece; esconder isso é esconder o porquê. */}
       {el.type === "text" && (
-        <Section title={tr("insp.effects")}>
+        <Section
+          id="effects"
+          title={tr("insp.effects")}
+          active={(el.effect?.kind ?? "none") !== "none"}
+        >
           <div className="insp-effect-grid">
             {TEXT_EFFECT_PRESETS.map((p) => (
               <button
@@ -929,7 +969,11 @@ function ElementInspector({ el }: { el: Element }) {
       )}
 
       {el.type === "image" && (
-        <Section title={tr("insp.imageAdjust")}>
+        <Section
+          id="imageAdjust"
+          title={tr("insp.imageAdjust")}
+          active={ADJUST_SLIDERS().some((sl) => (el.adjust?.[sl.k] ?? sl.neutral) !== sl.neutral)}
+        >
           {ADJUST_SLIDERS().map((s) => {
             const v = el.adjust?.[s.k] ?? s.neutral;
             return (
@@ -1174,7 +1218,8 @@ function ElementInspector({ el }: { el: Element }) {
             </Row>
           )}
 
-          <Section title={tr("insp.data")} defaultOpen>
+          {/* Os dados SÃO o gráfico: nasce sempre aberta. */}
+          <Section id="chartData" title={tr("insp.data")} active>
             <button
               className="insp-mini"
               title={tr("insp.pasteCsvTitle")}
@@ -1285,7 +1330,11 @@ function ElementInspector({ el }: { el: Element }) {
             )}
           </Section>
 
-          <Section title={tr("insp.colors")}>
+          <Section
+            id="chartColors"
+            title={tr("insp.colors")}
+            active={!!el.palette && el.palette.length > 0}
+          >
             {(isPieLikeChart(el.chart) ? el.categories : el.series.map((s) => s.name)).map((lab, i) => {
               const fallback = ["#2563eb", "#0ea5e9", "#f59e0b", "#ef4444", "#10b981", "#8b5cf6", "#ec4899", "#14b8a6"];
               const color = el.palette?.[i] ?? fallback[i % fallback.length];
@@ -1420,7 +1469,11 @@ function SlideInspector() {
 
   return (
     <>
-      <Section title={tr("insp.presentationTheme")}>
+      {/* Galerias de ESCOLHA (tema, layout): não têm "valor não-neutro" — são
+          ações, não estado. Então nascem fechadas, e nada fica escondido por
+          isso. O kit de marca é a exceção: kit salvo é conteúdo DO USUÁRIO, e
+          conteúdo do usuário nasce à vista. */}
+      <Section id="presentationTheme" title={tr("insp.presentationTheme")}>
       <div className="insp-themes">
         {THEME_PRESETS.map((p) => (
           <button
@@ -1440,7 +1493,7 @@ function SlideInspector() {
       </div>
       </Section>
 
-      <Section title={tr("insp.brandKit")}>
+      <Section id="brandKit" title={tr("insp.brandKit")} active={brandKits.length > 0}>
       <div className="insp-themes">
         {brandKits.map((k) => (
           <div key={k.id} className="brand-kit-row">
@@ -1476,7 +1529,7 @@ function SlideInspector() {
       </button>
       </Section>
 
-      <Section title={tr("insp.slideLayout")}>
+      <Section id="slideLayout" title={tr("insp.slideLayout")}>
       <div className="insp-layouts">
         {LAYOUTS.map((l) => (
           <div key={l.id} className="insp-layout-row">
