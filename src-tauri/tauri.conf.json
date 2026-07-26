@@ -37,7 +37,8 @@
         "ext": ["tslides"],
         "name": "Apresentação",
         "description": "Apresentação do LocalSlides",
-        "role": "Editor"
+        "role": "Editor",
+        "mimeType": "application/x-taylor-tslides"
       }
     ],
     "icon": [
