@@ -15,6 +15,8 @@
   --accent: #2563eb;
   --stage-bg: #d9dfe7;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08);
+  /* <select> no Linux: sem isto o GTK pinta o texto com a cor dele. */
+  color-scheme: light;
 }
 
 /* Escuro: quase-preto (L* 8) sobe ~4.5 L* mantendo matiz; a mesa sobe junto
@@ -29,6 +31,8 @@
   --accent: #3b82f6;
   --stage-bg: #151b29;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+  /* <select> no Linux: sem isto o GTK pinta o texto com a cor dele. */
+  color-scheme: dark;
 }
 
 :root[data-theme="nature"] {
@@ -43,6 +47,8 @@
      achatou a recessão (mesa ≈ fundo), então ela desce junto. */
   --stage-bg: #e8ebe4;
   --shadow: 0 10px 30px rgba(60, 70, 60, 0.14);
+  /* <select> no Linux: sem isto o GTK pinta o texto com a cor dele. */
+  color-scheme: light;
 }
 
 :root[data-theme="darkblue"] {
@@ -56,6 +62,8 @@
   /* Mesa sobe junto com o --bg do §1, mantendo a mesma recessão relativa. */
   --stage-bg: #171c24;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  /* <select> no Linux: sem isto o GTK pinta o texto com a cor dele. */
+  color-scheme: dark;
 }
 
 :root[data-theme="calmgreen"] {
@@ -68,6 +76,8 @@
   --accent: #4f7d5e;
   --stage-bg: #e4eae2;
   --shadow: 0 10px 30px rgba(60, 70, 60, 0.14);
+  /* <select> no Linux: sem isto o GTK pinta o texto com a cor dele. */
+  color-scheme: light;
 }
 
 :root[data-theme="pastelpink"] {
@@ -80,6 +90,8 @@
   --accent: #e8799f;
   --stage-bg: #efe3e9;
   --shadow: 0 10px 30px rgba(60, 70, 60, 0.14);
+  /* <select> no Linux: sem isto o GTK pinta o texto com a cor dele. */
+  color-scheme: light;
 }
 
 :root[data-theme="punkprincess"] {
@@ -92,6 +104,8 @@
   --accent: #ff2d95;
   --stage-bg: #16111a;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  /* <select> no Linux: sem isto o GTK pinta o texto com a cor dele. */
+  color-scheme: dark;
 }
 
 * {
