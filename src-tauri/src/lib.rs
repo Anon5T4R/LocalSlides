@@ -295,6 +295,15 @@ pub fn run() {
         // the presenter would also fire main's close-confirm flow and quit the
         // whole app instead of just that window.
         .on_window_event(|window, event| {
+            // Bug do tao ≤ 0.35 no GNOME/Wayland: botões da titlebar (min/max/
+            // fechar) mortos até um resize (tauri#13440, tauri#11856). O toggle
+            // de `resizable` em cada foco força o GTK a revalidar as decorações.
+            // Remover quando o tauri puxar o tao 0.36 (via wry 0.56).
+            #[cfg(target_os = "linux")]
+            if let tauri::WindowEvent::Focused(true) = event {
+                let _ = window.set_resizable(false);
+                let _ = window.set_resizable(true);
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
                     api.prevent_close();
