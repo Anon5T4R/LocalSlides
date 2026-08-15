@@ -16,6 +16,7 @@ use tauri::{Emitter, Manager, State};
 
 /// Read any file as base64 (used to load a `.tslides` zip into JSZip).
 #[tauri::command]
+
 fn read_file_base64(path: String) -> Result<String, String> {
     use base64::Engine;
     let bytes = fs::read(&path).map_err(|e| format!("Falha ao ler '{}': {}", path, e))?;
@@ -251,6 +252,22 @@ fn exit_app(app: tauri::AppHandle) {
 
 // ---------------------------------------------------------------------------
 
+/// Contorna a titlebar quebrada do tao <= 0.35 no GNOME/Wayland (CSD propia
+/// com regiao de input morta — causa e fix em tao#1218, so via tauri 2.12):
+/// troca por uma HeaderBar comum com layout forcado min/max/fechar, ANTES do
+/// primeiro map. Sai junto com o upgrade ao tao 0.36 (wry 0.56).
+#[cfg(target_os = "linux")]
+fn instalar_csd_limpa(w: &tauri::WebviewWindow) {
+    use gtk::prelude::*;
+    let Ok(gw) = w.gtk_window() else { return };
+    let header = gtk::HeaderBar::new();
+    header.set_show_close_button(true);
+    header.set_decoration_layout(Some("menu:minimize,maximize,close"));
+    header.set_title(Some("LocalSlides"));
+    header.show();
+    gw.set_titlebar(Some(&header));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // ── Contorno da tela branca do webkit: REMOVIDO, e o porquê importa ──────
@@ -274,6 +291,13 @@ pub fn run() {
     // que sobrou lib de host em algum AppDir, que é onde se deve olhar.
 
     tauri::Builder::default()
+    .setup(|app| {
+        #[cfg(target_os = "linux")]
+        if let Some(w) = app.get_webview_window("main") {
+            instalar_csd_limpa(&w);
+        }
+        Ok(())
+    })
         // single-instance must be registered first: a 2nd launch (e.g. "open with")
         // forwards the file path to the running window instead of starting a new app.
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {

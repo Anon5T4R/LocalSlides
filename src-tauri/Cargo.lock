@@ -3123,6 +3123,7 @@ name = "slides"
 version = "0.8.9"
 dependencies = [
  "base64 0.22.1",
+ "gtk",
  "serde",
  "serde_json",
  "tauri",
